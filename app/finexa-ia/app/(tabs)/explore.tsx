@@ -1,17 +1,18 @@
-import { ScrollView, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { Layout, Spacing, TextStyles } from '@/constants/uiStyles';
 
 export default function ExploreScreen() {
   return (
-    <ThemedView className="flex-1">
-      <SafeAreaView className="flex-1" edges={['top']}>
-        <ScrollView contentContainerStyle={{ paddingBottom: 24 }}>
-          <View className="px-4 pt-4">
+    <ThemedView style={Layout.flex1}>
+      <SafeAreaView style={Layout.flex1} edges={['top']}>
+        <ScrollView contentContainerStyle={styles.scroll}>
+          <View style={styles.header}>
             <ThemedText type="title">Explorar</ThemedText>
-            <Text className="mt-2 font-sans text-sm leading-relaxed text-text-secondary">
+            <Text style={[TextStyles.tabCardBody, styles.lead]}>
               Segunda pestaña — reemplazá este contenido por tu pantalla.
             </Text>
           </View>
@@ -20,3 +21,16 @@ export default function ExploreScreen() {
     </ThemedView>
   );
 }
+
+const styles = StyleSheet.create({
+  scroll: {
+    paddingBottom: Spacing.xl,
+  },
+  header: {
+    paddingHorizontal: Spacing.lg,
+    paddingTop: Spacing.lg,
+  },
+  lead: {
+    marginTop: Spacing.sm,
+  },
+});

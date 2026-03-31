@@ -8,7 +8,7 @@ export default function ModalScreen() {
   return (
     <ThemedView style={styles.container}>
       <ThemedText type="title">Modal de ejemplo</ThemedText>
-      <Link href="/" dismissTo style={styles.link}>
+      <Link href="/home" dismissTo style={styles.link}>
         <ThemedText type="link">Volver al inicio</ThemedText>
       </Link>
     </ThemedView>

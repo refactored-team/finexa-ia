@@ -1,11 +1,11 @@
 /**
- * Finexa Prism design tokens (aligned with tailwind.config.js).
+ * Finexa Prism design tokens — used by `constants/uiStyles.ts` (StyleSheet) and navigation themes.
  */
 
 import { DarkTheme, DefaultTheme, type Theme } from '@react-navigation/native';
 import { Platform } from 'react-native';
 
-/** Core palette — keep in sync with `tailwind.config.js` `theme.extend.colors`. */
+/** Core palette — keep in sync with `constants/uiStyles` for shared StyleSheet tokens. */
 export const PrismColors = {
   primary: '#2563EB',
   secondary: '#7C3AED',
