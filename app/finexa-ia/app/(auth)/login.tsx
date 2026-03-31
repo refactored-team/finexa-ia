@@ -1,4 +1,4 @@
-import { Link } from 'expo-router';
+import { Link, useRouter } from 'expo-router';
 import { Lock, Mail } from '@/constants/lucideIcons';
 import { useMemo, useState } from 'react';
 import {
@@ -29,6 +29,7 @@ import { Layout, Spacing, TextStyles } from '@/constants/uiStyles';
 import { useScrollOnlyIfOverflow } from '@/hooks/use-scroll-only-if-overflow';
 
 export default function LoginScreen() {
+  const router = useRouter();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const { scrollEnabled, onScrollViewLayout, onContentSizeChange } = useScrollOnlyIfOverflow();
@@ -57,7 +58,7 @@ export default function LoginScreen() {
     setLoading(true);
     setTimeout(() => {
       setLoading(false);
-      Alert.alert('Inicio de sesión', 'Sesión iniciada (demo). Conectá tu backend después.');
+      router.replace('/(onboarding)/link-bank');
     }, 600);
   }
 

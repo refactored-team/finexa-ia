@@ -1,4 +1,4 @@
-import { Link } from 'expo-router';
+import { Link, useRouter } from 'expo-router';
 import { Lock, Mail, User } from '@/constants/lucideIcons';
 import { useMemo, useState } from 'react';
 import {
@@ -30,6 +30,7 @@ import { PrismColors } from '@/constants/theme';
 import { Layout, Spacing, TextStyles } from '@/constants/uiStyles';
 
 export default function RegisterScreen() {
+  const router = useRouter();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
 
@@ -77,7 +78,7 @@ export default function RegisterScreen() {
     setLoading(true);
     setTimeout(() => {
       setLoading(false);
-      Alert.alert('Registro', 'Cuenta creada (demo). Conectá tu backend después.');
+      router.replace('/(onboarding)/link-bank');
     }, 600);
   }
 

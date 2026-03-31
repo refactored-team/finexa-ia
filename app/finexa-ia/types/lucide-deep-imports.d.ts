@@ -1,7 +1,19 @@
+declare module 'lucide-react-native/dist/esm/icons/arrow-left.js' {
+  import type { LucideIcon } from 'lucide-react-native';
+  const ArrowLeft: LucideIcon;
+  export default ArrowLeft;
+}
+
 declare module 'lucide-react-native/dist/esm/icons/apple.js' {
   import type { LucideIcon } from 'lucide-react-native';
   const Apple: LucideIcon;
   export default Apple;
+}
+
+declare module 'lucide-react-native/dist/esm/icons/chevron-right.js' {
+  import type { LucideIcon } from 'lucide-react-native';
+  const ChevronRight: LucideIcon;
+  export default ChevronRight;
 }
 
 declare module 'lucide-react-native/dist/esm/icons/circle-question-mark.js' {
@@ -28,6 +40,12 @@ declare module 'lucide-react-native/dist/esm/icons/globe.js' {
   export default Globe;
 }
 
+declare module 'lucide-react-native/dist/esm/icons/landmark.js' {
+  import type { LucideIcon } from 'lucide-react-native';
+  const Landmark: LucideIcon;
+  export default Landmark;
+}
+
 declare module 'lucide-react-native/dist/esm/icons/lock.js' {
   import type { LucideIcon } from 'lucide-react-native';
   const Lock: LucideIcon;
@@ -38,6 +56,30 @@ declare module 'lucide-react-native/dist/esm/icons/mail.js' {
   import type { LucideIcon } from 'lucide-react-native';
   const Mail: LucideIcon;
   export default Mail;
+}
+
+declare module 'lucide-react-native/dist/esm/icons/shield.js' {
+  import type { LucideIcon } from 'lucide-react-native';
+  const Shield: LucideIcon;
+  export default Shield;
+}
+
+declare module 'lucide-react-native/dist/esm/icons/sparkles.js' {
+  import type { LucideIcon } from 'lucide-react-native';
+  const Sparkles: LucideIcon;
+  export default Sparkles;
+}
+
+declare module 'lucide-react-native/dist/esm/icons/target.js' {
+  import type { LucideIcon } from 'lucide-react-native';
+  const Target: LucideIcon;
+  export default Target;
+}
+
+declare module 'lucide-react-native/dist/esm/icons/trending-up.js' {
+  import type { LucideIcon } from 'lucide-react-native';
+  const TrendingUp: LucideIcon;
+  export default TrendingUp;
 }
 
 declare module 'lucide-react-native/dist/esm/icons/user.js' {
