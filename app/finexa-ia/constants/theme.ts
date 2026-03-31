@@ -1,51 +1,109 @@
 /**
- * Below are the colors that are used in the app. The colors are defined in the light and dark mode.
- * There are many other ways to style your app. For example, [Nativewind](https://www.nativewind.dev/), [Tamagui](https://tamagui.dev/), [unistyles](https://reactnativeunistyles.vercel.app), etc.
+ * Finexa Prism design tokens (aligned with tailwind.config.js).
  */
 
+import { DarkTheme, DefaultTheme, type Theme } from '@react-navigation/native';
 import { Platform } from 'react-native';
 
-const tintColorLight = '#0a7ea4';
-const tintColorDark = '#fff';
+/** Core palette — keep in sync with `tailwind.config.js` `theme.extend.colors`. */
+export const PrismColors = {
+  primary: '#2563EB',
+  secondary: '#7C3AED',
+  tertiary: '#06B6D4',
+  neutral: '#F8FAFC',
+  surface: '#FFFFFF',
+  primaryBorder: '#DBEAFE',
+  textPrimary: '#1E293B',
+  textSecondary: '#64748B',
+  danger: '#B91C1C',
+} as const;
+
+/** Chart / series semantics (Victory, SVG, etc.). */
+export const ChartStyles = {
+  historicalLine: PrismColors.primary,
+  predictiveLine: PrismColors.tertiary,
+  predictiveLineStyle: 'dashed' as const,
+  positiveTrend: PrismColors.tertiary,
+  frictionOrExpenses: PrismColors.secondary,
+  frictionOrExpensesAlt: PrismColors.textSecondary,
+} as const;
+
+const tintColorLight = PrismColors.primary;
+const tintColorDark = '#60A5FA';
 
 export const Colors = {
   light: {
-    text: '#11181C',
-    background: '#fff',
+    text: PrismColors.textPrimary,
+    textSecondary: PrismColors.textSecondary,
+    background: PrismColors.neutral,
+    surface: PrismColors.surface,
     tint: tintColorLight,
-    icon: '#687076',
-    tabIconDefault: '#687076',
+    icon: PrismColors.textSecondary,
+    tabIconDefault: PrismColors.textSecondary,
     tabIconSelected: tintColorLight,
   },
   dark: {
-    text: '#ECEDEE',
-    background: '#151718',
+    text: '#F8FAFC',
+    textSecondary: '#94A3B8',
+    background: '#0F172A',
+    surface: '#1E293B',
     tint: tintColorDark,
-    icon: '#9BA1A6',
-    tabIconDefault: '#9BA1A6',
+    icon: '#94A3B8',
+    tabIconDefault: '#94A3B8',
     tabIconSelected: tintColorDark,
+  },
+};
+
+export const FinexaLightTheme: Theme = {
+  ...DefaultTheme,
+  colors: {
+    ...DefaultTheme.colors,
+    primary: PrismColors.primary,
+    background: PrismColors.neutral,
+    card: PrismColors.surface,
+    text: PrismColors.textPrimary,
+    border: PrismColors.primaryBorder,
+    notification: PrismColors.danger,
+  },
+};
+
+export const FinexaDarkTheme: Theme = {
+  ...DarkTheme,
+  colors: {
+    ...DarkTheme.colors,
+    primary: tintColorDark,
+    background: Colors.dark.background,
+    card: Colors.dark.surface,
+    text: Colors.dark.text,
+    border: '#334155',
+    notification: '#F87171',
   },
 };
 
 export const Fonts = Platform.select({
   ios: {
-    /** iOS `UIFontDescriptorSystemDesignDefault` */
-    sans: 'system-ui',
-    /** iOS `UIFontDescriptorSystemDesignSerif` */
+    sans: 'PlusJakartaSans_400Regular',
+    sansMedium: 'PlusJakartaSans_500Medium',
+    sansSemibold: 'PlusJakartaSans_600SemiBold',
+    sansBold: 'PlusJakartaSans_700Bold',
     serif: 'ui-serif',
-    /** iOS `UIFontDescriptorSystemDesignRounded` */
     rounded: 'ui-rounded',
-    /** iOS `UIFontDescriptorSystemDesignMonospaced` */
     mono: 'ui-monospace',
   },
   default: {
-    sans: 'normal',
+    sans: 'PlusJakartaSans_400Regular',
+    sansMedium: 'PlusJakartaSans_500Medium',
+    sansSemibold: 'PlusJakartaSans_600SemiBold',
+    sansBold: 'PlusJakartaSans_700Bold',
     serif: 'serif',
     rounded: 'normal',
     mono: 'monospace',
   },
   web: {
-    sans: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
+    sans: "PlusJakartaSans_400Regular, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+    sansMedium: "PlusJakartaSans_500Medium, system-ui, sans-serif",
+    sansSemibold: "PlusJakartaSans_600SemiBold, system-ui, sans-serif",
+    sansBold: "PlusJakartaSans_700Bold, system-ui, sans-serif",
     serif: "Georgia, 'Times New Roman', serif",
     rounded: "'SF Pro Rounded', 'Hiragino Maru Gothic ProN', Meiryo, 'MS PGothic', sans-serif",
     mono: "SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",

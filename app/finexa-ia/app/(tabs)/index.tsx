@@ -1,5 +1,5 @@
 import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import { Platform, StyleSheet, Text, View } from 'react-native';
 
 import { HelloWave } from '@/components/hello-wave';
 import ParallaxScrollView from '@/components/parallax-scroll-view';
@@ -17,6 +17,14 @@ export default function HomeScreen() {
           style={styles.reactLogo}
         />
       }>
+      <View className="mx-4 mb-4 rounded-3xl border border-primary-border bg-surface px-4 py-3 shadow-card">
+        <Text className="font-sans-bold text-base tracking-tight text-text-primary">
+          Finexa Prism — theme & NativeWind
+        </Text>
+        <Text className="mt-1 font-sans text-sm leading-relaxed text-text-secondary">
+          Plus Jakarta Sans · Finexa tokens
+        </Text>
+      </View>
       <ThemedView style={styles.titleContainer}>
         <ThemedText type="title">Welcome!</ThemedText>
         <HelloWave />
