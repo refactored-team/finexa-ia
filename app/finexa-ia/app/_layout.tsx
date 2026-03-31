@@ -44,7 +44,7 @@ export default function RootLayout() {
     <ThemeProvider value={colorScheme === 'dark' ? FinexaDarkTheme : FinexaLightTheme}>
       <Stack>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
+        <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Ejemplo' }} />
       </Stack>
       <StatusBar style="auto" />
     </ThemeProvider>

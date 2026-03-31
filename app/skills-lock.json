@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "skills": {
+    "expo-deployment": {
+      "source": "expo/skills",
+      "sourceType": "github",
+      "computedHash": "9ea9f16374765c1b16764a51bd43a64098921b33f48e94d9c5c1cce24b335c10"
+    },
+    "react-native": {
+      "source": "vercel-labs/json-render",
+      "sourceType": "github",
+      "computedHash": "1cfeffbd71f8fc350e7fdb5cd1f76067d64b60f2fef2300fd83181ad90148451"
+    },
+    "react-native-architecture": {
+      "source": "wshobson/agents",
+      "sourceType": "github",
+      "computedHash": "f9a0f18d522b307981b6f188b8501c9c9326adeb8aca5b46b679731dc69681ae"
+    },
+    "react-native-best-practices": {
+      "source": "callstackincubator/agent-skills",
+      "sourceType": "github",
+      "computedHash": "6f5210e63faead5d3c0c8ff4f5ed5fda60ec7472ea2b212622c4e1ae6f12fefa"
+    },
+    "react-native-design": {
+      "source": "wshobson/agents",
+      "sourceType": "github",
+      "computedHash": "f75e8c7bd9ffd77a29b74eece63806ff87f8723c30744c5cb90f8baab388d18e"
+    },
+    "react-native-expert": {
+      "source": "jeffallan/claude-skills",
+      "sourceType": "github",
+      "computedHash": "c8ece49ec9bee77e02ac3ef32bd76c82fb62372b0690928d937d9957381083aa"
+    },
+    "typescript-advanced-types": {
+      "source": "wshobson/agents",
+      "sourceType": "github",
+      "computedHash": "3a3be8c925f96ac4e1280db28a01677e7ca5197f3792de2bbf35ab3bb324b6dd"
+    },
+    "typescript-expert": {
+      "source": "sickn33/antigravity-awesome-skills",
+      "sourceType": "github",
+      "computedHash": "136deef983dfdd5f312e6fe0850fc4e87400f3ddce7a8ee9082c426e958e83f0"
+    }
+  }
+}
