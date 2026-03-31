@@ -1,17 +1,29 @@
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import {
   Alert,
-  Animated,
-  Easing,
   Pressable,
   StyleSheet,
   Text,
   useWindowDimensions,
   View,
+  type StyleProp,
+  type ViewStyle,
 } from 'react-native';
+import Animated, {
+  Easing,
+  interpolate,
+  runOnJS,
+  useAnimatedProps,
+  useAnimatedStyle,
+  useSharedValue,
+  withDelay,
+  withRepeat,
+  withSequence,
+  withTiming,
+} from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle, Defs, G, LinearGradient as SvgLinearGradient, Stop } from 'react-native-svg';
 
@@ -31,8 +43,17 @@ import { BorderColors, Layout, Radius, Shadow, Spacing, TextStyles } from '@/con
 const RING_SIZE = 168;
 const RING_R = 58;
 const RING_STROKE = 6;
-/** Arco sutil: el score completo se desbloquea al vincular el banco */
+/** Arco al que “crece” la línea; el score completo se desbloquea al vincular el banco */
 const PROGRESS_PREVIEW = 0.22;
+
+const RING_STATUS_MESSAGES = [
+  'Tu score te espera',
+  'Solo falta vincular',
+  'Con Plaid, en un paso',
+  'Listo cuando conectes',
+] as const;
+
+const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
 const VALUE_ITEMS = [
   {
@@ -57,11 +78,204 @@ const VALUE_ITEMS = [
   },
 ] as const;
 
+const ENTER = {
+  duration: 460,
+  easing: Easing.out(Easing.cubic),
+  slide: 14,
+} as const;
+
+function EnterFadeSlide({
+  delay = 0,
+  style,
+  children,
+}: {
+  delay?: number;
+  style?: StyleProp<ViewStyle>;
+  children: ReactNode;
+}) {
+  const t = useSharedValue(0);
+  useEffect(() => {
+    t.value = withDelay(delay, withTiming(1, { duration: ENTER.duration, easing: ENTER.easing }));
+  }, [delay, t]);
+  const animatedStyle = useAnimatedStyle(() => ({
+    opacity: t.value,
+    transform: [{ translateY: interpolate(t.value, [0, 1], [ENTER.slide, 0]) }],
+  }));
+  return <Animated.View style={[style, animatedStyle]}>{children}</Animated.View>;
+}
+
+function PulsingRingGlow({
+  ringSize,
+  style,
+}: {
+  ringSize: number;
+  style: ViewStyle;
+}) {
+  const o = useSharedValue(0.34);
+  useEffect(() => {
+    o.value = withRepeat(
+      withSequence(
+        withTiming(0.58, { duration: 2400, easing: Easing.inOut(Easing.sin) }),
+        withTiming(0.34, { duration: 2400, easing: Easing.inOut(Easing.sin) }),
+      ),
+      -1,
+      false,
+    );
+  }, [o]);
+  const animatedStyle = useAnimatedStyle(() => ({ opacity: o.value }));
+  const w = ringSize + 44;
+  return (
+    <Animated.View
+      style={[
+        style,
+        animatedStyle,
+        {
+          width: w,
+          height: w,
+          borderRadius: w / 2,
+          marginTop: -w / 2,
+          marginLeft: -w / 2,
+        },
+      ]}
+    />
+  );
+}
+
+function BreathingIconBadge({ children }: { children: ReactNode }) {
+  const s = useSharedValue(1);
+  useEffect(() => {
+    s.value = withRepeat(
+      withSequence(
+        withTiming(1.035, { duration: 2200, easing: Easing.inOut(Easing.sin) }),
+        withTiming(1, { duration: 2200, easing: Easing.inOut(Easing.sin) }),
+      ),
+      -1,
+      false,
+    );
+  }, [s]);
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: s.value }],
+  }));
+  return <Animated.View style={animatedStyle}>{children}</Animated.View>;
+}
+
+type RingSvgDims = {
+  ringSize: number;
+  ringCx: number;
+  ringCy: number;
+  ringR: number;
+  ringCirc: number;
+};
+
+function AnimatedProgressRing({ ringSize, ringCx, ringCy, ringR, ringCirc }: RingSvgDims) {
+  const progress = useSharedValue(0);
+
+  useEffect(() => {
+    progress.value = withDelay(
+      400,
+      withTiming(PROGRESS_PREVIEW, { duration: 2600, easing: Easing.out(Easing.cubic) }),
+    );
+  }, [progress]);
+
+  const animatedProps = useAnimatedProps(() => ({
+    strokeDashoffset: ringCirc * (1 - progress.value),
+  }));
+
+  return (
+    <Svg width={ringSize} height={ringSize} style={styles.ringSvg}>
+      <Defs>
+        <SvgLinearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <Stop offset="0%" stopColor={PrismColors.primary} />
+          <Stop offset="48%" stopColor={PrismColors.tertiary} />
+          <Stop offset="100%" stopColor={PrismColors.secondary} />
+        </SvgLinearGradient>
+      </Defs>
+      <Circle
+        cx={ringCx}
+        cy={ringCy}
+        r={ringR}
+        stroke="rgba(148, 163, 184, 0.28)"
+        strokeWidth={RING_STROKE}
+        fill="none"
+      />
+      <G transform={`rotate(-90 ${ringCx} ${ringCy})`}>
+        <AnimatedCircle
+          cx={ringCx}
+          cy={ringCy}
+          r={ringR}
+          stroke="url(#ringGrad)"
+          strokeWidth={RING_STROKE}
+          fill="none"
+          strokeLinecap="round"
+          strokeDasharray={`${ringCirc} ${ringCirc}`}
+          animatedProps={animatedProps}
+        />
+      </G>
+    </Svg>
+  );
+}
+
+function RingStatusCycle({
+  messages,
+  tightLayout,
+}: {
+  messages: readonly string[];
+  tightLayout: boolean;
+}) {
+  const [index, setIndex] = useState(0);
+  const labelOp = useSharedValue(1);
+
+  const advance = useCallback(() => {
+    setIndex((i) => (i + 1) % messages.length);
+    labelOp.value = withTiming(1, {
+      duration: 400,
+      easing: Easing.out(Easing.cubic),
+    });
+  }, [labelOp, messages.length]);
+
+  useEffect(() => {
+    labelOp.value = 1;
+    let intervalId: ReturnType<typeof setInterval> | undefined;
+    const step = () => {
+      labelOp.value = withTiming(
+        0,
+        { duration: 340, easing: Easing.inOut(Easing.quad) },
+        (finished) => {
+          if (finished) {
+            runOnJS(advance)();
+          }
+        },
+      );
+    };
+    const startDelay = setTimeout(() => {
+      intervalId = setInterval(step, 3600);
+    }, 2200);
+    return () => {
+      clearTimeout(startDelay);
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, [advance, labelOp]);
+
+  const captionAnim = useAnimatedStyle(() => ({
+    opacity: labelOp.value,
+    transform: [{ translateY: interpolate(labelOp.value, [0, 1], [5, 0]) }],
+  }));
+
+  return (
+    <Animated.View style={[styles.ringStatusTextWrap, captionAnim]}>
+      <Text
+        style={[styles.ringAwaitTitle, tightLayout && styles.ringAwaitTitleTight]}
+        numberOfLines={2}>
+        {messages[index] ?? messages[0]}
+      </Text>
+    </Animated.View>
+  );
+}
+
 export default function LinkBankScreen() {
   const insets = useSafeAreaInsets();
   const { height: windowH } = useWindowDimensions();
   const router = useRouter();
-  const glowOpacity = useRef(new Animated.Value(0.35)).current;
 
   const tightLayout = windowH < 700;
   const ringSize = tightLayout ? 148 : RING_SIZE;
@@ -72,27 +286,6 @@ export default function LinkBankScreen() {
 
   const headerPaddingTop = insets.top + Spacing.sm;
   const bodyPaddingTop = useMemo(() => headerPaddingTop + (tightLayout ? 76 : 82), [headerPaddingTop, tightLayout]);
-
-  useEffect(() => {
-    const loop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(glowOpacity, {
-          toValue: 0.62,
-          duration: 2400,
-          easing: Easing.inOut(Easing.sin),
-          useNativeDriver: true,
-        }),
-        Animated.timing(glowOpacity, {
-          toValue: 0.35,
-          duration: 2400,
-          easing: Easing.inOut(Easing.sin),
-          useNativeDriver: true,
-        }),
-      ]),
-    );
-    loop.start();
-    return () => loop.stop();
-  }, [glowOpacity]);
 
   function handleSignOut() {
     router.replace('/(auth)/login');
@@ -117,24 +310,26 @@ export default function LinkBankScreen() {
           intensity={48}
           tint="light"
           style={[styles.headerBlur, { paddingTop: headerPaddingTop, paddingBottom: Spacing.sm }]}>
-          <View style={styles.headerInner}>
-            <Pressable
-              onPress={handleSignOut}
-              accessibilityRole="button"
-              accessibilityLabel="Cerrar sesión"
-              hitSlop={12}
-              style={({ pressed }) => [styles.signOutPress, pressed && styles.pressed]}>
-              <Text style={styles.signOutLabel}>Cerrar sesión</Text>
-            </Pressable>
-            <View style={styles.headerTitles}>
-              <Text style={styles.headerTitle} numberOfLines={1}>
-                Vincular banco
-              </Text>
-              <Text style={styles.headerSubtitle} numberOfLines={1}>
-                Nivel bancario
-              </Text>
+          <EnterFadeSlide delay={0}>
+            <View style={styles.headerInner}>
+              <Pressable
+                onPress={handleSignOut}
+                accessibilityRole="button"
+                accessibilityLabel="Cerrar sesión"
+                hitSlop={12}
+                style={({ pressed }) => [styles.signOutPress, pressed && styles.pressed]}>
+                <Text style={styles.signOutLabel}>Cerrar sesión</Text>
+              </Pressable>
+              <View style={styles.headerTitles}>
+                <Text style={styles.headerTitle} numberOfLines={1}>
+                  Vincular banco
+                </Text>
+                <Text style={styles.headerSubtitle} numberOfLines={1}>
+                  Nivel bancario
+                </Text>
+              </View>
             </View>
-          </View>
+          </EnterFadeSlide>
         </BlurView>
 
         <View
@@ -146,28 +341,21 @@ export default function LinkBankScreen() {
           <View style={[Layout.flex1, styles.mainFill]}>
             <View style={[styles.glassCard, Shadow.card]}>
               <View style={styles.scoreSection}>
-                <Text style={styles.scoreEyebrow}>Score</Text>
-                <Text style={styles.scoreHeadline} numberOfLines={2}>
-                  Tu puntuación al vincular tu banco
-                </Text>
-                <Text style={styles.scoreLead} numberOfLines={tightLayout ? 1 : 2}>
-                  Con Plaid, en segundos y con datos cifrados.
-                </Text>
+                <EnterFadeSlide delay={70}>
+                  <View>
+                    <Text style={styles.scoreEyebrow}>Score</Text>
+                    <Text style={styles.scoreHeadline} numberOfLines={2}>
+                      Tu puntuación al vincular tu banco
+                    </Text>
+                    <Text style={styles.scoreLead} numberOfLines={tightLayout ? 1 : 2}>
+                      Con Plaid, en segundos y con datos cifrados.
+                    </Text>
+                  </View>
+                </EnterFadeSlide>
 
-                <View style={[styles.ringStage, { width: ringSize, height: ringSize }]}>
-                  <Animated.View
-                    style={[
-                      styles.ringGlowOuter,
-                      {
-                        opacity: glowOpacity,
-                        width: ringSize + 44,
-                        height: ringSize + 44,
-                        borderRadius: (ringSize + 44) / 2,
-                        marginTop: -(ringSize + 44) / 2,
-                        marginLeft: -(ringSize + 44) / 2,
-                      },
-                    ]}
-                  />
+                <EnterFadeSlide delay={140} style={styles.ringEnterWrap}>
+                  <View style={[styles.ringStage, { width: ringSize, height: ringSize }]}>
+                  <PulsingRingGlow ringSize={ringSize} style={styles.ringGlowOuter} />
                   <View
                     style={[
                       styles.ringGlowInner,
@@ -181,36 +369,13 @@ export default function LinkBankScreen() {
                     ]}
                   />
                   <View style={[styles.ringBlock, { width: ringSize, height: ringSize }]}>
-                    <Svg width={ringSize} height={ringSize} style={styles.ringSvg}>
-                      <Defs>
-                        <SvgLinearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                          <Stop offset="0%" stopColor={PrismColors.primary} />
-                          <Stop offset="48%" stopColor={PrismColors.tertiary} />
-                          <Stop offset="100%" stopColor={PrismColors.secondary} />
-                        </SvgLinearGradient>
-                      </Defs>
-                      <Circle
-                        cx={ringCx}
-                        cy={ringCy}
-                        r={ringR}
-                        stroke="rgba(148, 163, 184, 0.28)"
-                        strokeWidth={RING_STROKE}
-                        fill="none"
-                      />
-                      <G transform={`rotate(-90 ${ringCx} ${ringCy})`}>
-                        <Circle
-                          cx={ringCx}
-                          cy={ringCy}
-                          r={ringR}
-                          stroke="url(#ringGrad)"
-                          strokeWidth={RING_STROKE}
-                          fill="none"
-                          strokeLinecap="round"
-                          strokeDasharray={`${ringCirc} ${ringCirc}`}
-                          strokeDashoffset={ringCirc * (1 - PROGRESS_PREVIEW)}
-                        />
-                      </G>
-                    </Svg>
+                    <AnimatedProgressRing
+                      ringSize={ringSize}
+                      ringCx={ringCx}
+                      ringCy={ringCy}
+                      ringR={ringR}
+                      ringCirc={ringCirc}
+                    />
                     <LinearGradient
                       colors={['rgba(255,255,255,0.92)', 'rgba(248,250,252,0.75)']}
                       style={[
@@ -223,12 +388,12 @@ export default function LinkBankScreen() {
                       ]}
                     />
                     <View style={styles.ringCenter} pointerEvents="none">
-                      <View style={styles.ringIconBadge}>
-                        <Sparkles size={18} color={PrismColors.primary} strokeWidth={2} />
-                      </View>
-                      <Text style={styles.ringAwaitTitle} numberOfLines={1}>
-                        Listo al conectar
-                      </Text>
+                      <BreathingIconBadge>
+                        <View style={styles.ringIconBadge}>
+                          <Sparkles size={18} color={PrismColors.primary} strokeWidth={2} />
+                        </View>
+                      </BreathingIconBadge>
+                      <RingStatusCycle messages={RING_STATUS_MESSAGES} tightLayout={tightLayout} />
                       <View style={styles.ringAwaitRow}>
                         <Landmark size={12} color={PrismColors.tertiary} strokeWidth={2} />
                         <Text style={styles.ringAwaitHint} numberOfLines={1}>
@@ -238,11 +403,15 @@ export default function LinkBankScreen() {
                     </View>
                   </View>
                 </View>
+                </EnterFadeSlide>
 
                 <View style={styles.valueGrid}>
-                  {VALUE_ITEMS.map(({ Icon, title, body }) => (
-                    <View
+                  {VALUE_ITEMS.map(({ Icon, title, body }, index) => (
+                    <EnterFadeSlide
                       key={title}
+                      delay={220 + index * 52}
+                      style={styles.valueCellEnter}>
+                    <View
                       style={[
                         styles.valueCell,
                         styles.valueCellDimmed,
@@ -250,7 +419,7 @@ export default function LinkBankScreen() {
                       ]}>
                       <View style={styles.valueIconWrap}>
                         <Icon
-                          size={tightLayout ? 15 : 17}
+                          size={tightLayout ? 16 : 18}
                           color={PrismColors.primary}
                           strokeWidth={2}
                         />
@@ -264,6 +433,7 @@ export default function LinkBankScreen() {
                         {body}
                       </Text>
                     </View>
+                    </EnterFadeSlide>
                   ))}
                 </View>
               </View>
@@ -271,29 +441,33 @@ export default function LinkBankScreen() {
           </View>
 
           <View style={[styles.footer, { paddingBottom: insets.bottom + Spacing.sm }]}>
-            <Pressable
-              onPress={handleCtaPress}
-              style={({ pressed }) => [
-                styles.ctaPress,
-                Shadow.button,
-                pressed && styles.ctaPressed,
-              ]}>
-              <LinearGradient
-                colors={[PrismColors.primary, PrismColors.secondary]}
-                start={{ x: 0, y: 0.5 }}
-                end={{ x: 1, y: 0.5 }}
-                style={styles.ctaGradient}>
-                <Text style={styles.ctaLabel} numberOfLines={1}>
-                  Vincular con Plaid
-                </Text>
-                <ChevronRight size={18} color="#FFFFFF" strokeWidth={2.5} />
-              </LinearGradient>
-            </Pressable>
+            <EnterFadeSlide delay={400}>
+              <Pressable
+                onPress={handleCtaPress}
+                style={({ pressed }) => [
+                  styles.ctaPress,
+                  Shadow.button,
+                  pressed && styles.ctaPressed,
+                ]}>
+                <LinearGradient
+                  colors={[PrismColors.primary, PrismColors.secondary]}
+                  start={{ x: 0, y: 0.5 }}
+                  end={{ x: 1, y: 0.5 }}
+                  style={styles.ctaGradient}>
+                  <Text style={styles.ctaLabel} numberOfLines={1}>
+                    Vincular con Plaid
+                  </Text>
+                  <ChevronRight size={18} color="#FFFFFF" strokeWidth={2.5} />
+                </LinearGradient>
+              </Pressable>
+            </EnterFadeSlide>
 
-            <View style={styles.secureRow}>
-              <Lock size={12} color={PrismColors.textSecondary} strokeWidth={2} />
-              <Text style={styles.secureText}>100% seguro</Text>
-            </View>
+            <EnterFadeSlide delay={460}>
+              <View style={styles.secureRow}>
+                <Lock size={12} color={PrismColors.textSecondary} strokeWidth={2} />
+                <Text style={styles.secureText}>100% seguro</Text>
+              </View>
+            </EnterFadeSlide>
           </View>
         </View>
       </View>
@@ -367,6 +541,13 @@ const styles = StyleSheet.create({
   },
   scoreSection: {
     gap: 0,
+  },
+  ringEnterWrap: {
+    alignSelf: 'center',
+  },
+  valueCellEnter: {
+    width: '48%',
+    maxWidth: '48%',
   },
   scoreEyebrow: {
     ...TextStyles.labelUppercase,
@@ -447,12 +628,22 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: `${PrismColors.primary}22`,
   },
+  ringStatusTextWrap: {
+    minHeight: 34,
+    justifyContent: 'center',
+    alignItems: 'center',
+    maxWidth: '88%',
+  },
   ringAwaitTitle: {
     fontFamily: TextStyles.bodyMedium.fontFamily,
     fontSize: 12,
     lineHeight: 15,
     color: PrismColors.textPrimary,
     textAlign: 'center',
+  },
+  ringAwaitTitleTight: {
+    fontSize: 11,
+    lineHeight: 14,
   },
   ringAwaitRow: {
     flexDirection: 'row',
@@ -470,40 +661,40 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
-    rowGap: Spacing.sm,
+    rowGap: Spacing.md,
     columnGap: Spacing.sm,
   },
   valueCell: {
-    width: '47%',
-    borderRadius: Radius.sm + 2,
-    paddingVertical: Spacing.sm + 2,
-    paddingHorizontal: Spacing.sm,
+    width: '100%',
+    borderRadius: Radius.md,
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.md,
     backgroundColor: 'rgba(248,250,252,0.9)',
     borderWidth: 1,
     borderColor: BorderColors.subtle,
   },
   valueCellTight: {
-    paddingVertical: Spacing.sm,
-    paddingHorizontal: Spacing.xs + 2,
+    paddingVertical: Spacing.sm + 2,
+    paddingHorizontal: Spacing.sm,
   },
   valueCellDimmed: {
     opacity: 0.6,
   },
   valueIconWrap: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: `${PrismColors.primary}10`,
-    marginBottom: Spacing.xs + 2,
+    marginBottom: Spacing.sm,
   },
   valueTitle: {
     fontFamily: TextStyles.bodyMedium.fontFamily,
-    fontSize: 12,
-    lineHeight: 16,
+    fontSize: 13,
+    lineHeight: 17,
     color: PrismColors.textPrimary,
-    marginBottom: 3,
+    marginBottom: 4,
   },
   valueTitleTight: {
     fontSize: 11,
@@ -512,13 +703,13 @@ const styles = StyleSheet.create({
   },
   valueBody: {
     fontFamily: TextStyles.caption.fontFamily,
-    fontSize: 10,
-    lineHeight: 14,
+    fontSize: 11,
+    lineHeight: 15,
     color: PrismColors.textSecondary,
   },
   valueBodyTight: {
-    fontSize: 9,
-    lineHeight: 12,
+    fontSize: 10,
+    lineHeight: 13,
   },
   ctaPress: {
     borderRadius: Radius.full,
