@@ -64,25 +64,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/finexa-ia_ms-plaid_internal_models.PlaidItemResponse"
+                            "$ref": "#/definitions/finexa-ia_ms-plaid_internal_models.PlaidItemOKResult"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/finexa-ia_ms-plaid_internal_models.ErrorResponse"
+                            "$ref": "#/definitions/apiresult.ErrResult"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/finexa-ia_ms-plaid_internal_models.ErrorResponse"
+                            "$ref": "#/definitions/apiresult.ErrResult"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/finexa-ia_ms-plaid_internal_models.ErrorResponse"
+                            "$ref": "#/definitions/apiresult.ErrResult"
                         }
                     }
                 }
@@ -120,24 +120,27 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/finexa-ia_ms-plaid_internal_models.PlaidItemResponse"
+                            "$ref": "#/definitions/finexa-ia_ms-plaid_internal_models.PlaidItemOKResult"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/finexa-ia_ms-plaid_internal_models.ErrorResponse"
+                            "$ref": "#/definitions/apiresult.ErrResult"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/finexa-ia_ms-plaid_internal_models.ErrorResponse"
+                            "$ref": "#/definitions/apiresult.ErrResult"
                         }
                     }
                 }
             },
             "delete": {
+                "produces": [
+                    "application/json"
+                ],
                 "tags": [
                     "plaid-item"
                 ],
@@ -152,25 +155,28 @@ const docTemplate = `{
                     }
                 ],
                 "responses": {
-                    "204": {
-                        "description": "No content"
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/finexa-ia_ms-plaid_internal_models.PlaidItemDeleteOKResult"
+                        }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/finexa-ia_ms-plaid_internal_models.ErrorResponse"
+                            "$ref": "#/definitions/apiresult.ErrResult"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/finexa-ia_ms-plaid_internal_models.ErrorResponse"
+                            "$ref": "#/definitions/apiresult.ErrResult"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/finexa-ia_ms-plaid_internal_models.ErrorResponse"
+                            "$ref": "#/definitions/apiresult.ErrResult"
                         }
                     }
                 }
@@ -210,37 +216,37 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/finexa-ia_ms-plaid_internal_models.LinkTokenResponse"
+                            "$ref": "#/definitions/finexa-ia_ms-plaid_internal_models.LinkTokenOKResult"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/finexa-ia_ms-plaid_internal_models.LinkTokenErrorResponse"
+                            "$ref": "#/definitions/apiresult.ErrResult"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/finexa-ia_ms-plaid_internal_models.LinkTokenErrorResponse"
+                            "$ref": "#/definitions/apiresult.ErrResult"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/finexa-ia_ms-plaid_internal_models.LinkTokenErrorResponse"
+                            "$ref": "#/definitions/apiresult.ErrResult"
                         }
                     },
                     "502": {
                         "description": "Bad Gateway",
                         "schema": {
-                            "$ref": "#/definitions/finexa-ia_ms-plaid_internal_models.LinkTokenErrorResponse"
+                            "$ref": "#/definitions/apiresult.ErrResult"
                         }
                     },
                     "503": {
                         "description": "Service Unavailable",
                         "schema": {
-                            "$ref": "#/definitions/finexa-ia_ms-plaid_internal_models.LinkTokenErrorResponse"
+                            "$ref": "#/definitions/apiresult.ErrResult"
                         }
                     }
                 }
@@ -248,6 +254,32 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "apiresult.ErrResult": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "$ref": "#/definitions/apiresult.ErrorPayload"
+                },
+                "ok": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "apiresult.ErrorPayload": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string"
+                },
+                "details": {
+                    "type": "object",
+                    "additionalProperties": {}
+                },
+                "message": {
+                    "type": "string"
+                }
+            }
+        },
         "finexa-ia_ms-plaid_internal_models.CreateLinkTokenBody": {
             "type": "object",
             "properties": {
@@ -276,14 +308,6 @@ const docTemplate = `{
                 }
             }
         },
-        "finexa-ia_ms-plaid_internal_models.ErrorResponse": {
-            "type": "object",
-            "properties": {
-                "message": {
-                    "type": "string"
-                }
-            }
-        },
         "finexa-ia_ms-plaid_internal_models.HealthResponse": {
             "type": "object",
             "properties": {
@@ -298,14 +322,14 @@ const docTemplate = `{
                 }
             }
         },
-        "finexa-ia_ms-plaid_internal_models.LinkTokenErrorResponse": {
+        "finexa-ia_ms-plaid_internal_models.LinkTokenOKResult": {
             "type": "object",
             "properties": {
-                "message": {
-                    "type": "string"
+                "data": {
+                    "$ref": "#/definitions/finexa-ia_ms-plaid_internal_models.LinkTokenResponse"
                 },
-                "plaid": {
-                    "$ref": "#/definitions/finexa-ia_ms-plaid_internal_models.PlaidAPIErrorInfo"
+                "ok": {
+                    "type": "boolean"
                 }
             }
         },
@@ -323,17 +347,33 @@ const docTemplate = `{
                 }
             }
         },
-        "finexa-ia_ms-plaid_internal_models.PlaidAPIErrorInfo": {
+        "finexa-ia_ms-plaid_internal_models.PlaidItemDeleteData": {
             "type": "object",
             "properties": {
-                "error_code": {
-                    "type": "string"
+                "deleted": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "finexa-ia_ms-plaid_internal_models.PlaidItemDeleteOKResult": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/finexa-ia_ms-plaid_internal_models.PlaidItemDeleteData"
                 },
-                "error_message": {
-                    "type": "string"
+                "ok": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "finexa-ia_ms-plaid_internal_models.PlaidItemOKResult": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/finexa-ia_ms-plaid_internal_models.PlaidItemResponse"
                 },
-                "error_type": {
-                    "type": "string"
+                "ok": {
+                    "type": "boolean"
                 }
             }
         },

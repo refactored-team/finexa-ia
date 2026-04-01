@@ -1,5 +1,22 @@
 basePath: /
 definitions:
+  apiresult.ErrResult:
+    properties:
+      error:
+        $ref: '#/definitions/apiresult.ErrorPayload'
+      ok:
+        type: boolean
+    type: object
+  apiresult.ErrorPayload:
+    properties:
+      code:
+        type: string
+      details:
+        additionalProperties: {}
+        type: object
+      message:
+        type: string
+    type: object
   finexa-ia_ms-plaid_internal_models.CreateLinkTokenBody:
     properties:
       redirect_uri:
@@ -18,11 +35,6 @@ definitions:
       plaid_item_id:
         type: string
     type: object
-  finexa-ia_ms-plaid_internal_models.ErrorResponse:
-    properties:
-      message:
-        type: string
-    type: object
   finexa-ia_ms-plaid_internal_models.HealthResponse:
     properties:
       database:
@@ -33,12 +45,12 @@ definitions:
         example: ok
         type: string
     type: object
-  finexa-ia_ms-plaid_internal_models.LinkTokenErrorResponse:
+  finexa-ia_ms-plaid_internal_models.LinkTokenOKResult:
     properties:
-      message:
-        type: string
-      plaid:
-        $ref: '#/definitions/finexa-ia_ms-plaid_internal_models.PlaidAPIErrorInfo'
+      data:
+        $ref: '#/definitions/finexa-ia_ms-plaid_internal_models.LinkTokenResponse'
+      ok:
+        type: boolean
     type: object
   finexa-ia_ms-plaid_internal_models.LinkTokenResponse:
     properties:
@@ -49,14 +61,24 @@ definitions:
       request_id:
         type: string
     type: object
-  finexa-ia_ms-plaid_internal_models.PlaidAPIErrorInfo:
+  finexa-ia_ms-plaid_internal_models.PlaidItemDeleteData:
     properties:
-      error_code:
-        type: string
-      error_message:
-        type: string
-      error_type:
-        type: string
+      deleted:
+        type: boolean
+    type: object
+  finexa-ia_ms-plaid_internal_models.PlaidItemDeleteOKResult:
+    properties:
+      data:
+        $ref: '#/definitions/finexa-ia_ms-plaid_internal_models.PlaidItemDeleteData'
+      ok:
+        type: boolean
+    type: object
+  finexa-ia_ms-plaid_internal_models.PlaidItemOKResult:
+    properties:
+      data:
+        $ref: '#/definitions/finexa-ia_ms-plaid_internal_models.PlaidItemResponse'
+      ok:
+        type: boolean
     type: object
   finexa-ia_ms-plaid_internal_models.PlaidItemResponse:
     properties:
@@ -108,21 +130,25 @@ paths:
         name: userId
         required: true
         type: integer
+      produces:
+      - application/json
       responses:
-        "204":
-          description: No content
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/finexa-ia_ms-plaid_internal_models.PlaidItemDeleteOKResult'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/finexa-ia_ms-plaid_internal_models.ErrorResponse'
+            $ref: '#/definitions/apiresult.ErrResult'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/finexa-ia_ms-plaid_internal_models.ErrorResponse'
+            $ref: '#/definitions/apiresult.ErrResult'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/finexa-ia_ms-plaid_internal_models.ErrorResponse'
+            $ref: '#/definitions/apiresult.ErrResult'
       summary: Desconectar Plaid (baja lógica)
       tags:
       - plaid-item
@@ -141,19 +167,19 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/finexa-ia_ms-plaid_internal_models.PlaidItemResponse'
+            $ref: '#/definitions/finexa-ia_ms-plaid_internal_models.PlaidItemOKResult'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/finexa-ia_ms-plaid_internal_models.ErrorResponse'
+            $ref: '#/definitions/apiresult.ErrResult'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/finexa-ia_ms-plaid_internal_models.ErrorResponse'
+            $ref: '#/definitions/apiresult.ErrResult'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/finexa-ia_ms-plaid_internal_models.ErrorResponse'
+            $ref: '#/definitions/apiresult.ErrResult'
       summary: Obtener conexión Plaid
       tags:
       - plaid-item
@@ -178,15 +204,15 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/finexa-ia_ms-plaid_internal_models.PlaidItemResponse'
+            $ref: '#/definitions/finexa-ia_ms-plaid_internal_models.PlaidItemOKResult'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/finexa-ia_ms-plaid_internal_models.ErrorResponse'
+            $ref: '#/definitions/apiresult.ErrResult'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/finexa-ia_ms-plaid_internal_models.ErrorResponse'
+            $ref: '#/definitions/apiresult.ErrResult'
       summary: Registrar o actualizar conexión Plaid
       tags:
       - plaid-item
@@ -213,27 +239,27 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/finexa-ia_ms-plaid_internal_models.LinkTokenResponse'
+            $ref: '#/definitions/finexa-ia_ms-plaid_internal_models.LinkTokenOKResult'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/finexa-ia_ms-plaid_internal_models.LinkTokenErrorResponse'
+            $ref: '#/definitions/apiresult.ErrResult'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/finexa-ia_ms-plaid_internal_models.LinkTokenErrorResponse'
+            $ref: '#/definitions/apiresult.ErrResult'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/finexa-ia_ms-plaid_internal_models.LinkTokenErrorResponse'
+            $ref: '#/definitions/apiresult.ErrResult'
         "502":
           description: Bad Gateway
           schema:
-            $ref: '#/definitions/finexa-ia_ms-plaid_internal_models.LinkTokenErrorResponse'
+            $ref: '#/definitions/apiresult.ErrResult'
         "503":
           description: Service Unavailable
           schema:
-            $ref: '#/definitions/finexa-ia_ms-plaid_internal_models.LinkTokenErrorResponse'
+            $ref: '#/definitions/apiresult.ErrResult'
       summary: Crear link token Plaid
       tags:
       - plaid-link

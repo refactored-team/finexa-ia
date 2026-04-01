@@ -3,6 +3,7 @@ module finexa-ia/ms-plaid
 go 1.25.0
 
 require (
+	finexa-ia/apiresult v0.0.0-00010101000000-000000000000
 	github.com/aws/aws-sdk-go-v2 v1.41.5
 	github.com/aws/aws-sdk-go-v2/config v1.32.13
 	github.com/aws/aws-sdk-go-v2/service/secretsmanager v1.41.5
@@ -55,3 +56,5 @@ require (
 	google.golang.org/protobuf v1.28.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 )
+
+replace finexa-ia/apiresult => ../../pkg/apiresult

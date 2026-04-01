@@ -9,6 +9,7 @@ import (
 	"github.com/labstack/echo/v5/middleware"
 	"go.uber.org/fx"
 
+	"finexa-ia/apiresult"
 	"finexa-ia/service-c/internal/config"
 	"finexa-ia/service-c/internal/handlers"
 	"finexa-ia/service-c/internal/repository"
@@ -36,6 +37,7 @@ func newEcho() *echo.Echo {
 	e := echo.New()
 	e.Use(middleware.RequestLogger())
 	e.Use(middleware.Recover())
+	e.HTTPErrorHandler = apiresult.HTTPErrorHandler(apiresult.ExposeInternalError())
 	return e
 }
 

@@ -19,6 +19,8 @@ import (
 	httpSwagger "github.com/swaggo/http-swagger"
 	"go.uber.org/fx"
 
+	"finexa-ia/apiresult"
+
 	_ "finexa-ia/ms-plaid/docs"
 
 	"finexa-ia/ms-plaid/internal/config"
@@ -53,6 +55,7 @@ func newEcho() *echo.Echo {
 	e := echo.NewWithConfig(echo.Config{Logger: log})
 	e.Use(middleware.RequestLogger())
 	e.Use(middleware.Recover())
+	e.HTTPErrorHandler = apiresult.HTTPErrorHandler(apiresult.ExposeInternalError())
 	return e
 }
 

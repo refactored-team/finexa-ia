@@ -8,6 +8,7 @@ import (
 
 	"github.com/labstack/echo/v5"
 
+	"finexa-ia/apiresult"
 	"finexa-ia/ms-plaid/internal/models"
 	"finexa-ia/ms-plaid/internal/services"
 )
@@ -40,27 +41,27 @@ func (h *PlaidItemHandler) parseUserID(c *echo.Context) (int64, error) {
 //	@Tags			plaid-item
 //	@Param			userId	path		int	true	"ID interno de usuario (FK)"
 //	@Produce		json
-//	@Success		200	{object}	models.PlaidItemResponse
-//	@Failure		400	{object}	models.ErrorResponse
-//	@Failure		404	{object}	models.ErrorResponse
-//	@Failure		500	{object}	models.ErrorResponse
+//	@Success		200	{object}	models.PlaidItemOKResult
+//	@Failure		400	{object}	apiresult.ErrResult
+//	@Failure		404	{object}	apiresult.ErrResult
+//	@Failure		500	{object}	apiresult.ErrResult
 //	@Router			/v1/users/{userId}/plaid-item [get]
 func (h *PlaidItemHandler) get(c *echo.Context) error {
 	userID, err := h.parseUserID(c)
 	if err != nil || userID <= 0 {
-		return echo.ErrBadRequest
+		return apiresult.RespondError(c, http.StatusBadRequest, apiresult.CodeValidationError, "invalid user id", nil)
 	}
 	item, err := h.svc.GetForUser(c.Request().Context(), userID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return echo.ErrNotFound
+			return apiresult.RespondError(c, http.StatusNotFound, apiresult.CodeNotFound, http.StatusText(http.StatusNotFound), nil)
 		}
 		if errors.Is(err, services.ErrInvalidUserID) {
-			return echo.ErrBadRequest
+			return apiresult.RespondError(c, http.StatusBadRequest, apiresult.CodeValidationError, err.Error(), nil)
 		}
-		return echo.ErrInternalServerError
+		return apiresult.RespondError(c, http.StatusInternalServerError, apiresult.CodeInternalError, http.StatusText(http.StatusInternalServerError), nil)
 	}
-	return c.JSON(http.StatusOK, item)
+	return apiresult.RespondOK(c, http.StatusOK, item)
 }
 
 // upsert registers or replaces the user’s Plaid connection (one active row per user).
@@ -71,27 +72,27 @@ func (h *PlaidItemHandler) get(c *echo.Context) error {
 //	@Produce		json
 //	@Param			userId	path		int								true	"ID interno de usuario (FK)"
 //	@Param			body	body		models.CreatePlaidItemRequest	true	"Cuerpo"
-//	@Success		200	{object}	models.PlaidItemResponse
-//	@Failure		400	{object}	models.ErrorResponse
-//	@Failure		500	{object}	models.ErrorResponse
+//	@Success		200	{object}	models.PlaidItemOKResult
+//	@Failure		400	{object}	apiresult.ErrResult
+//	@Failure		500	{object}	apiresult.ErrResult
 //	@Router			/v1/users/{userId}/plaid-item [post]
 func (h *PlaidItemHandler) upsert(c *echo.Context) error {
 	userID, err := h.parseUserID(c)
 	if err != nil || userID <= 0 {
-		return echo.ErrBadRequest
+		return apiresult.RespondError(c, http.StatusBadRequest, apiresult.CodeValidationError, "invalid user id", nil)
 	}
 	var in models.CreatePlaidItemRequest
 	if err := c.Bind(&in); err != nil {
-		return echo.ErrBadRequest
+		return apiresult.RespondError(c, http.StatusBadRequest, apiresult.CodeValidationError, "invalid request body", nil)
 	}
 	item, err := h.svc.UpsertForUser(c.Request().Context(), userID, in)
 	if err != nil {
 		if errors.Is(err, services.ErrInvalidPlaidItemPayload) || errors.Is(err, services.ErrInvalidUserID) {
-			return echo.ErrBadRequest
+			return apiresult.RespondError(c, http.StatusBadRequest, apiresult.CodeValidationError, err.Error(), nil)
 		}
-		return echo.ErrInternalServerError
+		return apiresult.RespondError(c, http.StatusInternalServerError, apiresult.CodeInternalError, http.StatusText(http.StatusInternalServerError), nil)
 	}
-	return c.JSON(http.StatusOK, item)
+	return apiresult.RespondOK(c, http.StatusOK, item)
 }
 
 // delete soft-deletes the user’s active Plaid connection.
@@ -99,24 +100,25 @@ func (h *PlaidItemHandler) upsert(c *echo.Context) error {
 //	@Summary		Desconectar Plaid (baja lógica)
 //	@Tags			plaid-item
 //	@Param			userId	path	int	true	"ID interno de usuario (FK)"
-//	@Success		204	"No content"
-//	@Failure		400	{object}	models.ErrorResponse
-//	@Failure		404	{object}	models.ErrorResponse
-//	@Failure		500	{object}	models.ErrorResponse
+//	@Produce		json
+//	@Success		200	{object}	models.PlaidItemDeleteOKResult
+//	@Failure		400	{object}	apiresult.ErrResult
+//	@Failure		404	{object}	apiresult.ErrResult
+//	@Failure		500	{object}	apiresult.ErrResult
 //	@Router			/v1/users/{userId}/plaid-item [delete]
 func (h *PlaidItemHandler) delete(c *echo.Context) error {
 	userID, err := h.parseUserID(c)
 	if err != nil || userID <= 0 {
-		return echo.ErrBadRequest
+		return apiresult.RespondError(c, http.StatusBadRequest, apiresult.CodeValidationError, "invalid user id", nil)
 	}
 	if err := h.svc.DeleteForUser(c.Request().Context(), userID); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return echo.ErrNotFound
+			return apiresult.RespondError(c, http.StatusNotFound, apiresult.CodeNotFound, http.StatusText(http.StatusNotFound), nil)
 		}
 		if errors.Is(err, services.ErrInvalidUserID) {
-			return echo.ErrBadRequest
+			return apiresult.RespondError(c, http.StatusBadRequest, apiresult.CodeValidationError, err.Error(), nil)
 		}
-		return echo.ErrInternalServerError
+		return apiresult.RespondError(c, http.StatusInternalServerError, apiresult.CodeInternalError, http.StatusText(http.StatusInternalServerError), nil)
 	}
-	return c.NoContent(http.StatusNoContent)
+	return apiresult.RespondOK(c, http.StatusOK, models.PlaidItemDeleteData{Deleted: true})
 }

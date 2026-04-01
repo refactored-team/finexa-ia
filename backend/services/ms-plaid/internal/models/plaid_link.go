@@ -15,15 +15,9 @@ type LinkTokenResponse struct {
 	RequestID  string    `json:"request_id"`
 }
 
-// PlaidAPIErrorInfo is a safe subset of a Plaid error for JSON responses.
+// PlaidAPIErrorInfo is a safe subset of a Plaid error (e.g. inside apiresult error details).
 type PlaidAPIErrorInfo struct {
 	ErrorType    string `json:"error_type,omitempty"`
 	ErrorCode    string `json:"error_code,omitempty"`
 	ErrorMessage string `json:"error_message,omitempty"`
-}
-
-// LinkTokenErrorResponse is used when link-token creation fails.
-type LinkTokenErrorResponse struct {
-	Message string             `json:"message"`
-	Plaid   *PlaidAPIErrorInfo `json:"plaid,omitempty"`
 }

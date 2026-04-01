@@ -7,6 +7,7 @@ import (
 
 	"github.com/labstack/echo/v5"
 
+	"finexa-ia/apiresult"
 	"finexa-ia/ms-plaid/internal/models"
 	"finexa-ia/ms-plaid/internal/services"
 )
@@ -38,17 +39,17 @@ func (h *PlaidLinkHandler) parseUserID(c *echo.Context) (int64, error) {
 //	@Produce		json
 //	@Param			userId	path		int									true	"ID interno de usuario (FK)"
 //	@Param			body	body		models.CreateLinkTokenBody	false	"Overrides opcionales (webhook, redirect)"
-//	@Success		200	{object}	models.LinkTokenResponse
-//	@Failure		400	{object}	models.LinkTokenErrorResponse
-//	@Failure		404	{object}	models.LinkTokenErrorResponse
-//	@Failure		503	{object}	models.LinkTokenErrorResponse
-//	@Failure		502	{object}	models.LinkTokenErrorResponse
-//	@Failure		500	{object}	models.LinkTokenErrorResponse
+//	@Success		200	{object}	models.LinkTokenOKResult
+//	@Failure		400	{object}	apiresult.ErrResult
+//	@Failure		404	{object}	apiresult.ErrResult
+//	@Failure		503	{object}	apiresult.ErrResult
+//	@Failure		502	{object}	apiresult.ErrResult
+//	@Failure		500	{object}	apiresult.ErrResult
 //	@Router			/v1/users/{userId}/plaid/link-token [post]
 func (h *PlaidLinkHandler) createLinkToken(c *echo.Context) error {
 	userID, err := h.parseUserID(c)
 	if err != nil || userID <= 0 {
-		return c.JSON(http.StatusBadRequest, models.LinkTokenErrorResponse{Message: "invalid user id"})
+		return apiresult.RespondError(c, http.StatusBadRequest, apiresult.CodeValidationError, "invalid user id", nil)
 	}
 
 	var body models.CreateLinkTokenBody
@@ -58,27 +59,29 @@ func (h *PlaidLinkHandler) createLinkToken(c *echo.Context) error {
 	if err != nil {
 		return h.mapError(c, err)
 	}
-	return c.JSON(http.StatusOK, out)
+	return apiresult.RespondOK(c, http.StatusOK, out)
 }
 
 func (h *PlaidLinkHandler) mapError(c *echo.Context, err error) error {
 	switch {
 	case errors.Is(err, services.ErrInvalidUserID):
-		return c.JSON(http.StatusBadRequest, models.LinkTokenErrorResponse{Message: err.Error()})
+		return apiresult.RespondError(c, http.StatusBadRequest, apiresult.CodeValidationError, err.Error(), nil)
 	case errors.Is(err, services.ErrPlaidNotConfigured):
-		return c.JSON(http.StatusServiceUnavailable, models.LinkTokenErrorResponse{Message: "plaid is not configured"})
+		return apiresult.RespondError(c, http.StatusServiceUnavailable, apiresult.CodePlaidNotConfigured, "plaid is not configured", nil)
 	case errors.Is(err, services.ErrUserNotFound):
-		return c.JSON(http.StatusNotFound, models.LinkTokenErrorResponse{Message: err.Error()})
+		return apiresult.RespondError(c, http.StatusNotFound, apiresult.CodeNotFound, err.Error(), nil)
 	case errors.Is(err, services.ErrPlaidRequest):
-		return c.JSON(http.StatusBadRequest, models.LinkTokenErrorResponse{Message: err.Error()})
+		return apiresult.RespondError(c, http.StatusBadRequest, apiresult.CodeValidationError, err.Error(), nil)
 	default:
 		if info, ok := services.MapPlaidError(err); ok {
-			cloned := info
-			return c.JSON(http.StatusBadGateway, models.LinkTokenErrorResponse{
-				Message: "plaid API error",
-				Plaid:   &cloned,
+			return apiresult.RespondError(c, http.StatusBadGateway, apiresult.CodePlaidUpstreamError, "plaid API error", map[string]any{
+				"plaid": map[string]any{
+					"error_type":    info.ErrorType,
+					"error_code":    info.ErrorCode,
+					"error_message": info.ErrorMessage,
+				},
 			})
 		}
-		return c.JSON(http.StatusInternalServerError, models.LinkTokenErrorResponse{Message: "internal error"})
+		return apiresult.RespondError(c, http.StatusInternalServerError, apiresult.CodeInternalError, "internal error", nil)
 	}
 }
