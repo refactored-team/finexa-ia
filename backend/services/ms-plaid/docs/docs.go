@@ -41,121 +41,21 @@ const docTemplate = `{
                 }
             }
         },
-        "/v1/users/{userId}/plaid-items": {
+        "/v1/users/{userId}/plaid-item": {
             "get": {
-                "description": "Lista ítems activos (sin access_token en respuesta)",
+                "description": "Como máximo una conexión activa por usuario (sin access_token en respuesta)",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
-                    "plaid-items"
+                    "plaid-item"
                 ],
-                "summary": "Listar ítems Plaid",
+                "summary": "Obtener conexión Plaid",
                 "parameters": [
                     {
                         "type": "integer",
                         "description": "ID interno de usuario (FK)",
                         "name": "userId",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/finexa-ia_ms-plaid_internal_models.PlaidItemResponse"
-                            }
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/finexa-ia_ms-plaid_internal_models.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/finexa-ia_ms-plaid_internal_models.ErrorResponse"
-                        }
-                    }
-                }
-            },
-            "post": {
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "plaid-items"
-                ],
-                "summary": "Registrar ítem Plaid",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "ID interno de usuario (FK)",
-                        "name": "userId",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "Cuerpo",
-                        "name": "body",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/finexa-ia_ms-plaid_internal_models.CreatePlaidItemRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "201": {
-                        "description": "Created",
-                        "schema": {
-                            "$ref": "#/definitions/finexa-ia_ms-plaid_internal_models.PlaidItemResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/finexa-ia_ms-plaid_internal_models.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/finexa-ia_ms-plaid_internal_models.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/v1/users/{userId}/plaid-items/{plaidItemId}": {
-            "get": {
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "plaid-items"
-                ],
-                "summary": "Obtener ítem Plaid",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "ID interno de usuario (FK)",
-                        "name": "userId",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "plaid_item_id de Plaid",
-                        "name": "plaidItemId",
                         "in": "path",
                         "required": true
                     }
@@ -187,11 +87,17 @@ const docTemplate = `{
                     }
                 }
             },
-            "delete": {
-                "tags": [
-                    "plaid-items"
+            "post": {
+                "consumes": [
+                    "application/json"
                 ],
-                "summary": "Baja lógica de ítem Plaid",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "plaid-item"
+                ],
+                "summary": "Registrar o actualizar conexión Plaid",
                 "parameters": [
                     {
                         "type": "integer",
@@ -201,9 +107,46 @@ const docTemplate = `{
                         "required": true
                     },
                     {
-                        "type": "string",
-                        "description": "plaid_item_id de Plaid",
-                        "name": "plaidItemId",
+                        "description": "Cuerpo",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/finexa-ia_ms-plaid_internal_models.CreatePlaidItemRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/finexa-ia_ms-plaid_internal_models.PlaidItemResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/finexa-ia_ms-plaid_internal_models.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/finexa-ia_ms-plaid_internal_models.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "plaid-item"
+                ],
+                "summary": "Desconectar Plaid (baja lógica)",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID interno de usuario (FK)",
+                        "name": "userId",
                         "in": "path",
                         "required": true
                     }
@@ -310,7 +253,7 @@ var SwaggerInfo = &swag.Spec{
 	BasePath:         "/",
 	Schemes:          []string{"http", "https"},
 	Title:            "ms-plaid API",
-	Description:      "Microservicio Plaid. La identidad del usuario debe validarse en el API gateway; aquí se usa userId en la ruta.",
+	Description:      "Microservicio Plaid: una conexión activa por usuario. La identidad debe validarse en el API gateway; aquí se usa userId en la ruta.",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
 	LeftDelim:        "{{",

@@ -11,13 +11,67 @@ import (
 	"time"
 )
 
-const createPlaidItem = `-- name: CreatePlaidItem :one
+const getPlaidItemByUserID = `-- name: GetPlaidItemByUserID :one
+SELECT id, user_id, plaid_item_id, institution_id, institution_name, created_at, updated_at, deleted_at
+FROM plaid_items
+WHERE user_id = $1 AND deleted_at IS NULL
+LIMIT 1
+`
+
+type GetPlaidItemByUserIDRow struct {
+	ID              int64          `json:"id"`
+	UserID          int64          `json:"user_id"`
+	PlaidItemID     string         `json:"plaid_item_id"`
+	InstitutionID   sql.NullString `json:"institution_id"`
+	InstitutionName sql.NullString `json:"institution_name"`
+	CreatedAt       time.Time      `json:"created_at"`
+	UpdatedAt       time.Time      `json:"updated_at"`
+	DeletedAt       sql.NullTime   `json:"deleted_at"`
+}
+
+func (q *Queries) GetPlaidItemByUserID(ctx context.Context, userID int64) (GetPlaidItemByUserIDRow, error) {
+	row := q.db.QueryRowContext(ctx, getPlaidItemByUserID, userID)
+	var i GetPlaidItemByUserIDRow
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.PlaidItemID,
+		&i.InstitutionID,
+		&i.InstitutionName,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+	)
+	return i, err
+}
+
+const softDeletePlaidItemForUser = `-- name: SoftDeletePlaidItemForUser :execrows
+UPDATE plaid_items
+SET deleted_at = now()
+WHERE user_id = $1 AND deleted_at IS NULL
+`
+
+func (q *Queries) SoftDeletePlaidItemForUser(ctx context.Context, userID int64) (int64, error) {
+	result, err := q.db.ExecContext(ctx, softDeletePlaidItemForUser, userID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
+const upsertPlaidItemForUser = `-- name: UpsertPlaidItemForUser :one
 INSERT INTO plaid_items (user_id, plaid_item_id, access_token, institution_id, institution_name)
 VALUES ($1, $2, $3, $4, $5)
+ON CONFLICT (user_id) WHERE (deleted_at IS NULL) DO UPDATE SET
+    plaid_item_id = EXCLUDED.plaid_item_id,
+    access_token = EXCLUDED.access_token,
+    institution_id = EXCLUDED.institution_id,
+    institution_name = EXCLUDED.institution_name,
+    updated_at = now()
 RETURNING id, user_id, plaid_item_id, institution_id, institution_name, created_at, updated_at, deleted_at
 `
 
-type CreatePlaidItemParams struct {
+type UpsertPlaidItemForUserParams struct {
 	UserID          int64          `json:"user_id"`
 	PlaidItemID     string         `json:"plaid_item_id"`
 	AccessToken     string         `json:"access_token"`
@@ -25,7 +79,7 @@ type CreatePlaidItemParams struct {
 	InstitutionName sql.NullString `json:"institution_name"`
 }
 
-type CreatePlaidItemRow struct {
+type UpsertPlaidItemForUserRow struct {
 	ID              int64          `json:"id"`
 	UserID          int64          `json:"user_id"`
 	PlaidItemID     string         `json:"plaid_item_id"`
@@ -36,15 +90,15 @@ type CreatePlaidItemRow struct {
 	DeletedAt       sql.NullTime   `json:"deleted_at"`
 }
 
-func (q *Queries) CreatePlaidItem(ctx context.Context, arg CreatePlaidItemParams) (CreatePlaidItemRow, error) {
-	row := q.db.QueryRowContext(ctx, createPlaidItem,
+func (q *Queries) UpsertPlaidItemForUser(ctx context.Context, arg UpsertPlaidItemForUserParams) (UpsertPlaidItemForUserRow, error) {
+	row := q.db.QueryRowContext(ctx, upsertPlaidItemForUser,
 		arg.UserID,
 		arg.PlaidItemID,
 		arg.AccessToken,
 		arg.InstitutionID,
 		arg.InstitutionName,
 	)
-	var i CreatePlaidItemRow
+	var i UpsertPlaidItemForUserRow
 	err := row.Scan(
 		&i.ID,
 		&i.UserID,
@@ -56,112 +110,4 @@ func (q *Queries) CreatePlaidItem(ctx context.Context, arg CreatePlaidItemParams
 		&i.DeletedAt,
 	)
 	return i, err
-}
-
-const getPlaidItemByPlaidItemIDForUser = `-- name: GetPlaidItemByPlaidItemIDForUser :one
-SELECT id, user_id, plaid_item_id, institution_id, institution_name, created_at, updated_at, deleted_at
-FROM plaid_items
-WHERE user_id = $1 AND plaid_item_id = $2 AND deleted_at IS NULL
-LIMIT 1
-`
-
-type GetPlaidItemByPlaidItemIDForUserParams struct {
-	UserID      int64  `json:"user_id"`
-	PlaidItemID string `json:"plaid_item_id"`
-}
-
-type GetPlaidItemByPlaidItemIDForUserRow struct {
-	ID              int64          `json:"id"`
-	UserID          int64          `json:"user_id"`
-	PlaidItemID     string         `json:"plaid_item_id"`
-	InstitutionID   sql.NullString `json:"institution_id"`
-	InstitutionName sql.NullString `json:"institution_name"`
-	CreatedAt       time.Time      `json:"created_at"`
-	UpdatedAt       time.Time      `json:"updated_at"`
-	DeletedAt       sql.NullTime   `json:"deleted_at"`
-}
-
-func (q *Queries) GetPlaidItemByPlaidItemIDForUser(ctx context.Context, arg GetPlaidItemByPlaidItemIDForUserParams) (GetPlaidItemByPlaidItemIDForUserRow, error) {
-	row := q.db.QueryRowContext(ctx, getPlaidItemByPlaidItemIDForUser, arg.UserID, arg.PlaidItemID)
-	var i GetPlaidItemByPlaidItemIDForUserRow
-	err := row.Scan(
-		&i.ID,
-		&i.UserID,
-		&i.PlaidItemID,
-		&i.InstitutionID,
-		&i.InstitutionName,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-		&i.DeletedAt,
-	)
-	return i, err
-}
-
-const listPlaidItemsByUserID = `-- name: ListPlaidItemsByUserID :many
-SELECT id, user_id, plaid_item_id, institution_id, institution_name, created_at, updated_at, deleted_at
-FROM plaid_items
-WHERE user_id = $1 AND deleted_at IS NULL
-ORDER BY id
-`
-
-type ListPlaidItemsByUserIDRow struct {
-	ID              int64          `json:"id"`
-	UserID          int64          `json:"user_id"`
-	PlaidItemID     string         `json:"plaid_item_id"`
-	InstitutionID   sql.NullString `json:"institution_id"`
-	InstitutionName sql.NullString `json:"institution_name"`
-	CreatedAt       time.Time      `json:"created_at"`
-	UpdatedAt       time.Time      `json:"updated_at"`
-	DeletedAt       sql.NullTime   `json:"deleted_at"`
-}
-
-func (q *Queries) ListPlaidItemsByUserID(ctx context.Context, userID int64) ([]ListPlaidItemsByUserIDRow, error) {
-	rows, err := q.db.QueryContext(ctx, listPlaidItemsByUserID, userID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []ListPlaidItemsByUserIDRow
-	for rows.Next() {
-		var i ListPlaidItemsByUserIDRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.UserID,
-			&i.PlaidItemID,
-			&i.InstitutionID,
-			&i.InstitutionName,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-			&i.DeletedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const softDeletePlaidItem = `-- name: SoftDeletePlaidItem :execrows
-UPDATE plaid_items
-SET deleted_at = now()
-WHERE user_id = $1 AND plaid_item_id = $2 AND deleted_at IS NULL
-`
-
-type SoftDeletePlaidItemParams struct {
-	UserID      int64  `json:"user_id"`
-	PlaidItemID string `json:"plaid_item_id"`
-}
-
-func (q *Queries) SoftDeletePlaidItem(ctx context.Context, arg SoftDeletePlaidItemParams) (int64, error) {
-	result, err := q.db.ExecContext(ctx, softDeletePlaidItem, arg.UserID, arg.PlaidItemID)
-	if err != nil {
-		return 0, err
-	}
-	return result.RowsAffected()
 }

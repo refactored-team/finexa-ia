@@ -1,4 +1,4 @@
-.PHONY: run build tidy test sqlc swag
+.PHONY: run build tidy test sqlc swag migrate-up
 
 ENV_FILE ?= .env.dev
 
@@ -26,3 +26,14 @@ test:
 # Requires sqlc: go install github.com/sqlc-dev/sqlc/cmd/sqlc@latest
 sqlc:
 	sqlc generate
+
+# ── Postgres (local docker-compose from backend/) ────────────────────────────────
+# Migrations use dbmate-style sections (-- migrate:up / -- migrate:down). Feeding the
+# raw file to psql would run both and undo the schema; this target applies only :up.
+# Prerequisite: docker compose -f ../../docker-compose.yml up -d postgres
+migrate-up:
+	@for f in $$(ls migrations/*.sql | sort); do \
+		echo "Applying $$f"; \
+		awk '/^-- migrate:up/{p=1;next}/^-- migrate:down/{p=0}p' "$$f" | \
+		docker compose -f ../../docker-compose.yml exec -T postgres psql -U finexa -d finexa -v ON_ERROR_STOP=1 || exit 1; \
+	done

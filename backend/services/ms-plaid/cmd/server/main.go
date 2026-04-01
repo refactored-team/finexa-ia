@@ -1,8 +1,8 @@
-// Microservicio Plaid: salud y CRUD de ítems por user_id (identidad vía API gateway).
+// Microservicio Plaid: salud y una conexión Plaid por usuario (identidad vía API gateway).
 //
 //	@title			ms-plaid API
 //	@version		1.0.0
-//	@description	Microservicio Plaid. La identidad del usuario debe validarse en el API gateway; aquí se usa userId en la ruta.
+//	@description	Microservicio Plaid: una conexión activa por usuario. La identidad debe validarse en el API gateway; aquí se usa userId en la ruta.
 //	@BasePath		/
 //	@schemes		http https
 package main

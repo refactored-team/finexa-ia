@@ -25,3 +25,7 @@ CREATE TABLE plaid_items (
     updated_at        timestamptz NOT NULL DEFAULT now(),
     deleted_at        timestamptz
 );
+
+CREATE UNIQUE INDEX idx_plaid_items_one_active_per_user
+    ON plaid_items (user_id)
+    WHERE deleted_at IS NULL;

@@ -13,7 +13,7 @@ type PlaidItemResponse struct {
 	UpdatedAt       time.Time  `json:"updated_at"`
 }
 
-// CreatePlaidItemRequest is the JSON body for POST (includes secret token for storage only).
+// CreatePlaidItemRequest is the JSON body for POST /plaid-item (includes secret token for storage only).
 type CreatePlaidItemRequest struct {
 	PlaidItemID     string  `json:"plaid_item_id"`
 	AccessToken     string  `json:"access_token"`

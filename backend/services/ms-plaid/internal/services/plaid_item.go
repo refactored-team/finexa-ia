@@ -12,7 +12,6 @@ import (
 
 var (
 	ErrInvalidUserID           = errors.New("invalid user id")
-	ErrInvalidParams           = errors.New("invalid parameters")
 	ErrInvalidPlaidItemPayload = errors.New("plaid_item_id and access_token are required")
 )
 
@@ -24,18 +23,12 @@ func NewPlaidItemService(repo *repository.PlaidItemRepository) *PlaidItemService
 	return &PlaidItemService{repo: repo}
 }
 
-func (s *PlaidItemService) ListByUser(ctx context.Context, userID int64) ([]models.PlaidItemResponse, error) {
+// GetForUser returns the single active Plaid connection for the user, if any.
+func (s *PlaidItemService) GetForUser(ctx context.Context, userID int64) (models.PlaidItemResponse, error) {
 	if userID <= 0 {
-		return nil, ErrInvalidUserID
+		return models.PlaidItemResponse{}, ErrInvalidUserID
 	}
-	return s.repo.ListByUserID(ctx, userID)
-}
-
-func (s *PlaidItemService) Get(ctx context.Context, userID int64, plaidItemID string) (models.PlaidItemResponse, error) {
-	if userID <= 0 || strings.TrimSpace(plaidItemID) == "" {
-		return models.PlaidItemResponse{}, ErrInvalidParams
-	}
-	item, err := s.repo.GetByPlaidItemID(ctx, userID, plaidItemID)
+	item, err := s.repo.GetByUserID(ctx, userID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return models.PlaidItemResponse{}, err
@@ -45,21 +38,23 @@ func (s *PlaidItemService) Get(ctx context.Context, userID int64, plaidItemID st
 	return item, nil
 }
 
-func (s *PlaidItemService) Create(ctx context.Context, userID int64, in models.CreatePlaidItemRequest) (models.PlaidItemResponse, error) {
+// UpsertForUser creates or replaces the user’s only Plaid connection (at most one active row).
+func (s *PlaidItemService) UpsertForUser(ctx context.Context, userID int64, in models.CreatePlaidItemRequest) (models.PlaidItemResponse, error) {
 	if userID <= 0 {
 		return models.PlaidItemResponse{}, ErrInvalidUserID
 	}
 	if strings.TrimSpace(in.PlaidItemID) == "" || strings.TrimSpace(in.AccessToken) == "" {
 		return models.PlaidItemResponse{}, ErrInvalidPlaidItemPayload
 	}
-	return s.repo.Create(ctx, userID, in)
+	return s.repo.UpsertForUser(ctx, userID, in)
 }
 
-func (s *PlaidItemService) Delete(ctx context.Context, userID int64, plaidItemID string) error {
-	if userID <= 0 || strings.TrimSpace(plaidItemID) == "" {
-		return ErrInvalidParams
+// DeleteForUser soft-deletes the user’s active Plaid connection.
+func (s *PlaidItemService) DeleteForUser(ctx context.Context, userID int64) error {
+	if userID <= 0 {
+		return ErrInvalidUserID
 	}
-	n, err := s.repo.SoftDelete(ctx, userID, plaidItemID)
+	n, err := s.repo.SoftDeleteForUser(ctx, userID)
 	if err != nil {
 		return err
 	}

@@ -1,0 +1,14 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "ms-plaid: debug (dev .env)",
+      "type": "go",
+      "request": "launch",
+      "mode": "auto",
+      "program": "${workspaceFolder}/services/ms-plaid/cmd/server",
+      "cwd": "${workspaceFolder}/services/ms-plaid",
+      "envFile": "${workspaceFolder}/services/ms-plaid/.env.dev"
+    }
+  ]
+}
