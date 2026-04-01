@@ -1,6 +1,27 @@
-CREATE TABLE IF NOT EXISTS users (
-    id         BIGSERIAL PRIMARY KEY,
-    name       TEXT      NOT NULL,
-    email      TEXT      NOT NULL UNIQUE,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+CREATE TABLE users (
+    id           bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+    cognito_sub  text NOT NULL UNIQUE,
+    email        text,
+    created_at   timestamptz NOT NULL DEFAULT now(),
+    updated_at   timestamptz NOT NULL DEFAULT now(),
+    deleted_at   timestamptz
+);
+
+CREATE TABLE plaid_items_audit (
+    id             bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+    plaid_item_id  text,
+    action         text,
+    changed_at     timestamptz
+);
+
+CREATE TABLE plaid_items (
+    id                bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+    user_id           bigint NOT NULL REFERENCES users (id),
+    plaid_item_id     text NOT NULL,
+    access_token      text NOT NULL,
+    institution_id    text,
+    institution_name  text,
+    created_at        timestamptz NOT NULL DEFAULT now(),
+    updated_at        timestamptz NOT NULL DEFAULT now(),
+    deleted_at        timestamptz
 );

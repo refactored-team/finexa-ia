@@ -21,10 +21,10 @@ func main() {
 		fx.Provide(
 			config.Load,
 			provideDB,
-			repository.NewUserRepository,
-			services.NewUserService,
+			repository.NewPlaidItemRepository,
+			services.NewPlaidItemService,
 			handlers.NewHealthHandler,
-			handlers.NewUserHandler,
+			handlers.NewPlaidItemHandler,
 			newEcho,
 		),
 		fx.Invoke(registerRoutes),
@@ -56,10 +56,10 @@ func provideDB(lc fx.Lifecycle, cfg *config.App) (*sql.DB, error) {
 func registerRoutes(
 	e *echo.Echo,
 	health *handlers.HealthHandler,
-	user *handlers.UserHandler,
+	plaid *handlers.PlaidItemHandler,
 ) {
 	health.Register(e)
-	user.Register(e)
+	plaid.Register(e)
 }
 
 func startServer(lc fx.Lifecycle, e *echo.Echo, cfg *config.App) {
