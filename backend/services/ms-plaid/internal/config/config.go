@@ -16,7 +16,7 @@ import (
 // plaid_client_id + (plaid_secret o sandbox_secret) en JSON de Secrets Manager.
 var (
 	mvpPlaidEnv                    = "sandbox"
-	mvpPlaidClientName             = "Finexa"
+	mvpPlaidClientName             = "Finexa IA"
 	mvpPlaidLanguage               = "es"
 	mvpPlaidCountryCodes           = "US"
 	mvpPlaidProducts               = "transactions"
@@ -27,8 +27,8 @@ type App struct {
 	DatabaseURL string `json:"database_url"`
 	HTTPPort    string `json:"http_port"`
 
-	PlaidClientID                  string `json:"plaid_client_id,omitempty"`
-	PlaidSecret                    string `json:"plaid_secret,omitempty"`
+	PlaidClientID string `json:"plaid_client_id,omitempty"`
+	PlaidSecret   string `json:"plaid_secret,omitempty"`
 	// SandboxSecret: alias en JSON si no usas la clave plaid_secret (mismo valor que el Sandbox secret del dashboard).
 	SandboxSecret                  string `json:"sandbox_secret,omitempty"`
 	PlaidEnv                       string `json:"plaid_env,omitempty"`
