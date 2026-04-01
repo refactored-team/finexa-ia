@@ -17,7 +17,7 @@ const docTemplate = `{
     "paths": {
         "/health": {
             "get": {
-                "description": "Servicio operativo",
+                "description": "Comprueba que el proceso responde y que la base de datos acepta conexión",
                 "produces": [
                     "application/json"
                 ],
@@ -28,6 +28,12 @@ const docTemplate = `{
                 "responses": {
                     "200": {
                         "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/finexa-ia_ms-plaid_internal_models.HealthResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
                         "schema": {
                             "$ref": "#/definitions/finexa-ia_ms-plaid_internal_models.HealthResponse"
                         }
@@ -257,6 +263,11 @@ const docTemplate = `{
         "finexa-ia_ms-plaid_internal_models.HealthResponse": {
             "type": "object",
             "properties": {
+                "database": {
+                    "description": "\"ok\" cuando Ping a Postgres funciona",
+                    "type": "string",
+                    "example": "ok"
+                },
                 "status": {
                     "type": "string",
                     "example": "ok"
