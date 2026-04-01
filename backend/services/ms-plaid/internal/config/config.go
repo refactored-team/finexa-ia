@@ -5,15 +5,38 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
 )
 
+// MVP: parámetros de Link fijos en código (sandbox / pruebas). Solo credenciales
+// vienen de env o Secrets Manager (plaid_client_id, plaid_secret).
+var (
+	mvpPlaidEnv                     = "sandbox"
+	mvpPlaidClientName              = "Finexa"
+	mvpPlaidLanguage                = "es"
+	mvpPlaidCountryCodes            = "US"
+	mvpPlaidProducts                = "transactions"
+	mvpPlaidTransactionsDays int32 = 90
+)
+
 type App struct {
 	DatabaseURL string `json:"database_url"`
 	HTTPPort    string `json:"http_port"`
+
+	PlaidClientID   string `json:"plaid_client_id,omitempty"`
+	PlaidSecret     string `json:"plaid_secret,omitempty"`
+	PlaidEnv        string `json:"plaid_env,omitempty"`
+	PlaidClientName string `json:"plaid_client_name,omitempty"`
+	PlaidLanguage   string `json:"plaid_language,omitempty"`
+	PlaidCountryCodes string `json:"plaid_country_codes,omitempty"`
+	PlaidProducts     string `json:"plaid_products,omitempty"`
+	PlaidWebhook      string `json:"plaid_webhook_url,omitempty"`
+	PlaidRedirect     string `json:"plaid_redirect_uri,omitempty"`
+	PlaidTransactionsDaysRequested *int32 `json:"plaid_transactions_days_requested,omitempty"`
 }
 
 // Load resolves configuration from AWS Secrets Manager when AWS_SECRET_ID is set,
@@ -35,7 +58,14 @@ func fromEnv() (*App, error) {
 	if port == "" {
 		port = "8080"
 	}
-	return &App{DatabaseURL: dbURL, HTTPPort: port}, nil
+	app := &App{
+		DatabaseURL:   dbURL,
+		HTTPPort:      port,
+		PlaidClientID: os.Getenv("PLAID_CLIENT_ID"),
+		PlaidSecret:   os.Getenv("PLAID_SECRET"),
+	}
+	applyPlaidMVPDefaults(app)
+	return app, nil
 }
 
 func fromSecretsManager(secretID string) (*App, error) {
@@ -61,5 +91,27 @@ func fromSecretsManager(secretID string) (*App, error) {
 	if app.HTTPPort == "" {
 		app.HTTPPort = "8080"
 	}
+	applyPlaidMVPDefaults(&app)
 	return &app, nil
+}
+
+// applyPlaidMVPDefaults fija en código todo lo que no es secreto (Link sandbox).
+func applyPlaidMVPDefaults(a *App) {
+	if a == nil {
+		return
+	}
+	a.PlaidEnv = mvpPlaidEnv
+	a.PlaidClientName = mvpPlaidClientName
+	a.PlaidLanguage = mvpPlaidLanguage
+	a.PlaidCountryCodes = mvpPlaidCountryCodes
+	a.PlaidProducts = mvpPlaidProducts
+	a.PlaidWebhook = ""
+	a.PlaidRedirect = ""
+	d := mvpPlaidTransactionsDays
+	a.PlaidTransactionsDaysRequested = &d
+}
+
+// PlaidConfigured is true when credentials are present for Link token creation.
+func (a *App) PlaidConfigured() bool {
+	return a != nil && strings.TrimSpace(a.PlaidClientID) != "" && strings.TrimSpace(a.PlaidSecret) != ""
 }

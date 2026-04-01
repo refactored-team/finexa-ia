@@ -172,9 +172,90 @@
                     }
                 }
             }
+        },
+        "/v1/users/{userId}/plaid/link-token": {
+            "post": {
+                "description": "Inicializa una sesión Link: llama a Plaid y persiste metadatos (sin guardar el link_token).",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "plaid-link"
+                ],
+                "summary": "Crear link token Plaid",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID interno de usuario (FK)",
+                        "name": "userId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Overrides opcionales (webhook, redirect)",
+                        "name": "body",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/finexa-ia_ms-plaid_internal_models.CreateLinkTokenBody"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/finexa-ia_ms-plaid_internal_models.LinkTokenResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/finexa-ia_ms-plaid_internal_models.LinkTokenErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/finexa-ia_ms-plaid_internal_models.LinkTokenErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/finexa-ia_ms-plaid_internal_models.LinkTokenErrorResponse"
+                        }
+                    },
+                    "502": {
+                        "description": "Bad Gateway",
+                        "schema": {
+                            "$ref": "#/definitions/finexa-ia_ms-plaid_internal_models.LinkTokenErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/finexa-ia_ms-plaid_internal_models.LinkTokenErrorResponse"
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
+        "finexa-ia_ms-plaid_internal_models.CreateLinkTokenBody": {
+            "type": "object",
+            "properties": {
+                "redirect_uri": {
+                    "type": "string"
+                },
+                "webhook_url": {
+                    "type": "string"
+                }
+            }
+        },
         "finexa-ia_ms-plaid_internal_models.CreatePlaidItemRequest": {
             "type": "object",
             "properties": {
@@ -211,6 +292,45 @@
                 "status": {
                     "type": "string",
                     "example": "ok"
+                }
+            }
+        },
+        "finexa-ia_ms-plaid_internal_models.LinkTokenErrorResponse": {
+            "type": "object",
+            "properties": {
+                "message": {
+                    "type": "string"
+                },
+                "plaid": {
+                    "$ref": "#/definitions/finexa-ia_ms-plaid_internal_models.PlaidAPIErrorInfo"
+                }
+            }
+        },
+        "finexa-ia_ms-plaid_internal_models.LinkTokenResponse": {
+            "type": "object",
+            "properties": {
+                "expiration": {
+                    "type": "string"
+                },
+                "link_token": {
+                    "type": "string"
+                },
+                "request_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "finexa-ia_ms-plaid_internal_models.PlaidAPIErrorInfo": {
+            "type": "object",
+            "properties": {
+                "error_code": {
+                    "type": "string"
+                },
+                "error_message": {
+                    "type": "string"
+                },
+                "error_type": {
+                    "type": "string"
                 }
             }
         },

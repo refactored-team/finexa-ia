@@ -1,5 +1,12 @@
 basePath: /
 definitions:
+  finexa-ia_ms-plaid_internal_models.CreateLinkTokenBody:
+    properties:
+      redirect_uri:
+        type: string
+      webhook_url:
+        type: string
+    type: object
   finexa-ia_ms-plaid_internal_models.CreatePlaidItemRequest:
     properties:
       access_token:
@@ -24,6 +31,31 @@ definitions:
         type: string
       status:
         example: ok
+        type: string
+    type: object
+  finexa-ia_ms-plaid_internal_models.LinkTokenErrorResponse:
+    properties:
+      message:
+        type: string
+      plaid:
+        $ref: '#/definitions/finexa-ia_ms-plaid_internal_models.PlaidAPIErrorInfo'
+    type: object
+  finexa-ia_ms-plaid_internal_models.LinkTokenResponse:
+    properties:
+      expiration:
+        type: string
+      link_token:
+        type: string
+      request_id:
+        type: string
+    type: object
+  finexa-ia_ms-plaid_internal_models.PlaidAPIErrorInfo:
+    properties:
+      error_code:
+        type: string
+      error_message:
+        type: string
+      error_type:
         type: string
     type: object
   finexa-ia_ms-plaid_internal_models.PlaidItemResponse:
@@ -158,6 +190,53 @@ paths:
       summary: Registrar o actualizar conexión Plaid
       tags:
       - plaid-item
+  /v1/users/{userId}/plaid/link-token:
+    post:
+      consumes:
+      - application/json
+      description: 'Inicializa una sesión Link: llama a Plaid y persiste metadatos
+        (sin guardar el link_token).'
+      parameters:
+      - description: ID interno de usuario (FK)
+        in: path
+        name: userId
+        required: true
+        type: integer
+      - description: Overrides opcionales (webhook, redirect)
+        in: body
+        name: body
+        schema:
+          $ref: '#/definitions/finexa-ia_ms-plaid_internal_models.CreateLinkTokenBody'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/finexa-ia_ms-plaid_internal_models.LinkTokenResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/finexa-ia_ms-plaid_internal_models.LinkTokenErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/finexa-ia_ms-plaid_internal_models.LinkTokenErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/finexa-ia_ms-plaid_internal_models.LinkTokenErrorResponse'
+        "502":
+          description: Bad Gateway
+          schema:
+            $ref: '#/definitions/finexa-ia_ms-plaid_internal_models.LinkTokenErrorResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/finexa-ia_ms-plaid_internal_models.LinkTokenErrorResponse'
+      summary: Crear link token Plaid
+      tags:
+      - plaid-link
 schemes:
 - http
 - https

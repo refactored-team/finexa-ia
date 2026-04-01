@@ -35,8 +35,10 @@ func main() {
 			provideDB,
 			repository.NewPlaidItemRepository,
 			services.NewPlaidItemService,
+			services.NewPlaidLinkService,
 			handlers.NewHealthHandler,
 			handlers.NewPlaidItemHandler,
+			handlers.NewPlaidLinkHandler,
 			newEcho,
 		),
 		fx.Invoke(registerRoutes),
@@ -72,6 +74,7 @@ func registerRoutes(
 	e *echo.Echo,
 	health *handlers.HealthHandler,
 	plaid *handlers.PlaidItemHandler,
+	plaidLink *handlers.PlaidLinkHandler,
 ) {
 	// Swagger UI + swagger.json (generado con `make swag`; ver docs/docs.go).
 	e.GET("/swagger/*", echo.WrapHandler(httpSwagger.WrapHandler))
@@ -80,6 +83,7 @@ func registerRoutes(
 	})
 	health.Register(e)
 	plaid.Register(e)
+	plaidLink.Register(e)
 }
 
 func startServer(lc fx.Lifecycle, e *echo.Echo, cfg *config.App) {

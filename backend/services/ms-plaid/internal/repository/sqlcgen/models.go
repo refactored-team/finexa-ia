@@ -28,6 +28,16 @@ type PlaidItemsAudit struct {
 	ChangedAt   sql.NullTime   `json:"changed_at"`
 }
 
+type PlaidLinkSession struct {
+	ID               int64          `json:"id"`
+	UserID           int64          `json:"user_id"`
+	ExpiresAt        time.Time      `json:"expires_at"`
+	PlaidRequestID   string         `json:"plaid_request_id"`
+	PlaidEnvironment string         `json:"plaid_environment"`
+	InitialProducts  sql.NullString `json:"initial_products"`
+	CreatedAt        time.Time      `json:"created_at"`
+}
+
 type User struct {
 	ID         int64          `json:"id"`
 	CognitoSub string         `json:"cognito_sub"`
