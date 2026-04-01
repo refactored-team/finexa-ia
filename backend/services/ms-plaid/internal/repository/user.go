@@ -4,8 +4,8 @@ import (
 	"context"
 	"database/sql"
 
-	"finexa-ia/service-a/internal/models"
-	"finexa-ia/service-a/internal/repository/sqlcgen"
+	"finexa-ia/ms-plaid/internal/models"
+	"finexa-ia/ms-plaid/internal/repository/sqlcgen"
 )
 
 type UserRepository struct {

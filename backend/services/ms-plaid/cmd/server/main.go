@@ -9,11 +9,11 @@ import (
 	"github.com/labstack/echo/v5/middleware"
 	"go.uber.org/fx"
 
-	"finexa-ia/service-a/internal/config"
-	"finexa-ia/service-a/internal/handlers"
-	"finexa-ia/service-a/internal/repository"
-	"finexa-ia/service-a/internal/services"
-	pkgdb "finexa-ia/service-a/pkg/db"
+	"finexa-ia/ms-plaid/internal/config"
+	"finexa-ia/ms-plaid/internal/handlers"
+	"finexa-ia/ms-plaid/internal/repository"
+	"finexa-ia/ms-plaid/internal/services"
+	pkgdb "finexa-ia/ms-plaid/pkg/db"
 )
 
 func main() {

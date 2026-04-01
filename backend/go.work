@@ -1,7 +1,7 @@
 go 1.25.0
 
 use (
-	./services/service-a
+	./services/ms-plaid
 	./services/service-b
 	./services/service-c
 )

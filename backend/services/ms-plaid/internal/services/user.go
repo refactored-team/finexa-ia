@@ -3,8 +3,8 @@ package services
 import (
 	"context"
 
-	"finexa-ia/service-a/internal/models"
-	"finexa-ia/service-a/internal/repository"
+	"finexa-ia/ms-plaid/internal/models"
+	"finexa-ia/ms-plaid/internal/repository"
 )
 
 type UserService struct {

@@ -1,4 +1,4 @@
-module finexa-ia/service-a
+module finexa-ia/ms-plaid
 
 go 1.25.0
 

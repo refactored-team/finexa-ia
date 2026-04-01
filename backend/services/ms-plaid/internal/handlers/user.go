@@ -6,7 +6,7 @@ import (
 
 	"github.com/labstack/echo/v5"
 
-	"finexa-ia/service-a/internal/services"
+	"finexa-ia/ms-plaid/internal/services"
 )
 
 type UserHandler struct {

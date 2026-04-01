@@ -6,7 +6,7 @@ import (
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 
-	"finexa-ia/service-a/internal/config"
+	"finexa-ia/ms-plaid/internal/config"
 )
 
 // New opens a Postgres connection pool using the pgx stdlib driver.
