@@ -29,15 +29,15 @@ description: Microservicio ms-plaid — Link token, variables PLAID_*, flujo hac
 
 ## Origen de configuración
 
-- **Local**: en `.env.dev` define `CONFIG_SOURCE=env` y los secretos (`DATABASE_URL`, `PLAID_CLIENT_ID`, `PLAID_SECRET`, …). `make run` carga el archivo; no se usa Secrets Manager aunque exista `AWS_SECRET_ID` en el shell.
-- **AWS**: quita `CONFIG_SOURCE=env` en el task/container y define `AWS_SECRET_ID` con el secreto JSON (`database_url`, `http_port`, `plaid_client_id`, `plaid_secret`, …).
+- **Local**: en `.env.dev` define `CONFIG_SOURCE=env`, `DATABASE_URL`, `PLAID_CLIENT_ID` y `SANDBOX_SECRET` (el “Sandbox secret” del dashboard; opcionalmente `PLAID_SECRET` si prefieres ese nombre). `make run` carga el archivo.
+- **AWS**: quita `CONFIG_SOURCE=env` en el task/container y define `AWS_SECRET_ID` con el JSON (`database_url`, `http_port`, `plaid_client_id`, `plaid_secret` o `sandbox_secret`, …).
 
 ## Configuración Plaid (MVP)
 
-- **Credenciales**: env local (`PLAID_CLIENT_ID`, `PLAID_SECRET`) o el mismo JSON en Secrets Manager en producción.
+- **Credenciales**: env local `PLAID_CLIENT_ID` + `SANDBOX_SECRET` (o `PLAID_SECRET`). En Secrets Manager: `plaid_client_id` y `plaid_secret` o `sandbox_secret`.
 - **Resto del Link** (entorno sandbox, idioma, países, productos, días de transacciones, sin webhook/redirect por defecto): constantes en `internal/config/config.go` → `applyPlaidMVPDefaults`. Para cambiar el MVP, edita ahí las variables `mvpPlaid*`.
 
-Sin `PLAID_CLIENT_ID` / `PLAID_SECRET`, el endpoint de link-token responde **503**.
+Sin client id y secret (vía `SANDBOX_SECRET` o `PLAID_SECRET`), el link-token responde **503**.
 
 El body opcional del POST `link-token` sigue pudiendo enviar `webhook_url` y `redirect_uri` por petición.
 

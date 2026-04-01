@@ -12,14 +12,14 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
 )
 
-// MVP: parámetros de Link fijos en código (sandbox / pruebas). Solo credenciales
-// vienen de env o Secrets Manager (plaid_client_id, plaid_secret).
+// MVP: Link en sandbox. Credenciales: PLAID_CLIENT_ID + SANDBOX_SECRET (env) o
+// plaid_client_id + (plaid_secret o sandbox_secret) en JSON de Secrets Manager.
 var (
-	mvpPlaidEnv                     = "sandbox"
-	mvpPlaidClientName              = "Finexa"
-	mvpPlaidLanguage                = "es"
-	mvpPlaidCountryCodes            = "US"
-	mvpPlaidProducts                = "transactions"
+	mvpPlaidEnv                    = "sandbox"
+	mvpPlaidClientName             = "Finexa"
+	mvpPlaidLanguage               = "es"
+	mvpPlaidCountryCodes           = "US"
+	mvpPlaidProducts               = "transactions"
 	mvpPlaidTransactionsDays int32 = 90
 )
 
@@ -27,22 +27,24 @@ type App struct {
 	DatabaseURL string `json:"database_url"`
 	HTTPPort    string `json:"http_port"`
 
-	PlaidClientID   string `json:"plaid_client_id,omitempty"`
-	PlaidSecret     string `json:"plaid_secret,omitempty"`
-	PlaidEnv        string `json:"plaid_env,omitempty"`
-	PlaidClientName string `json:"plaid_client_name,omitempty"`
-	PlaidLanguage   string `json:"plaid_language,omitempty"`
-	PlaidCountryCodes string `json:"plaid_country_codes,omitempty"`
-	PlaidProducts     string `json:"plaid_products,omitempty"`
-	PlaidWebhook      string `json:"plaid_webhook_url,omitempty"`
-	PlaidRedirect     string `json:"plaid_redirect_uri,omitempty"`
+	PlaidClientID                  string `json:"plaid_client_id,omitempty"`
+	PlaidSecret                    string `json:"plaid_secret,omitempty"`
+	// SandboxSecret: alias en JSON si no usas la clave plaid_secret (mismo valor que el Sandbox secret del dashboard).
+	SandboxSecret                  string `json:"sandbox_secret,omitempty"`
+	PlaidEnv                       string `json:"plaid_env,omitempty"`
+	PlaidClientName                string `json:"plaid_client_name,omitempty"`
+	PlaidLanguage                  string `json:"plaid_language,omitempty"`
+	PlaidCountryCodes              string `json:"plaid_country_codes,omitempty"`
+	PlaidProducts                  string `json:"plaid_products,omitempty"`
+	PlaidWebhook                   string `json:"plaid_webhook_url,omitempty"`
+	PlaidRedirect                  string `json:"plaid_redirect_uri,omitempty"`
 	PlaidTransactionsDaysRequested *int32 `json:"plaid_transactions_days_requested,omitempty"`
 }
 
 // Load elige el origen de la configuración:
 //
 //	Desarrollo local (.env.dev + make run): CONFIG_SOURCE=env → solo variables de
-//	entorno (DATABASE_URL, HTTP_PORT, PLAID_CLIENT_ID, PLAID_SECRET, …). Se ignora
+//	entorno (DATABASE_URL, HTTP_PORT, PLAID_CLIENT_ID, SANDBOX_SECRET o PLAID_SECRET). Se ignora
 //	AWS_SECRET_ID aunque exista en el shell (evita mezclar credenciales AWS con .env).
 //
 //	AWS / producción: sin CONFIG_SOURCE=env (o sin definir CONFIG_SOURCE) y con
@@ -59,6 +61,15 @@ func Load() (*App, error) {
 	return fromSecretsManager(secretID)
 }
 
+// plaidSecretFromEnv: header PLAID-SECRET de la API; en sandbox el dashboard lo llama "Sandbox secret".
+// Acepta PLAID_SECRET o, si vacío, SANDBOX_SECRET (nombre que muchos equipos usan en .env).
+func plaidSecretFromEnv() string {
+	if s := strings.TrimSpace(os.Getenv("PLAID_SECRET")); s != "" {
+		return s
+	}
+	return strings.TrimSpace(os.Getenv("SANDBOX_SECRET"))
+}
+
 func fromEnv() (*App, error) {
 	dbURL := os.Getenv("DATABASE_URL")
 	if dbURL == "" {
@@ -71,8 +82,8 @@ func fromEnv() (*App, error) {
 	app := &App{
 		DatabaseURL:   dbURL,
 		HTTPPort:      port,
-		PlaidClientID: os.Getenv("PLAID_CLIENT_ID"),
-		PlaidSecret:   os.Getenv("PLAID_SECRET"),
+		PlaidClientID: strings.TrimSpace(os.Getenv("PLAID_CLIENT_ID")),
+		PlaidSecret:   plaidSecretFromEnv(),
 	}
 	applyPlaidMVPDefaults(app)
 	return app, nil
@@ -98,6 +109,10 @@ func fromSecretsManager(secretID string) (*App, error) {
 	if err := json.Unmarshal([]byte(aws.ToString(out.SecretString)), &app); err != nil {
 		return nil, fmt.Errorf("parse secret json: %w", err)
 	}
+	if strings.TrimSpace(app.PlaidSecret) == "" {
+		app.PlaidSecret = strings.TrimSpace(app.SandboxSecret)
+	}
+	app.SandboxSecret = ""
 	if app.HTTPPort == "" {
 		app.HTTPPort = "8080"
 	}
