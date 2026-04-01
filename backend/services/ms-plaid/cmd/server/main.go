@@ -1,3 +1,10 @@
+// Microservicio Plaid: salud y CRUD de ítems por user_id (identidad vía API gateway).
+//
+//	@title			ms-plaid API
+//	@version		1.0.0
+//	@description	Microservicio Plaid. La identidad del usuario debe validarse en el API gateway; aquí se usa userId en la ruta.
+//	@BasePath		/
+//	@schemes		http https
 package main
 
 import (
@@ -7,7 +14,10 @@ import (
 
 	"github.com/labstack/echo/v5"
 	"github.com/labstack/echo/v5/middleware"
+	"github.com/swaggo/http-swagger"
 	"go.uber.org/fx"
+
+	_ "finexa-ia/ms-plaid/docs"
 
 	"finexa-ia/ms-plaid/internal/config"
 	"finexa-ia/ms-plaid/internal/handlers"
@@ -58,6 +68,11 @@ func registerRoutes(
 	health *handlers.HealthHandler,
 	plaid *handlers.PlaidItemHandler,
 ) {
+	// Swagger UI + swagger.json (generado con `make swag`; ver docs/docs.go).
+	e.GET("/swagger/*", echo.WrapHandler(httpSwagger.WrapHandler))
+	e.GET("/docs", func(c *echo.Context) error {
+		return c.Redirect(302, "/swagger/index.html")
+	})
 	health.Register(e)
 	plaid.Register(e)
 }

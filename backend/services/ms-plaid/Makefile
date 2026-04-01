@@ -1,6 +1,12 @@
-.PHONY: run build tidy test sqlc
+.PHONY: run build tidy test sqlc swag
 
 ENV_FILE ?= .env.dev
+
+# ── Swagger (swag) ─────────────────────────────────────────────────────────────
+# Regenera docs/docs.go, swagger.json y swagger.yaml desde comentarios en main/handlers.
+# En CI: tras cambiar rutas o comentarios `// @...`, ejecuta `make swag` y commitea `docs/`.
+swag:
+	go run github.com/swaggo/swag/cmd/swag@v1.16.6 init -g cmd/server/main.go -o docs --parseInternal --parseDependency
 
 # ── Local dev ──────────────────────────────────────────────────────────────────
 run:
