@@ -11,10 +11,12 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"log/slog"
+	"os"
 
 	"github.com/labstack/echo/v5"
 	"github.com/labstack/echo/v5/middleware"
-	"github.com/swaggo/http-swagger"
+	httpSwagger "github.com/swaggo/http-swagger"
 	"go.uber.org/fx"
 
 	_ "finexa-ia/ms-plaid/docs"
@@ -43,7 +45,10 @@ func main() {
 }
 
 func newEcho() *echo.Echo {
-	e := echo.New()
+	// Echo v5 no imprime el ASCII clásico: el "banner" va por slog (por defecto JSON y se mezcla con FX).
+	// TextHandler hace visible la línea de arranque y "http(s) server started".
+	log := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
+	e := echo.NewWithConfig(echo.Config{Logger: log})
 	e.Use(middleware.RequestLogger())
 	e.Use(middleware.Recover())
 	return e
@@ -80,7 +85,7 @@ func registerRoutes(
 func startServer(lc fx.Lifecycle, e *echo.Echo, cfg *config.App) {
 	sc := echo.StartConfig{
 		Address:    fmt.Sprintf(":%s", cfg.HTTPPort),
-		HideBanner: true,
+		HideBanner: false,
 	}
 	var cancel context.CancelFunc
 	lc.Append(fx.Hook{
