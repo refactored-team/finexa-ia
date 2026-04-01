@@ -27,9 +27,14 @@ description: Microservicio ms-plaid — Link token, variables PLAID_*, flujo hac
 4. El cliente abre Plaid Link con ese token; al terminar recibe un `public_token`.
 5. Paso siguiente (otro endpoint o el actual POST `plaid-item`): intercambiar con Plaid [**`/item/public_token/exchange`**](https://plaid.com/docs/api/items/#itempublic_tokenexchange) y guardar `item_id` + `access_token` en `plaid_items` (ya soportado por el POST existente de `plaid-item`).
 
+## Origen de configuración
+
+- **Local**: en `.env.dev` define `CONFIG_SOURCE=env` y los secretos (`DATABASE_URL`, `PLAID_CLIENT_ID`, `PLAID_SECRET`, …). `make run` carga el archivo; no se usa Secrets Manager aunque exista `AWS_SECRET_ID` en el shell.
+- **AWS**: quita `CONFIG_SOURCE=env` en el task/container y define `AWS_SECRET_ID` con el secreto JSON (`database_url`, `http_port`, `plaid_client_id`, `plaid_secret`, …).
+
 ## Configuración Plaid (MVP)
 
-- **Credenciales** (`plaid_client_id`, `plaid_secret`): env local (`PLAID_CLIENT_ID`, `PLAID_SECRET`) o JSON en Secrets Manager junto con `database_url` / `http_port`.
+- **Credenciales**: env local (`PLAID_CLIENT_ID`, `PLAID_SECRET`) o el mismo JSON en Secrets Manager en producción.
 - **Resto del Link** (entorno sandbox, idioma, países, productos, días de transacciones, sin webhook/redirect por defecto): constantes en `internal/config/config.go` → `applyPlaidMVPDefaults`. Para cambiar el MVP, edita ahí las variables `mvpPlaid*`.
 
 Sin `PLAID_CLIENT_ID` / `PLAID_SECRET`, el endpoint de link-token responde **503**.

@@ -39,11 +39,21 @@ type App struct {
 	PlaidTransactionsDaysRequested *int32 `json:"plaid_transactions_days_requested,omitempty"`
 }
 
-// Load resolves configuration from AWS Secrets Manager when AWS_SECRET_ID is set,
-// otherwise falls back to environment variables (CONFIG_SOURCE=env or no secret ID).
+// Load elige el origen de la configuración:
+//
+//	Desarrollo local (.env.dev + make run): CONFIG_SOURCE=env → solo variables de
+//	entorno (DATABASE_URL, HTTP_PORT, PLAID_CLIENT_ID, PLAID_SECRET, …). Se ignora
+//	AWS_SECRET_ID aunque exista en el shell (evita mezclar credenciales AWS con .env).
+//
+//	AWS / producción: sin CONFIG_SOURCE=env (o sin definir CONFIG_SOURCE) y con
+//	AWS_SECRET_ID → JSON desde Secrets Manager (database_url, http_port,
+//	plaid_client_id, plaid_secret, …).
+//
+//	Sin AWS_SECRET_ID y sin forzar env: mismo comportamiento que env (útil en CI).
 func Load() (*App, error) {
-	secretID := os.Getenv("AWS_SECRET_ID")
-	if secretID == "" || os.Getenv("CONFIG_SOURCE") == "env" {
+	secretID := strings.TrimSpace(os.Getenv("AWS_SECRET_ID"))
+	forceEnv := strings.EqualFold(strings.TrimSpace(os.Getenv("CONFIG_SOURCE")), "env")
+	if forceEnv || secretID == "" {
 		return fromEnv()
 	}
 	return fromSecretsManager(secretID)
