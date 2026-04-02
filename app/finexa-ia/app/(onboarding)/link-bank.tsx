@@ -220,7 +220,7 @@ function AnimatedProgressRing({ ringSize, ringCx, ringCy, ringR, ringCirc }: Rin
           animatedProps={animatedProps}
         />
       </G>
-    </Svg>
+    </Svg> 
   );
 }
 
@@ -367,46 +367,48 @@ export default function LinkBankScreen() {
       const plaidSdk = require('react-native-plaid-link-sdk') as typeof import('react-native-plaid-link-sdk');
       const { create, open } = plaidSdk;
 
+      agentLog('H4_create_before', 'about to call create()', { tokenLen: linkToken.length });
       create({
         token: linkToken,
         logLevel: 'debug' as unknown as LinkLogLevel,
-        onLoad: () => {
-          agentLog('H1_create_onLoad', 'create onLoad fired -> calling open', { tokenLen: linkToken.length });
-          open({
-            logLevel: 'debug' as unknown as LinkLogLevel,
-            iOSPresentationStyle: 'MODAL' as unknown as LinkIOSPresentationStyle,
-            onSuccess: async (success: LinkSuccess) => {
-              agentLog('H2_onSuccess', 'onSuccess fired', {
-                hasPublicToken: Boolean(success?.publicToken),
-                publicTokenLen: success?.publicToken?.length ?? null,
-              });
-              try {
-                console.log('[Plaid] onSuccess publicToken:', success.publicToken);
-                await plaidService.exchangePublicToken(userId, success.publicToken);
-                router.replace('/(tabs)/home');
-              } catch (error) {
-                console.error('Error al guardar conexión bancaria:', error);
-                Alert.alert('Error', 'No se pudo guardar la conexión de forma segura.');
-              } finally {
-                setIsLinking(false);
-              }
-            },
-            onExit: (exit: LinkExit) => {
-              agentLog('H2_onExit', 'onExit fired', {
-                errorType: exit?.error?.errorType ?? null,
-                errorCode: exit?.error?.errorCode ?? null,
-                status: exit?.metadata?.status ?? null,
-              });
-              console.log('[Plaid] onExit:', {
-                error: exit?.error ?? null,
-                metadata: exit?.metadata ?? null,
-                raw: exit,
-              });
-              setIsLinking(false);
-            },
+      });
+      agentLog('H4_create_after', 'create() returned', { tokenLen: linkToken.length });
+
+      agentLog('H5_open_before', 'about to call open()', { tokenLen: linkToken.length });
+      open({
+        logLevel: 'debug' as unknown as LinkLogLevel,
+        iOSPresentationStyle: 'MODAL' as unknown as LinkIOSPresentationStyle,
+        onSuccess: async (success: LinkSuccess) => {
+          agentLog('H2_onSuccess', 'onSuccess fired', {
+            hasPublicToken: Boolean(success?.publicToken),
+            publicTokenLen: success?.publicToken?.length ?? null,
           });
+          try {
+            console.log('[Plaid] onSuccess publicToken:', success.publicToken);
+            await plaidService.exchangePublicToken(userId, success.publicToken);
+            router.replace('/(tabs)/home');
+          } catch (error) {
+            console.error('Error al guardar conexión bancaria:', error);
+            Alert.alert('Error', 'No se pudo guardar la conexión de forma segura.');
+          } finally {
+            setIsLinking(false);
+          }
+        },
+        onExit: (exit: LinkExit) => {
+          agentLog('H2_onExit', 'onExit fired', {
+            errorType: exit?.error?.errorType ?? null,
+            errorCode: exit?.error?.errorCode ?? null,
+            status: exit?.metadata?.status ?? null,
+          });
+          console.log('[Plaid] onExit:', {
+            error: exit?.error ?? null,
+            metadata: exit?.metadata ?? null,
+            raw: exit,
+          });
+          setIsLinking(false);
         },
       });
+      agentLog('H5_open_after', 'open() invoked (no throw)', { tokenLen: linkToken.length });
     } catch (error) {
       console.error('[Plaid] open/create failed:', error);
       agentLog('H3_open_create_throw', 'open/create threw', {
