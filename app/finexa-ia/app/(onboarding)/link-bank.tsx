@@ -7,6 +7,7 @@ import {
   Pressable,
   StyleSheet,
   Text,
+  TouchableOpacity,
   useWindowDimensions,
   View,
   type StyleProp,
@@ -25,7 +26,10 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Svg, { Circle, Defs, G, LinearGradient as SvgLinearGradient, Stop } from 'react-native-svg';
+import Svg, { Circle, Defs, G, Stop, LinearGradient as SvgLinearGradient } from 'react-native-svg';
+
+import { plaidService } from '@/src/services/api/plaid/plaidService';
+import { create, LinkExit, LinkSuccess, open } from 'react-native-plaid-link-sdk';
 
 import { AuthBackground } from '@/components/auth';
 import {
@@ -277,6 +281,52 @@ export default function LinkBankScreen() {
   const { height: windowH } = useWindowDimensions();
   const router = useRouter();
 
+  const [linkToken, setLinkToken] = useState<string | null>(null);
+  const [isLinking, setIsLinking] = useState(false);
+  const userId = "2";
+
+  // Fase 1: Pedir Link Token al backend
+  useEffect(() => {
+    async function fetchLinkToken() {
+      try {
+        const data = await plaidService.createLinkToken(userId);
+        setLinkToken(data.link_token);
+      } catch (error) {
+        console.error('Error al obtener el link_token:', error);
+        Alert.alert('Error', 'No se pudo conectar con el servidor bancario.');
+      }
+    }
+    fetchLinkToken();
+  }, []);
+
+  // Fase 2: Configurar SDK cuando llega el token
+  useEffect(() => {
+    if (linkToken) {
+      create({
+        token: linkToken,
+      });
+
+      open({
+        onSuccess: async (success: LinkSuccess) => {
+          setIsLinking(true);
+          try {
+            await plaidService.exchangePublicToken(userId, success.publicToken);
+            router.replace('/(tabs)/home');
+          } catch (error) {
+            console.error('Error al guardar conexión bancaria:', error);
+            Alert.alert('Error', 'No se pudo guardar la conexión de forma segura.');
+            setIsLinking(false);
+          }
+        },
+        onExit: (exit: LinkExit) => {
+          console.log('El usuario canceló o cerró Plaid', exit);
+          setIsLinking(false);
+        },
+      });
+    }
+  }, [linkToken]);
+  // -------------------------
+
   const tightLayout = windowH < 700;
   const ringSize = tightLayout ? 148 : RING_SIZE;
   const ringR = tightLayout ? 52 : RING_R;
@@ -291,16 +341,30 @@ export default function LinkBankScreen() {
     router.replace('/(auth)/login');
   }
 
-  function completeOnboardingStub() {
-    Alert.alert(
-      'Plaid',
-      'En producción se abrirá el flujo seguro de Plaid (SDK nativo + link_token). Por ahora es una demo.',
-      [{ text: 'Continuar', onPress: () => router.replace('/(tabs)/home') }],
-    );
-  }
-
+  // Fase 3: Disparador del CTA
   function handleCtaPress() {
-    completeOnboardingStub();
+    if (!linkToken) {
+      Alert.alert('Cargando', 'Preparando conexión segura, por favor espera un momento...');
+      return;
+    }
+    setIsLinking(true);
+    open({
+      onSuccess: async (success: LinkSuccess) => {
+        setIsLinking(true);
+        try {
+          await plaidService.exchangePublicToken(userId, success.publicToken);
+          router.replace('/(tabs)/home');
+        } catch (error) {
+          console.error('Error al guardar conexión bancaria:', error);
+          Alert.alert('Error', 'No se pudo guardar la conexión de forma segura.');
+          setIsLinking(false);
+        }
+      },
+      onExit: (exit: LinkExit) => {
+        console.log('El usuario canceló o cerró Plaid', exit);
+        setIsLinking(false);
+      },
+    });
   }
 
   return (
@@ -355,54 +419,54 @@ export default function LinkBankScreen() {
 
                 <EnterFadeSlide delay={140} style={styles.ringEnterWrap}>
                   <View style={[styles.ringStage, { width: ringSize, height: ringSize }]}>
-                  <PulsingRingGlow ringSize={ringSize} style={styles.ringGlowOuter} />
-                  <View
-                    style={[
-                      styles.ringGlowInner,
-                      {
-                        width: ringSize + 16,
-                        height: ringSize + 16,
-                        borderRadius: (ringSize + 16) / 2,
-                        marginTop: -(ringSize + 16) / 2,
-                        marginLeft: -(ringSize + 16) / 2,
-                      },
-                    ]}
-                  />
-                  <View style={[styles.ringBlock, { width: ringSize, height: ringSize }]}>
-                    <AnimatedProgressRing
-                      ringSize={ringSize}
-                      ringCx={ringCx}
-                      ringCy={ringCy}
-                      ringR={ringR}
-                      ringCirc={ringCirc}
-                    />
-                    <LinearGradient
-                      colors={['rgba(255,255,255,0.92)', 'rgba(248,250,252,0.75)']}
+                    <PulsingRingGlow ringSize={ringSize} style={styles.ringGlowOuter} />
+                    <View
                       style={[
-                        styles.ringInnerDisc,
+                        styles.ringGlowInner,
                         {
-                          width: (ringR - RING_STROKE) * 2 - 10,
-                          height: (ringR - RING_STROKE) * 2 - 10,
-                          borderRadius: ringR - RING_STROKE,
+                          width: ringSize + 16,
+                          height: ringSize + 16,
+                          borderRadius: (ringSize + 16) / 2,
+                          marginTop: -(ringSize + 16) / 2,
+                          marginLeft: -(ringSize + 16) / 2,
                         },
                       ]}
                     />
-                    <View style={styles.ringCenter} pointerEvents="none">
-                      <BreathingIconBadge>
-                        <View style={styles.ringIconBadge}>
-                          <Sparkles size={18} color={PrismColors.primary} strokeWidth={2} />
+                    <View style={[styles.ringBlock, { width: ringSize, height: ringSize }]}>
+                      <AnimatedProgressRing
+                        ringSize={ringSize}
+                        ringCx={ringCx}
+                        ringCy={ringCy}
+                        ringR={ringR}
+                        ringCirc={ringCirc}
+                      />
+                      <LinearGradient
+                        colors={['rgba(255,255,255,0.92)', 'rgba(248,250,252,0.75)']}
+                        style={[
+                          styles.ringInnerDisc,
+                          {
+                            width: (ringR - RING_STROKE) * 2 - 10,
+                            height: (ringR - RING_STROKE) * 2 - 10,
+                            borderRadius: ringR - RING_STROKE,
+                          },
+                        ]}
+                      />
+                      <View style={styles.ringCenter} pointerEvents="none">
+                        <BreathingIconBadge>
+                          <View style={styles.ringIconBadge}>
+                            <Sparkles size={18} color={PrismColors.primary} strokeWidth={2} />
+                          </View>
+                        </BreathingIconBadge>
+                        <RingStatusCycle messages={RING_STATUS_MESSAGES} tightLayout={tightLayout} />
+                        <View style={styles.ringAwaitRow}>
+                          <Landmark size={12} color={PrismColors.tertiary} strokeWidth={2} />
+                          <Text style={styles.ringAwaitHint} numberOfLines={1}>
+                            Vía Plaid
+                          </Text>
                         </View>
-                      </BreathingIconBadge>
-                      <RingStatusCycle messages={RING_STATUS_MESSAGES} tightLayout={tightLayout} />
-                      <View style={styles.ringAwaitRow}>
-                        <Landmark size={12} color={PrismColors.tertiary} strokeWidth={2} />
-                        <Text style={styles.ringAwaitHint} numberOfLines={1}>
-                          Vía Plaid
-                        </Text>
                       </View>
                     </View>
                   </View>
-                </View>
                 </EnterFadeSlide>
 
                 <View style={styles.valueGrid}>
@@ -411,28 +475,28 @@ export default function LinkBankScreen() {
                       key={title}
                       delay={220 + index * 52}
                       style={styles.valueCellEnter}>
-                    <View
-                      style={[
-                        styles.valueCell,
-                        styles.valueCellDimmed,
-                        tightLayout && styles.valueCellTight,
-                      ]}>
-                      <View style={styles.valueIconWrap}>
-                        <Icon
-                          size={tightLayout ? 16 : 18}
-                          color={PrismColors.primary}
-                          strokeWidth={2}
-                        />
+                      <View
+                        style={[
+                          styles.valueCell,
+                          styles.valueCellDimmed,
+                          tightLayout && styles.valueCellTight,
+                        ]}>
+                        <View style={styles.valueIconWrap}>
+                          <Icon
+                            size={tightLayout ? 16 : 18}
+                            color={PrismColors.primary}
+                            strokeWidth={2}
+                          />
+                        </View>
+                        <Text style={[styles.valueTitle, tightLayout && styles.valueTitleTight]} numberOfLines={1}>
+                          {title}
+                        </Text>
+                        <Text
+                          style={[styles.valueBody, tightLayout && styles.valueBodyTight]}
+                          numberOfLines={tightLayout ? 2 : 3}>
+                          {body}
+                        </Text>
                       </View>
-                      <Text style={[styles.valueTitle, tightLayout && styles.valueTitleTight]} numberOfLines={1}>
-                        {title}
-                      </Text>
-                      <Text
-                        style={[styles.valueBody, tightLayout && styles.valueBodyTight]}
-                        numberOfLines={tightLayout ? 2 : 3}>
-                        {body}
-                      </Text>
-                    </View>
                     </EnterFadeSlide>
                   ))}
                 </View>
@@ -442,12 +506,13 @@ export default function LinkBankScreen() {
 
           <View style={[styles.footer, { paddingBottom: insets.bottom + Spacing.sm }]}>
             <EnterFadeSlide delay={400}>
-              <Pressable
+              <TouchableOpacity
                 onPress={handleCtaPress}
-                style={({ pressed }) => [
+                disabled={isLinking}
+                style={[
                   styles.ctaPress,
                   Shadow.button,
-                  pressed && styles.ctaPressed,
+                  isLinking && styles.disabledButton
                 ]}>
                 <LinearGradient
                   colors={[PrismColors.primary, PrismColors.secondary]}
@@ -455,11 +520,11 @@ export default function LinkBankScreen() {
                   end={{ x: 1, y: 0.5 }}
                   style={styles.ctaGradient}>
                   <Text style={styles.ctaLabel} numberOfLines={1}>
-                    Vincular con Plaid
+                    {isLinking ? 'Conectando...' : 'Vincular con Plaid'}
                   </Text>
-                  <ChevronRight size={18} color="#FFFFFF" strokeWidth={2.5} />
+                  {!isLinking && <ChevronRight size={18} color="#FFFFFF" strokeWidth={2.5} />}
                 </LinearGradient>
-              </Pressable>
+              </TouchableOpacity>
             </EnterFadeSlide>
 
             <EnterFadeSlide delay={460}>
@@ -719,6 +784,9 @@ const styles = StyleSheet.create({
   ctaPressed: {
     opacity: 0.95,
     transform: [{ scale: 0.98 }],
+  },
+  disabledButton: {
+    opacity: 0.6,
   },
   ctaGradient: {
     flexDirection: 'row',
