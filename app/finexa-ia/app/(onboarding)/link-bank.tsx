@@ -290,7 +290,7 @@ export default function LinkBankScreen() {
     async function fetchLinkToken() {
       try {
         const data = await plaidService.createLinkToken(userId);
-        setLinkToken(data.link_token);
+        setLinkToken(data.data?.link_token ?? null);
       } catch (error) {
         console.error('Error al obtener el link_token:', error);
         Alert.alert('Error', 'No se pudo conectar con el servidor bancario.');
@@ -324,7 +324,7 @@ export default function LinkBankScreen() {
         },
       });
     }
-  }, [linkToken]);
+  }, [linkToken, router]);
   // -------------------------
 
   const tightLayout = windowH < 700;
