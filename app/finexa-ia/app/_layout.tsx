@@ -1,3 +1,5 @@
+import 'react-native-get-random-values';
+
 import {
   PlusJakartaSans_400Regular,
   PlusJakartaSans_500Medium,
@@ -14,6 +16,9 @@ import 'react-native-reanimated';
 
 import { FinexaDarkTheme, FinexaLightTheme } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { configureAmplify } from '@/lib/amplify/configure';
+
+configureAmplify();
 
 SplashScreen.preventAutoHideAsync();
 

@@ -28,6 +28,12 @@ declare module 'lucide-react-native/dist/esm/icons/globe.js' {
   export default Globe;
 }
 
+declare module 'lucide-react-native/dist/esm/icons/hash.js' {
+  import type { LucideIcon } from 'lucide-react-native';
+  const Hash: LucideIcon;
+  export default Hash;
+}
+
 declare module 'lucide-react-native/dist/esm/icons/lock.js' {
   import type { LucideIcon } from 'lucide-react-native';
   const Lock: LucideIcon;

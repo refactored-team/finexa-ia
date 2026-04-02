@@ -1,4 +1,4 @@
-import { Link } from 'expo-router';
+import { Link, useRouter } from 'expo-router';
 import { Lock, Mail } from '@/constants/lucideIcons';
 import { useMemo, useState } from 'react';
 import {
@@ -27,8 +27,10 @@ import {
 } from '@/components/auth';
 import { Layout, Spacing, TextStyles } from '@/constants/uiStyles';
 import { useScrollOnlyIfOverflow } from '@/hooks/use-scroll-only-if-overflow';
+import { signInWithEmailPassword } from '@/lib/auth/cognito';
 
 export default function LoginScreen() {
+  const router = useRouter();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const { scrollEnabled, onScrollViewLayout, onContentSizeChange } = useScrollOnlyIfOverflow();
@@ -53,12 +55,33 @@ export default function LoginScreen() {
     [insets.top, insets.bottom, width],
   );
 
-  function handleSubmit() {
+  async function handleSubmit() {
+    if (!email.trim() || !password) {
+      Alert.alert('Datos incompletos', 'Ingresá correo y contraseña.');
+      return;
+    }
     setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      Alert.alert('Inicio de sesión', 'Sesión iniciada (demo). Conectá tu backend después.');
-    }, 600);
+    const result = await signInWithEmailPassword(email, password);
+    setLoading(false);
+    if (result.ok) {
+      router.replace('/(tabs)/home');
+      return;
+    }
+    if (result.code === 'UserNotConfirmedException') {
+      Alert.alert('Confirmá tu correo', result.message, [
+        {
+          text: 'Ir a confirmar',
+          onPress: () =>
+            router.push({
+              pathname: '/confirm-signup',
+              params: { email: email.trim() },
+            }),
+        },
+        { text: 'OK', style: 'cancel' },
+      ]);
+      return;
+    }
+    Alert.alert('Inicio de sesión', result.message);
   }
 
   return (

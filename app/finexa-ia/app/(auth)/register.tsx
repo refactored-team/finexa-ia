@@ -1,4 +1,4 @@
-import { Link } from 'expo-router';
+import { Link, useRouter } from 'expo-router';
 import { Lock, Mail, User } from '@/constants/lucideIcons';
 import { useMemo, useState } from 'react';
 import {
@@ -28,8 +28,10 @@ import {
 } from '@/components/auth';
 import { PrismColors } from '@/constants/theme';
 import { Layout, Spacing, TextStyles } from '@/constants/uiStyles';
+import { signUpWithEmailPassword } from '@/lib/auth/cognito';
 
 export default function RegisterScreen() {
+  const router = useRouter();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
 
@@ -72,13 +74,37 @@ export default function RegisterScreen() {
     setStep(2);
   }
 
-  function handleSubmit() {
+  async function handleSubmit() {
     if (!validateStep1()) return;
     setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      Alert.alert('Registro', 'Cuenta creada (demo). Conectá tu backend después.');
-    }, 600);
+    const result = await signUpWithEmailPassword(email, password, name);
+    setLoading(false);
+    if (!result.ok) {
+      Alert.alert('Registro', result.message);
+      return;
+    }
+    if (result.data.nextStep === 'CONFIRM_SIGN_UP') {
+      Alert.alert('Revisá tu correo', 'Te enviamos un código para confirmar la cuenta.', [
+        {
+          text: 'Continuar',
+          onPress: () =>
+            router.replace({
+              pathname: '/confirm-signup',
+              params: { email: email.trim() },
+            }),
+        },
+      ]);
+      return;
+    }
+    if (result.data.nextStep === 'COMPLETE_AUTO_SIGN_IN') {
+      router.replace('/(tabs)/home');
+      return;
+    }
+    if (result.data.nextStep === 'DONE') {
+      Alert.alert('Listo', 'Tu cuenta fue creada.', [
+        { text: 'OK', onPress: () => router.replace('/(tabs)/home') },
+      ]);
+    }
   }
 
   return (
@@ -173,7 +199,7 @@ export default function RegisterScreen() {
                 <View style={styles.sectionHeader}>
                   <Text style={TextStyles.screenTitle}>Casi listo</Text>
                   <Text style={[TextStyles.caption, styles.subtitle]} numberOfLines={2}>
-                    Google o Apple (próximamente).
+                    Creá tu cuenta con email o usá Google o Apple (próximamente).
                   </Text>
                 </View>
 
