@@ -24,8 +24,10 @@ import {
   PasswordVisibilityToggle,
 } from '@/components/auth';
 import { Layout, Spacing, TextStyles } from '@/constants/uiStyles';
+import { followSignInResult } from '@/lib/auth/followSignInResult';
+import { setLastSignInEmail } from '@/lib/auth/lastSignInContext';
+import { signInWithEmailPassword } from '@/lib/auth/cognito';
 import { useScrollOnlyIfOverflow } from '@/hooks/use-scroll-only-if-overflow';
-import { requestPasswordReset, signInWithEmailPassword } from '@/lib/auth/cognito';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -57,80 +59,15 @@ export default function LoginScreen() {
       Alert.alert('Datos incompletos', 'Ingresá correo y contraseña.');
       return;
     }
+    const trimmedEmail = email.trim().toLowerCase();
+    setLastSignInEmail(trimmedEmail);
     setLoading(true);
     const result = await signInWithEmailPassword(email, password);
     setLoading(false);
-
-    if (!result.ok) {
-      if (result.code === 'UserNotConfirmedException') {
-        Alert.alert('Confirmá tu correo', result.message, [
-          {
-            text: 'Ir a confirmar',
-            onPress: () =>
-              router.push({
-                pathname: '/confirm-signup',
-                params: { email: email.trim() },
-              }),
-          },
-          { text: 'OK', style: 'cancel' },
-        ]);
-        return;
-      }
-      Alert.alert('Inicio de sesión', result.message);
-      return;
-    }
-
-    const { data } = result;
-    if (data.kind === 'signed_in') {
-      router.replace('/(tabs)/home');
-      return;
-    }
-    if (data.kind === 'needs_confirm_sign_up') {
-      router.push({
-        pathname: '/confirm-signup',
-        params: { email: data.email },
-      });
-      return;
-    }
-    if (data.kind === 'needs_password_reset') {
-      setLoading(true);
-      const send = await requestPasswordReset(email);
-      setLoading(false);
-      if (!send.ok) {
-        Alert.alert('Restablecer contraseña', send.message);
-        return;
-      }
-      Alert.alert(
-        'Revisá tu correo',
-        'Te enviamos un código para definir una nueva contraseña.',
-        [
-          {
-            text: 'Continuar',
-            onPress: () =>
-              router.replace({
-                pathname: '/reset-password',
-                params: { email: data.email },
-              }),
-          },
-        ],
-      );
-      return;
-    }
-    if (data.kind === 'needs_new_password') {
-      router.push('/new-password');
-      return;
-    }
-    if (data.kind === 'needs_verification_code') {
-      router.push({
-        pathname: '/sign-in-challenge',
-        params: { channel: data.channel },
-      });
-      return;
-    }
-    Alert.alert(
-      'Inicio de sesión',
-      `Tu cuenta requiere un paso que esta app aún no soporta (${data.signInStep}). Revisá la configuración del pool en AWS o contactá soporte.`,
-    );
+    await followSignInResult(router, result, {
+      email: trimmedEmail,
+      setLoading,
+    });
   }
 
   return (

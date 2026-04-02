@@ -1,5 +1,6 @@
 import { Link, useRouter } from 'expo-router';
 import { Lock, Mail, User } from '@/constants/lucideIcons';
+import { buildE164, getDefaultPhoneCountry, type PhoneCountry } from '@/constants/phoneCountries';
 import { useMemo, useState } from 'react';
 import {
   Alert,
@@ -16,17 +17,27 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import {
   AuthBackground,
+  AuthBirthDateField,
   AuthBranding,
   AuthCard,
   AuthHelpButton,
   AuthPasswordStrength,
+  AuthPhoneField,
   AuthPrimaryButton,
   AuthTextField,
   PasswordVisibilityToggle,
 } from '@/components/auth';
 import { PrismColors } from '@/constants/theme';
 import { Layout, Spacing, TextStyles } from '@/constants/uiStyles';
-import { signUpWithEmailPassword } from '@/lib/auth/cognito';
+import {
+  isValidBirthdate,
+  isValidPhoneE164,
+  signUpWithProfile,
+} from '@/lib/auth/cognito';
+import {
+  passwordMeetsCognitoLikePolicy,
+  passwordMissingPartsSpanish,
+} from '@/lib/auth/passwordPolicy';
 
 export default function RegisterScreen() {
   const router = useRouter();
@@ -34,6 +45,10 @@ export default function RegisterScreen() {
   const { width } = useWindowDimensions();
 
   const [name, setName] = useState('');
+  const [middleName, setMiddleName] = useState('');
+  const [birthdate, setBirthdate] = useState('');
+  const [phoneCountry, setPhoneCountry] = useState<PhoneCountry>(() => getDefaultPhoneCountry());
+  const [phoneNational, setPhoneNational] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [passwordVisible, setPasswordVisible] = useState(false);
@@ -54,9 +69,43 @@ export default function RegisterScreen() {
     [insets.top, insets.bottom, width],
   );
 
+  const phoneE164 = useMemo(
+    () => buildE164(phoneCountry, phoneNational),
+    [phoneCountry, phoneNational],
+  );
+
   function validateForm(): boolean {
-    if (!name.trim() || !email.trim() || !password) {
-      Alert.alert('Datos incompletos', 'Completá nombre, correo y contraseña.');
+    if (!name.trim() || !middleName.trim() || !email.trim() || !password) {
+      Alert.alert('Datos incompletos', 'Completá nombre, nombre intermedio, correo y contraseña.');
+      return false;
+    }
+    if (!birthdate.trim()) {
+      Alert.alert('Fecha de nacimiento', 'Ingresá tu fecha de nacimiento.');
+      return false;
+    }
+    if (!isValidBirthdate(birthdate.trim())) {
+      Alert.alert(
+        'Fecha de nacimiento',
+        'Elegí una fecha válida usando el calendario (no podés ser futuro).',
+      );
+      return false;
+    }
+    if (!phoneNational.trim()) {
+      Alert.alert('Teléfono', 'Ingresá tu número (sin el código de país; ya está en la bandera).');
+      return false;
+    }
+    if (!isValidPhoneE164(phoneE164)) {
+      Alert.alert(
+        'Teléfono',
+        'Completá un número válido para el país elegido (formato internacional E.164).',
+      );
+      return false;
+    }
+    if (!passwordMeetsCognitoLikePolicy(password)) {
+      Alert.alert(
+        'Contraseña',
+        `Tu contraseña debe cumplir lo que pide Cognito. Falta: ${passwordMissingPartsSpanish(password)}.`,
+      );
       return false;
     }
     if (!termsAccepted) {
@@ -69,14 +118,26 @@ export default function RegisterScreen() {
   async function handleSubmit() {
     if (!validateForm()) return;
     setLoading(true);
-    const result = await signUpWithEmailPassword(email, password, name);
+    const result = await signUpWithProfile({
+      email: email.trim(),
+      password,
+      name: name.trim(),
+      middle_name: middleName.trim(),
+      birthdate: birthdate.trim(),
+      phone_number: phoneE164,
+    });
     setLoading(false);
     if (!result.ok) {
       Alert.alert('Registro', result.message);
       return;
     }
     if (result.data.nextStep === 'CONFIRM_SIGN_UP') {
-      Alert.alert('Revisá tu correo', 'Te enviamos un código para confirmar la cuenta.', [
+      Alert.alert(
+        'Revisá tu correo',
+        'Te enviamos un código para confirmar la cuenta.\n\n' +
+          'Si no llega en unos minutos: mirá spam y promociones; el remitente suele ser de Amazon/Cognito.\n\n' +
+          'En la siguiente pantalla podés usar «Reenviar código». Si en AWS configuraste Amazon SES en modo sandbox, el correo solo se entrega a direcciones verificadas en SES (o tenés que salir del sandbox).',
+        [
         {
           text: 'Continuar',
           onPress: () =>
@@ -115,19 +176,39 @@ export default function RegisterScreen() {
             <AuthCard>
               <View style={styles.sectionHeader}>
                 <Text style={TextStyles.screenTitle}>Crear cuenta</Text>
-                <Text style={[TextStyles.caption, styles.subtitle]} numberOfLines={2}>
-                  Completá tus datos para registrarte.
+                <Text style={[TextStyles.caption, styles.subtitle]} numberOfLines={3}>
+                  Los datos deben coincidir con los atributos requeridos de tu cuenta en Cognito.
                 </Text>
               </View>
 
               <View style={Layout.formColumn}>
                 <AuthTextField
-                  label="Nombre completo"
+                  label="Nombre"
                   placeholder="Nombre"
                   value={name}
                   onChangeText={setName}
                   icon={User}
                   autoCapitalize="words"
+                />
+                <AuthTextField
+                  label="Nombre intermedio"
+                  placeholder="Segundo nombre o apellido"
+                  value={middleName}
+                  onChangeText={setMiddleName}
+                  icon={User}
+                  autoCapitalize="words"
+                />
+                <AuthBirthDateField
+                  label="Fecha de nacimiento"
+                  value={birthdate}
+                  onChangeIso={setBirthdate}
+                />
+                <AuthPhoneField
+                  label="Teléfono móvil"
+                  country={phoneCountry}
+                  onSelectCountry={setPhoneCountry}
+                  nationalDigits={phoneNational}
+                  onChangeNationalDigits={setPhoneNational}
                 />
                 <AuthTextField
                   label="Correo electrónico"

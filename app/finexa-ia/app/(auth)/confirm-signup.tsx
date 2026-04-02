@@ -76,7 +76,10 @@ export default function ConfirmSignUpScreen() {
     const result = await resendConfirmationCode(email);
     setResendLoading(false);
     if (result.ok) {
-      Alert.alert('Código reenviado', 'Revisá tu bandeja de entrada.');
+      Alert.alert(
+        'Código reenviado',
+        'Revisá entrada y spam en unos minutos. Si usás SES en sandbox, el destino tiene que estar verificado en Amazon SES.',
+      );
     } else {
       Alert.alert('Error', result.message);
     }
@@ -99,7 +102,9 @@ export default function ConfirmSignUpScreen() {
               <View style={styles.sectionHeader}>
                 <Text style={TextStyles.screenTitle}>Confirmá tu correo</Text>
                 <Text style={[TextStyles.caption, styles.subtitle]}>
-                  Ingresá el código que enviamos a tu email.
+                  Ingresá el código que envió Cognito a tu correo. Si no llega, revisá spam y usá «Reenviar código».
+                  {'\n\n'}
+                  Si tu pool usa Amazon SES en sandbox, ese email debe estar verificado en SES para recibir mensajes.
                 </Text>
               </View>
 

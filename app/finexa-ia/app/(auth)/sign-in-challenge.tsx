@@ -22,7 +22,14 @@ import {
   AuthTextField,
 } from '@/components/auth';
 import { Layout, Spacing, TextStyles } from '@/constants/uiStyles';
+import { followSignInResult } from '@/lib/auth/followSignInResult';
+import { getLastSignInEmail } from '@/lib/auth/lastSignInContext';
 import { submitSignInChallengeCode } from '@/lib/auth/cognito';
+
+function parseChannel(raw: string | undefined): 'sms' | 'email' | 'totp' {
+  if (raw === 'sms' || raw === 'email' || raw === 'totp') return raw;
+  return 'email';
+}
 
 export default function SignInChallengeScreen() {
   const router = useRouter();
@@ -30,7 +37,7 @@ export default function SignInChallengeScreen() {
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
 
-  const channel = params.channel === 'sms' ? 'sms' : 'email';
+  const channel = parseChannel(typeof params.channel === 'string' ? params.channel : undefined);
   const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -51,7 +58,9 @@ export default function SignInChallengeScreen() {
   const subtitle =
     channel === 'sms'
       ? 'Ingresá el código que enviamos por SMS.'
-      : 'Ingresá el código que enviamos a tu correo.';
+      : channel === 'totp'
+        ? 'Ingresá el código de 6 dígitos de tu app autenticadora.'
+        : 'Ingresá el código que enviamos a tu correo.';
 
   async function handleSubmit() {
     if (!code.trim()) {
@@ -61,25 +70,10 @@ export default function SignInChallengeScreen() {
     setLoading(true);
     const result = await submitSignInChallengeCode(code);
     setLoading(false);
-    if (!result.ok) {
-      Alert.alert('Verificación', result.message);
-      return;
-    }
-    if (result.data.kind === 'signed_in') {
-      router.replace('/(tabs)/home');
-      return;
-    }
-    if (result.data.kind === 'unsupported_challenge') {
-      Alert.alert(
-        'Siguiente paso',
-        `Se requiere otro paso que la app aún no soporta (${result.data.signInStep}).`,
-      );
-      return;
-    }
-    Alert.alert(
-      'Verificación',
-      'El inicio de sesión no se completó. Probá de nuevo o iniciá sesión otra vez.',
-    );
+    await followSignInResult(router, result, {
+      email: getLastSignInEmail(),
+      setLoading,
+    });
   }
 
   return (

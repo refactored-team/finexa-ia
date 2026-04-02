@@ -1,6 +1,6 @@
 import { Link, useRouter } from 'expo-router';
-import { Lock } from '@/constants/lucideIcons';
-import { useMemo, useState } from 'react';
+import { Hash } from '@/constants/lucideIcons';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -12,36 +12,41 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
+import QRCode from 'react-native-qrcode-svg';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
   AuthBackground,
   AuthBranding,
   AuthCard,
-  AuthPasswordStrength,
   AuthPrimaryButton,
   AuthTextField,
-  PasswordVisibilityToggle,
 } from '@/components/auth';
+import { PrismColors } from '@/constants/theme';
 import { Layout, Spacing, TextStyles } from '@/constants/uiStyles';
 import { followSignInResult } from '@/lib/auth/followSignInResult';
 import { getLastSignInEmail } from '@/lib/auth/lastSignInContext';
-import { submitSignInNewPassword } from '@/lib/auth/cognito';
-import {
-  passwordMeetsCognitoLikePolicy,
-  passwordMissingPartsSpanish,
-} from '@/lib/auth/passwordPolicy';
+import { submitSignInChallengeCode } from '@/lib/auth/cognito';
+import { getPendingTotpSetup } from '@/lib/auth/totpSetupStore';
 
-export default function NewPasswordScreen() {
+export default function TotpSetupScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
 
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [passwordVisible, setPasswordVisible] = useState(false);
-  const [confirmVisible, setConfirmVisible] = useState(false);
+  const [setup, setSetup] = useState<{ setupUri: string; sharedSecret: string } | null>(() =>
+    getPendingTotpSetup() ?? null,
+  );
+  const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!setup) {
+      Alert.alert('Sesión', 'Volvé a iniciar sesión para configurar la app autenticadora.', [
+        { text: 'OK', onPress: () => router.replace('/login') },
+      ]);
+    }
+  }, [setup, router]);
 
   const scrollContentStyle = useMemo(
     () => [
@@ -58,28 +63,25 @@ export default function NewPasswordScreen() {
   );
 
   async function handleSubmit() {
-    if (!password) {
-      Alert.alert('Contraseña', 'Ingresá una nueva contraseña.');
-      return;
-    }
-    if (password !== confirmPassword) {
-      Alert.alert('Contraseñas', 'La confirmación no coincide.');
-      return;
-    }
-    if (!passwordMeetsCognitoLikePolicy(password)) {
-      Alert.alert(
-        'Contraseña',
-        `Tu contraseña debe cumplir lo que pide Cognito. Falta: ${passwordMissingPartsSpanish(password)}.`,
-      );
+    if (!code.trim()) {
+      Alert.alert('Código', 'Ingresá el código de 6 dígitos de tu app autenticadora.');
       return;
     }
     setLoading(true);
-    const result = await submitSignInNewPassword(password);
+    const result = await submitSignInChallengeCode(code);
     setLoading(false);
     await followSignInResult(router, result, {
       email: getLastSignInEmail(),
       setLoading,
     });
+  }
+
+  if (!setup) {
+    return (
+      <AuthBackground>
+        <SafeAreaView style={Layout.flex1} edges={['left', 'right']} />
+      </AuthBackground>
+    );
   }
 
   return (
@@ -97,45 +99,33 @@ export default function NewPasswordScreen() {
 
             <AuthCard>
               <View style={styles.sectionHeader}>
-                <Text style={TextStyles.screenTitle}>Nueva contraseña</Text>
+                <Text style={TextStyles.screenTitle}>App autenticadora</Text>
                 <Text style={[TextStyles.caption, styles.subtitle]}>
-                  Tu cuenta requiere definir una contraseña nueva antes de continuar.
+                  Escaneá el código con Google Authenticator, Authy u otra app compatible. Si no podés
+                  escanear, ingresá la clave manualmente.
                 </Text>
               </View>
 
-              <View style={Layout.formColumn}>
-                <View>
-                  <AuthTextField
-                    label="Nueva contraseña"
-                    placeholder="······"
-                    value={password}
-                    onChangeText={setPassword}
-                    icon={Lock}
-                    secureTextEntry={!passwordVisible}
-                    rightAccessory={
-                      <PasswordVisibilityToggle
-                        visible={passwordVisible}
-                        onToggle={() => setPasswordVisible((v) => !v)}
-                      />
-                    }
-                  />
-                  <AuthPasswordStrength password={password} />
-                </View>
+              <View style={styles.qrWrap}>
+                <QRCode value={setup.setupUri} size={200} />
+              </View>
+
+              <Text style={[TextStyles.caption, styles.secretLabel]}>Clave manual</Text>
+              <Text selectable style={styles.secret}>
+                {setup.sharedSecret}
+              </Text>
+
+              <View style={[Layout.formColumn, styles.formTop]}>
                 <AuthTextField
-                  label="Confirmar contraseña"
-                  placeholder="······"
-                  value={confirmPassword}
-                  onChangeText={setConfirmPassword}
-                  icon={Lock}
-                  secureTextEntry={!confirmVisible}
-                  rightAccessory={
-                    <PasswordVisibilityToggle
-                      visible={confirmVisible}
-                      onToggle={() => setConfirmVisible((v) => !v)}
-                    />
-                  }
+                  label="Código de verificación"
+                  placeholder="123456"
+                  value={code}
+                  onChangeText={setCode}
+                  icon={Hash}
+                  keyboardType="number-pad"
+                  autoCapitalize="none"
                 />
-                <AuthPrimaryButton title="Continuar" onPress={handleSubmit} loading={loading} />
+                <AuthPrimaryButton title="Confirmar" onPress={handleSubmit} loading={loading} />
               </View>
             </AuthCard>
 
@@ -160,10 +150,30 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   sectionHeader: {
-    marginBottom: Spacing.xl,
+    marginBottom: Spacing.lg,
   },
   subtitle: {
     marginTop: Spacing.xs,
+  },
+  qrWrap: {
+    alignItems: 'center',
+    marginBottom: Spacing.lg,
+    padding: Spacing.md,
+    backgroundColor: PrismColors.surface,
+    borderRadius: 12,
+    alignSelf: 'center',
+  },
+  secretLabel: {
+    marginBottom: Spacing.xs,
+  },
+  secret: {
+    fontFamily: 'monospace',
+    fontSize: 13,
+    color: PrismColors.textPrimary,
+    marginBottom: Spacing.lg,
+  },
+  formTop: {
+    marginTop: Spacing.sm,
   },
   footer: {
     marginTop: Spacing.md,
