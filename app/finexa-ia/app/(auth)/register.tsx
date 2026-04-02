@@ -18,13 +18,11 @@ import {
   AuthBackground,
   AuthBranding,
   AuthCard,
-  AuthDivider,
   AuthHelpButton,
   AuthPasswordStrength,
   AuthPrimaryButton,
   AuthTextField,
   PasswordVisibilityToggle,
-  SocialAuthButtons,
 } from '@/components/auth';
 import { PrismColors } from '@/constants/theme';
 import { Layout, Spacing, TextStyles } from '@/constants/uiStyles';
@@ -35,7 +33,6 @@ export default function RegisterScreen() {
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
 
-  const [step, setStep] = useState<1 | 2>(1);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -57,7 +54,7 @@ export default function RegisterScreen() {
     [insets.top, insets.bottom, width],
   );
 
-  function validateStep1(): boolean {
+  function validateForm(): boolean {
     if (!name.trim() || !email.trim() || !password) {
       Alert.alert('Datos incompletos', 'Completá nombre, correo y contraseña.');
       return false;
@@ -69,13 +66,8 @@ export default function RegisterScreen() {
     return true;
   }
 
-  function handleNext() {
-    if (!validateStep1()) return;
-    setStep(2);
-  }
-
   async function handleSubmit() {
-    if (!validateStep1()) return;
+    if (!validateForm()) return;
     setLoading(true);
     const result = await signUpWithEmailPassword(email, password, name);
     setLoading(false);
@@ -120,101 +112,82 @@ export default function RegisterScreen() {
             showsVerticalScrollIndicator={false}>
             <AuthBranding />
 
-            {step === 1 ? (
-              <AuthCard>
-                <View style={styles.sectionHeader}>
-                  <Text style={TextStyles.screenTitle}>Crear cuenta</Text>
+            <AuthCard>
+              <View style={styles.sectionHeader}>
+                <Text style={TextStyles.screenTitle}>Crear cuenta</Text>
+                <Text style={[TextStyles.caption, styles.subtitle]} numberOfLines={2}>
+                  Completá tus datos para registrarte.
+                </Text>
+              </View>
+
+              <View style={Layout.formColumn}>
+                <AuthTextField
+                  label="Nombre completo"
+                  placeholder="Nombre"
+                  value={name}
+                  onChangeText={setName}
+                  icon={User}
+                  autoCapitalize="words"
+                />
+                <AuthTextField
+                  label="Correo electrónico"
+                  placeholder="correo"
+                  value={email}
+                  onChangeText={setEmail}
+                  icon={Mail}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                />
+                <View>
+                  <AuthTextField
+                    label="Contraseña"
+                    placeholder="······"
+                    value={password}
+                    onChangeText={setPassword}
+                    icon={Lock}
+                    secureTextEntry={!passwordVisible}
+                    rightAccessory={
+                      <PasswordVisibilityToggle
+                        visible={passwordVisible}
+                        onToggle={() => setPasswordVisible((v) => !v)}
+                      />
+                    }
+                  />
+                  <AuthPasswordStrength password={password} />
                 </View>
 
-                <View style={Layout.formColumn}>
-                  <AuthTextField
-                    label="Nombre completo"
-                    placeholder="Nombre"
-                    value={name}
-                    onChangeText={setName}
-                    icon={User}
-                    autoCapitalize="words"
-                  />
-                  <AuthTextField
-                    label="Correo electrónico"
-                    placeholder="correo"
-                    value={email}
-                    onChangeText={setEmail}
-                    icon={Mail}
-                    keyboardType="email-address"
-                    autoCapitalize="none"
-                  />
-                  <View>
-                    <AuthTextField
-                      label="Contraseña"
-                      placeholder="······"
-                      value={password}
-                      onChangeText={setPassword}
-                      icon={Lock}
-                      secureTextEntry={!passwordVisible}
-                      rightAccessory={
-                        <PasswordVisibilityToggle
-                          visible={passwordVisible}
-                          onToggle={() => setPasswordVisible((v) => !v)}
-                        />
-                      }
-                    />
-                    <AuthPasswordStrength password={password} />
-                  </View>
-
-                  <View style={[Layout.termsRow, styles.termsRowDense]}>
-                    <Pressable
-                      onPress={() => setTermsAccepted((v) => !v)}
-                      style={[
-                        styles.checkbox,
-                        {
-                          borderColor: PrismColors.primaryBorder,
-                          backgroundColor: termsAccepted ? PrismColors.primary : PrismColors.surface,
-                        },
-                      ]}
-                      accessibilityRole="checkbox"
-                      accessibilityState={{ checked: termsAccepted }}>
-                      {termsAccepted ? <Text style={TextStyles.checkboxMark}>✓</Text> : null}
-                    </Pressable>
-                    <Text style={[TextStyles.terms, styles.termsWrap]}>
-                      Acepto los{' '}
-                      <Text style={TextStyles.link} onPress={() => Alert.alert('Términos', 'Contenido próximamente.')}>
-                        Términos del servicio
-                      </Text>{' '}
-                      y la{' '}
-                      <Text
-                        style={TextStyles.link}
-                        onPress={() => Alert.alert('Privacidad', 'Contenido próximamente.')}>
-                        Política de privacidad
-                      </Text>
-                      .
+                <View style={[Layout.termsRow, styles.termsRowDense]}>
+                  <Pressable
+                    onPress={() => setTermsAccepted((v) => !v)}
+                    style={[
+                      styles.checkbox,
+                      {
+                        borderColor: PrismColors.primaryBorder,
+                        backgroundColor: termsAccepted ? PrismColors.primary : PrismColors.surface,
+                      },
+                    ]}
+                    accessibilityRole="checkbox"
+                    accessibilityState={{ checked: termsAccepted }}>
+                    {termsAccepted ? <Text style={TextStyles.checkboxMark}>✓</Text> : null}
+                  </Pressable>
+                  <Text style={[TextStyles.terms, styles.termsWrap]}>
+                    Acepto los{' '}
+                    <Text style={TextStyles.link} onPress={() => Alert.alert('Términos', 'Contenido próximamente.')}>
+                      Términos del servicio
+                    </Text>{' '}
+                    y la{' '}
+                    <Text
+                      style={TextStyles.link}
+                      onPress={() => Alert.alert('Privacidad', 'Contenido próximamente.')}>
+                      Política de privacidad
                     </Text>
-                  </View>
-
-                  <AuthPrimaryButton title="Siguiente" onPress={handleNext} />
-                </View>
-              </AuthCard>
-            ) : (
-              <AuthCard>
-                <View style={styles.sectionHeader}>
-                  <Text style={TextStyles.screenTitle}>Casi listo</Text>
-                  <Text style={[TextStyles.caption, styles.subtitle]} numberOfLines={2}>
-                    Creá tu cuenta con email o usá Google o Apple (próximamente).
+                    .
                   </Text>
                 </View>
 
-                <Pressable onPress={() => setStep(1)} hitSlop={8} style={styles.backLink}>
-                  <Text style={TextStyles.linkSmall}>← Volver a editar datos</Text>
-                </Pressable>
-
-                <AuthDivider label="o regístrate con" />
-                <SocialAuthButtons mode="sign-up" />
-
-                <View style={styles.step2Cta}>
-                  <AuthPrimaryButton title="Crear cuenta" onPress={handleSubmit} loading={loading} />
-                </View>
-              </AuthCard>
-            )}
+                <AuthPrimaryButton title="Crear cuenta" onPress={handleSubmit} loading={loading} />
+              </View>
+            </AuthCard>
 
             <View style={[Layout.rowWrapCenter, styles.footer]}>
               <Text style={[TextStyles.bodyMedium, styles.footerMuted]}>¿Ya tenés cuenta?</Text>
@@ -259,13 +232,6 @@ const styles = StyleSheet.create({
   },
   termsWrap: {
     flex: 1,
-  },
-  backLink: {
-    alignSelf: 'flex-start',
-    marginBottom: Spacing.md,
-  },
-  step2Cta: {
-    marginTop: Spacing.md,
   },
   footer: {
     marginTop: Spacing.sm,

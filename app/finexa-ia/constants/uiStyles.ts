@@ -81,10 +81,6 @@ export const Layout = {
   centerHorizontal: { alignItems: 'center' as const } satisfies ViewStyle,
   /** Vertical stack with consistent spacing between fields */
   formColumn: { gap: Spacing.xl + 4 } satisfies ViewStyle,
-  /** Tighter auth forms (less scroll on small phones) */
-  formColumnDense: { gap: Spacing.md } satisfies ViewStyle,
-  /** Auth: espacio intermedio entre campos */
-  formColumnAuth: { gap: Spacing.lg } satisfies ViewStyle,
   termsRow: {
     flexDirection: 'row' as const,
     alignItems: 'flex-start' as const,
@@ -98,7 +94,6 @@ export const Layout = {
 export const BorderColors = {
   card: 'rgba(219, 234, 254, 0.4)',
   subtle: 'rgba(219, 234, 254, 0.5)',
-  divider: 'rgba(219, 234, 254, 0.4)',
 } as const;
 
 export const TextStyles = {
@@ -108,19 +103,6 @@ export const TextStyles = {
     lineHeight: 30,
     color: PrismColors.textPrimary,
     textAlign: 'left',
-  } satisfies TextStyle,
-  screenTitleCompact: {
-    fontFamily: F.sansBold,
-    fontSize: 20,
-    lineHeight: 26,
-    color: PrismColors.textPrimary,
-    textAlign: 'left',
-  } satisfies TextStyle,
-  heroTitle: {
-    fontFamily: F.sansBold,
-    fontSize: 36,
-    letterSpacing: -0.5,
-    color: PrismColors.primary,
   } satisfies TextStyle,
   body: {
     fontFamily: F.sans,
@@ -161,18 +143,6 @@ export const TextStyles = {
     fontFamily: F.sansBold,
     fontSize: 16,
     color: '#FFFFFF',
-  } satisfies TextStyle,
-  dividerLabel: {
-    fontFamily: F.sansBold,
-    fontSize: 10,
-    letterSpacing: 2,
-    textTransform: 'uppercase' as const,
-    color: PrismColors.textSecondary,
-  } satisfies TextStyle,
-  socialLabel: {
-    fontFamily: F.sansBold,
-    fontSize: 12,
-    color: PrismColors.textSecondary,
   } satisfies TextStyle,
   strengthLabel: {
     fontFamily: F.sansBold,

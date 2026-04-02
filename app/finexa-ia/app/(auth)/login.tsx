@@ -18,16 +18,14 @@ import {
   AuthBackground,
   AuthBranding,
   AuthCard,
-  AuthDivider,
   AuthHelpButton,
   AuthPrimaryButton,
   AuthTextField,
   PasswordVisibilityToggle,
-  SocialAuthButtons,
 } from '@/components/auth';
 import { Layout, Spacing, TextStyles } from '@/constants/uiStyles';
 import { useScrollOnlyIfOverflow } from '@/hooks/use-scroll-only-if-overflow';
-import { signInWithEmailPassword } from '@/lib/auth/cognito';
+import { requestPasswordReset, signInWithEmailPassword } from '@/lib/auth/cognito';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -39,7 +37,6 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [showSocial, setShowSocial] = useState(false);
 
   const scrollContentStyle = useMemo(
     () => [
@@ -63,25 +60,77 @@ export default function LoginScreen() {
     setLoading(true);
     const result = await signInWithEmailPassword(email, password);
     setLoading(false);
-    if (result.ok) {
+
+    if (!result.ok) {
+      if (result.code === 'UserNotConfirmedException') {
+        Alert.alert('Confirmá tu correo', result.message, [
+          {
+            text: 'Ir a confirmar',
+            onPress: () =>
+              router.push({
+                pathname: '/confirm-signup',
+                params: { email: email.trim() },
+              }),
+          },
+          { text: 'OK', style: 'cancel' },
+        ]);
+        return;
+      }
+      Alert.alert('Inicio de sesión', result.message);
+      return;
+    }
+
+    const { data } = result;
+    if (data.kind === 'signed_in') {
       router.replace('/(tabs)/home');
       return;
     }
-    if (result.code === 'UserNotConfirmedException') {
-      Alert.alert('Confirmá tu correo', result.message, [
-        {
-          text: 'Ir a confirmar',
-          onPress: () =>
-            router.push({
-              pathname: '/confirm-signup',
-              params: { email: email.trim() },
-            }),
-        },
-        { text: 'OK', style: 'cancel' },
-      ]);
+    if (data.kind === 'needs_confirm_sign_up') {
+      router.push({
+        pathname: '/confirm-signup',
+        params: { email: data.email },
+      });
       return;
     }
-    Alert.alert('Inicio de sesión', result.message);
+    if (data.kind === 'needs_password_reset') {
+      setLoading(true);
+      const send = await requestPasswordReset(email);
+      setLoading(false);
+      if (!send.ok) {
+        Alert.alert('Restablecer contraseña', send.message);
+        return;
+      }
+      Alert.alert(
+        'Revisá tu correo',
+        'Te enviamos un código para definir una nueva contraseña.',
+        [
+          {
+            text: 'Continuar',
+            onPress: () =>
+              router.replace({
+                pathname: '/reset-password',
+                params: { email: data.email },
+              }),
+          },
+        ],
+      );
+      return;
+    }
+    if (data.kind === 'needs_new_password') {
+      router.push('/new-password');
+      return;
+    }
+    if (data.kind === 'needs_verification_code') {
+      router.push({
+        pathname: '/sign-in-challenge',
+        params: { channel: data.channel },
+      });
+      return;
+    }
+    Alert.alert(
+      'Inicio de sesión',
+      `Tu cuenta requiere un paso que esta app aún no soporta (${data.signInStep}). Revisá la configuración del pool en AWS o contactá soporte.`,
+    );
   }
 
   return (
@@ -134,7 +183,7 @@ export default function LoginScreen() {
                 />
 
                 <Pressable
-                  onPress={() => Alert.alert('Contraseña', 'Flujo próximamente.')}
+                  onPress={() => router.push('/forgot-password')}
                   style={styles.forgot}
                   hitSlop={8}>
                   <Text style={TextStyles.linkSmall}>¿Olvidaste tu contraseña?</Text>
@@ -142,22 +191,6 @@ export default function LoginScreen() {
 
                 <AuthPrimaryButton title="Iniciar sesión" onPress={handleSubmit} loading={loading} />
               </View>
-
-              <Pressable
-                onPress={() => setShowSocial((s) => !s)}
-                style={styles.socialToggle}
-                hitSlop={8}>
-                <Text style={TextStyles.linkSmall}>
-                  {showSocial ? 'Ocultar Google y Apple' : 'Google y Apple'}
-                </Text>
-              </Pressable>
-
-              {showSocial ? (
-                <>
-                  <AuthDivider label="o iniciá sesión con" />
-                  <SocialAuthButtons mode="sign-in" />
-                </>
-              ) : null}
             </AuthCard>
 
             <View style={[Layout.rowWrapCenter, styles.footer]}>
@@ -190,11 +223,6 @@ const styles = StyleSheet.create({
   },
   forgot: {
     alignSelf: 'flex-end',
-  },
-  socialToggle: {
-    alignSelf: 'center',
-    marginTop: Spacing.sm,
-    paddingVertical: Spacing.xs,
   },
   footer: {
     marginTop: Spacing.sm,
