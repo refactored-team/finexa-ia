@@ -29,7 +29,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle, Defs, G, Stop, LinearGradient as SvgLinearGradient } from 'react-native-svg';
 
 import { plaidService } from '@/src/services/api/plaid/plaidService';
-import { create, LinkExit, LinkSuccess, open } from 'react-native-plaid-link-sdk';
+import type {
+  LinkExit,
+  LinkIOSPresentationStyle,
+  LinkLogLevel,
+  LinkSuccess,
+} from 'react-native-plaid-link-sdk';
 
 import { AuthBackground } from '@/components/auth';
 import {
@@ -285,12 +290,36 @@ export default function LinkBankScreen() {
   const [isLinking, setIsLinking] = useState(false);
   const userId = "2";
 
+  const agentLog = (hypothesisId: string, message: string, data?: Record<string, unknown>) => {
+    // #region agent log
+    fetch('http://127.0.0.1:7309/ingest/7e367ce2-2186-4cbf-b33d-a0b2606f148c', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Debug-Session-Id': 'f9f192',
+      },
+      body: JSON.stringify({
+        sessionId: 'f9f192',
+        runId: 'pre',
+        hypothesisId,
+        location: 'link-bank.tsx',
+        message,
+        data: data ?? {},
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion
+  };
+
   // Fase 1: Pedir Link Token al backend
   useEffect(() => {
     async function fetchLinkToken() {
       try {
         const data = await plaidService.createLinkToken(userId);
-        setLinkToken(data.data?.link_token ?? null);
+        const token = data.data?.link_token ?? null;
+        console.log('[Plaid] linkToken received:', token ? `${token.slice(0, 14)}...` : null);
+        agentLog('H2_token', 'linkToken received', { tokenLen: token?.length ?? null });
+        setLinkToken(token);
       } catch (error) {
         console.error('Error al obtener el link_token:', error);
         Alert.alert('Error', 'No se pudo conectar con el servidor bancario.');
@@ -299,32 +328,8 @@ export default function LinkBankScreen() {
     fetchLinkToken();
   }, []);
 
-  // Fase 2: Configurar SDK cuando llega el token
-  useEffect(() => {
-    if (linkToken) {
-      create({
-        token: linkToken,
-      });
-
-      open({
-        onSuccess: async (success: LinkSuccess) => {
-          setIsLinking(true);
-          try {
-            await plaidService.exchangePublicToken(userId, success.publicToken);
-            router.replace('/(tabs)/home');
-          } catch (error) {
-            console.error('Error al guardar conexión bancaria:', error);
-            Alert.alert('Error', 'No se pudo guardar la conexión de forma segura.');
-            setIsLinking(false);
-          }
-        },
-        onExit: (exit: LinkExit) => {
-          console.log('El usuario canceló o cerró Plaid', exit);
-          setIsLinking(false);
-        },
-      });
-    }
-  }, [linkToken, router]);
+  // Nota: no llamamos `create()` aquí. Lo hacemos solo cuando el usuario presiona CTA
+  // para evitar problemas con la interacción requerida por el SDK nativo.
   // -------------------------
 
   const tightLayout = windowH < 700;
@@ -347,24 +352,72 @@ export default function LinkBankScreen() {
       Alert.alert('Cargando', 'Preparando conexión segura, por favor espera un momento...');
       return;
     }
+
+    if (isLinking) return;
     setIsLinking(true);
-    open({
-      onSuccess: async (success: LinkSuccess) => {
-        setIsLinking(true);
-        try {
-          await plaidService.exchangePublicToken(userId, success.publicToken);
-          router.replace('/(tabs)/home');
-        } catch (error) {
-          console.error('Error al guardar conexión bancaria:', error);
-          Alert.alert('Error', 'No se pudo guardar la conexión de forma segura.');
-          setIsLinking(false);
-        }
-      },
-      onExit: (exit: LinkExit) => {
-        console.log('El usuario canceló o cerró Plaid', exit);
-        setIsLinking(false);
-      },
-    });
+
+    // Importante: `open()` debe dispararse desde una interacción del usuario.
+    // `create()` lo repetimos aquí para asegurar que el SDK está listo justo antes de abrir.
+    try {
+      console.log('[Plaid] open() called (token len):', linkToken.length);
+      agentLog('H3_open_called', 'CTA pressed -> create called', { tokenLen: linkToken.length });
+      // En Expo Go, el módulo nativo no está disponible y el SDK puede fallar al inicializar.
+      // Por eso hacemos `require` aquí (bajo interacción del usuario) y lo envolvemos en try/catch.
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const plaidSdk = require('react-native-plaid-link-sdk') as typeof import('react-native-plaid-link-sdk');
+      const { create, open } = plaidSdk;
+
+      create({
+        token: linkToken,
+        logLevel: 'debug' as unknown as LinkLogLevel,
+        onLoad: () => {
+          agentLog('H1_create_onLoad', 'create onLoad fired -> calling open', { tokenLen: linkToken.length });
+          open({
+            logLevel: 'debug' as unknown as LinkLogLevel,
+            iOSPresentationStyle: 'MODAL' as unknown as LinkIOSPresentationStyle,
+            onSuccess: async (success: LinkSuccess) => {
+              agentLog('H2_onSuccess', 'onSuccess fired', {
+                hasPublicToken: Boolean(success?.publicToken),
+                publicTokenLen: success?.publicToken?.length ?? null,
+              });
+              try {
+                console.log('[Plaid] onSuccess publicToken:', success.publicToken);
+                await plaidService.exchangePublicToken(userId, success.publicToken);
+                router.replace('/(tabs)/home');
+              } catch (error) {
+                console.error('Error al guardar conexión bancaria:', error);
+                Alert.alert('Error', 'No se pudo guardar la conexión de forma segura.');
+              } finally {
+                setIsLinking(false);
+              }
+            },
+            onExit: (exit: LinkExit) => {
+              agentLog('H2_onExit', 'onExit fired', {
+                errorType: exit?.error?.errorType ?? null,
+                errorCode: exit?.error?.errorCode ?? null,
+                status: exit?.metadata?.status ?? null,
+              });
+              console.log('[Plaid] onExit:', {
+                error: exit?.error ?? null,
+                metadata: exit?.metadata ?? null,
+                raw: exit,
+              });
+              setIsLinking(false);
+            },
+          });
+        },
+      });
+    } catch (error) {
+      console.error('[Plaid] open/create failed:', error);
+      agentLog('H3_open_create_throw', 'open/create threw', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      setIsLinking(false);
+      Alert.alert(
+        'Plaid no disponible',
+        'Para abrir Plaid con este SDK necesitas un dev build (no Expo Go). Revisa la consola para el detalle.'
+      );
+    }
   }
 
   return (
