@@ -34,6 +34,8 @@ import { plaidService } from '@/src/services/api/plaid/plaidService';
 import type { LinkIOSPresentationStyle, LinkSuccess } from 'react-native-plaid-link-sdk';
 
 import { AuthBackground } from '@/components/auth';
+import { isAmplifyAuthConfigured } from '@/lib/amplify/configure';
+import { signOutUser } from '@/lib/auth/cognito';
 import {
   ChevronRight,
   Landmark,
@@ -316,12 +318,15 @@ export default function LinkBankScreen() {
   const headerPaddingTop = insets.top + Spacing.sm;
   const bodyPaddingTop = useMemo(() => headerPaddingTop + (tightLayout ? 76 : 82), [headerPaddingTop, tightLayout]);
 
-  function handleSignOut() {
-    router.replace('/(auth)/login');
+  async function handleSignOut() {
+    if (isAmplifyAuthConfigured()) {
+      await signOutUser();
+    }
+    router.replace('/login');
   }
 
-  // Fase 3: Disparador del CTA
-  function handleCtaPress() {
+  // Fase 3: Disparador del CTA — import dinámico del SDK solo si el nativo está presente.
+  async function handleCtaPress() {
     if (!linkToken) {
       Alert.alert('Cargando', 'Preparando conexión segura, por favor espera un momento...');
       return;
@@ -330,8 +335,6 @@ export default function LinkBankScreen() {
     if (isLinking) return;
     setIsLinking(true);
 
-    // Importante: `open()` debe dispararse desde una interacción del usuario.
-    // `create()` lo repetimos aquí para asegurar que el SDK está listo justo antes de abrir.
     try {
       const rnLinksdk = TurboModuleRegistry.get('RNLinksdk');
       const plaidAndroid = TurboModuleRegistry.get('PlaidAndroid');
@@ -347,10 +350,7 @@ export default function LinkBankScreen() {
         return;
       }
 
-      // En Expo Go, el módulo nativo no está disponible y el SDK puede fallar al inicializar.
-      // Por eso hacemos `require` aquí (bajo interacción del usuario) y lo envolvemos en try/catch.
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
-      const plaidSdk = require('react-native-plaid-link-sdk') as typeof import('react-native-plaid-link-sdk');
+      const plaidSdk = await import('react-native-plaid-link-sdk');
       const { create, open } = plaidSdk;
 
       create({
@@ -362,7 +362,7 @@ export default function LinkBankScreen() {
         onSuccess: async (success: LinkSuccess) => {
           try {
             await plaidService.exchangePublicToken(userId, success.publicToken);
-            router.replace('/(tabs)/home');
+            router.replace('/(tabs)/explore');
           } catch (error) {
             console.error('Error al guardar conexión bancaria:', error);
             Alert.alert('Error', 'No se pudo guardar la conexión de forma segura.');
@@ -379,7 +379,7 @@ export default function LinkBankScreen() {
       setIsLinking(false);
       Alert.alert(
         'Plaid no disponible',
-        'Para abrir Plaid con este SDK necesitas un dev build (no Expo Go). Revisa la consola para el detalle.'
+        'Para abrir Plaid con este SDK necesitas un dev build (no Expo Go). Revisa la consola para el detalle.',
       );
     }
   }
@@ -587,7 +587,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   headerTitle: {
-    fontFamily: TextStyles.screenTitleCompact.fontFamily,
+    fontFamily: TextStyles.screenTitle.fontFamily,
     fontSize: 16,
     lineHeight: 20,
     color: PrismColors.textPrimary,

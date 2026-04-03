@@ -45,7 +45,7 @@ export async function followSignInResult(
 
   switch (data.kind) {
     case 'signed_in':
-      router.replace('/(tabs)/home');
+      router.replace('/(onboarding)/link-bank');
       return;
     case 'needs_confirm_sign_up':
       router.push({

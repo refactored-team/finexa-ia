@@ -150,12 +150,12 @@ export default function RegisterScreen() {
       return;
     }
     if (result.data.nextStep === 'COMPLETE_AUTO_SIGN_IN') {
-      router.replace('/(tabs)/home');
+      router.replace('/(onboarding)/link-bank');
       return;
     }
     if (result.data.nextStep === 'DONE') {
       Alert.alert('Listo', 'Tu cuenta fue creada.', [
-        { text: 'OK', onPress: () => router.replace('/(tabs)/home') },
+        { text: 'OK', onPress: () => router.replace('/(onboarding)/link-bank') },
       ]);
     }
   }

@@ -40,7 +40,7 @@ export default function Index() {
   }
 
   if (signedIn) {
-    return <Redirect href="/(tabs)/home" />;
+    return <Redirect href="/(onboarding)/link-bank" />;
   }
 
   return <Redirect href="/login" />;
