@@ -4,10 +4,12 @@ import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import {
   Alert,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
   TouchableOpacity,
+  TurboModuleRegistry,
   useWindowDimensions,
   View,
   type StyleProp,
@@ -29,12 +31,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle, Defs, G, Stop, LinearGradient as SvgLinearGradient } from 'react-native-svg';
 
 import { plaidService } from '@/src/services/api/plaid/plaidService';
-import type {
-  LinkExit,
-  LinkIOSPresentationStyle,
-  LinkLogLevel,
-  LinkSuccess,
-} from 'react-native-plaid-link-sdk';
+import type { LinkIOSPresentationStyle, LinkSuccess } from 'react-native-plaid-link-sdk';
 
 import { AuthBackground } from '@/components/auth';
 import {
@@ -290,35 +287,12 @@ export default function LinkBankScreen() {
   const [isLinking, setIsLinking] = useState(false);
   const userId = "1";
 
-  const agentLog = (hypothesisId: string, message: string, data?: Record<string, unknown>) => {
-    // #region agent log
-    fetch('http://127.0.0.1:7309/ingest/7e367ce2-2186-4cbf-b33d-a0b2606f148c', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Debug-Session-Id': 'f9f192',
-      },
-      body: JSON.stringify({
-        sessionId: 'f9f192',
-        runId: 'pre',
-        hypothesisId,
-        location: 'link-bank.tsx',
-        message,
-        data: data ?? {},
-        timestamp: Date.now(),
-      }),
-    }).catch(() => { });
-    // #endregion
-  };
-
   // Fase 1: Pedir Link Token al backend
   useEffect(() => {
     async function fetchLinkToken() {
       try {
         const data = await plaidService.createLinkToken(userId);
         const token = data.data?.link_token ?? null;
-        console.log('[Plaid] linkToken received:', token ? `${token.slice(0, 14)}...` : null);
-        agentLog('H2_token', 'linkToken received', { tokenLen: token?.length ?? null });
         setLinkToken(token);
       } catch (error) {
         console.error('Error al obtener el link_token:', error);
@@ -359,32 +333,34 @@ export default function LinkBankScreen() {
     // Importante: `open()` debe dispararse desde una interacción del usuario.
     // `create()` lo repetimos aquí para asegurar que el SDK está listo justo antes de abrir.
     try {
-      console.log('[Plaid] open() called (token len):', linkToken.length);
-      agentLog('H3_open_called', 'CTA pressed -> create called', { tokenLen: linkToken.length });
+      const rnLinksdk = TurboModuleRegistry.get('RNLinksdk');
+      const plaidAndroid = TurboModuleRegistry.get('PlaidAndroid');
+      const nativePlaidPresent =
+        Platform.OS === 'ios' ? rnLinksdk != null : plaidAndroid != null;
+
+      if (!nativePlaidPresent) {
+        setIsLinking(false);
+        Alert.alert(
+          'Plaid no disponible en esta app',
+          'Este SDK necesita código nativo enlazado. Usa un development build (expo prebuild + run) o EAS Dev Client; Expo Go no incluye react-native-plaid-link-sdk.',
+        );
+        return;
+      }
+
       // En Expo Go, el módulo nativo no está disponible y el SDK puede fallar al inicializar.
       // Por eso hacemos `require` aquí (bajo interacción del usuario) y lo envolvemos en try/catch.
       // eslint-disable-next-line @typescript-eslint/no-var-requires
       const plaidSdk = require('react-native-plaid-link-sdk') as typeof import('react-native-plaid-link-sdk');
       const { create, open } = plaidSdk;
 
-      agentLog('H4_create_before', 'about to call create()', { tokenLen: linkToken.length });
       create({
         token: linkToken,
-        logLevel: 'debug' as unknown as LinkLogLevel,
       });
-      agentLog('H4_create_after', 'create() returned', { tokenLen: linkToken.length });
 
-      agentLog('H5_open_before', 'about to call open()', { tokenLen: linkToken.length });
       open({
-        logLevel: 'debug' as unknown as LinkLogLevel,
         iOSPresentationStyle: 'MODAL' as unknown as LinkIOSPresentationStyle,
         onSuccess: async (success: LinkSuccess) => {
-          agentLog('H2_onSuccess', 'onSuccess fired', {
-            hasPublicToken: Boolean(success?.publicToken),
-            publicTokenLen: success?.publicToken?.length ?? null,
-          });
           try {
-            console.log('[Plaid] onSuccess publicToken:', success.publicToken);
             await plaidService.exchangePublicToken(userId, success.publicToken);
             router.replace('/(tabs)/home');
           } catch (error) {
@@ -394,26 +370,12 @@ export default function LinkBankScreen() {
             setIsLinking(false);
           }
         },
-        onExit: (exit: LinkExit) => {
-          agentLog('H2_onExit', 'onExit fired', {
-            errorType: exit?.error?.errorType ?? null,
-            errorCode: exit?.error?.errorCode ?? null,
-            status: exit?.metadata?.status ?? null,
-          });
-          console.log('[Plaid] onExit:', {
-            error: exit?.error ?? null,
-            metadata: exit?.metadata ?? null,
-            raw: exit,
-          });
+        onExit: () => {
           setIsLinking(false);
         },
       });
-      agentLog('H5_open_after', 'open() invoked (no throw)', { tokenLen: linkToken.length });
     } catch (error) {
       console.error('[Plaid] open/create failed:', error);
-      agentLog('H3_open_create_throw', 'open/create threw', {
-        error: error instanceof Error ? error.message : String(error),
-      });
       setIsLinking(false);
       Alert.alert(
         'Plaid no disponible',
