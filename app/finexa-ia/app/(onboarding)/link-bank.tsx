@@ -220,7 +220,7 @@ function AnimatedProgressRing({ ringSize, ringCx, ringCy, ringR, ringCirc }: Rin
           animatedProps={animatedProps}
         />
       </G>
-    </Svg> 
+    </Svg>
   );
 }
 
@@ -288,7 +288,7 @@ export default function LinkBankScreen() {
 
   const [linkToken, setLinkToken] = useState<string | null>(null);
   const [isLinking, setIsLinking] = useState(false);
-  const userId = "2";
+  const userId = "1";
 
   const agentLog = (hypothesisId: string, message: string, data?: Record<string, unknown>) => {
     // #region agent log
@@ -307,7 +307,7 @@ export default function LinkBankScreen() {
         data: data ?? {},
         timestamp: Date.now(),
       }),
-    }).catch(() => {});
+    }).catch(() => { });
     // #endregion
   };
 
