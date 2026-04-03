@@ -1,7 +1,13 @@
-declare module 'lucide-react-native/dist/esm/icons/apple.js' {
+declare module 'lucide-react-native/dist/esm/icons/calendar.js' {
   import type { LucideIcon } from 'lucide-react-native';
-  const Apple: LucideIcon;
-  export default Apple;
+  const Calendar: LucideIcon;
+  export default Calendar;
+}
+
+declare module 'lucide-react-native/dist/esm/icons/chevron-down.js' {
+  import type { LucideIcon } from 'lucide-react-native';
+  const ChevronDown: LucideIcon;
+  export default ChevronDown;
 }
 
 declare module 'lucide-react-native/dist/esm/icons/circle-question-mark.js' {
@@ -22,10 +28,10 @@ declare module 'lucide-react-native/dist/esm/icons/eye-off.js' {
   export default EyeOff;
 }
 
-declare module 'lucide-react-native/dist/esm/icons/globe.js' {
+declare module 'lucide-react-native/dist/esm/icons/hash.js' {
   import type { LucideIcon } from 'lucide-react-native';
-  const Globe: LucideIcon;
-  export default Globe;
+  const Hash: LucideIcon;
+  export default Hash;
 }
 
 declare module 'lucide-react-native/dist/esm/icons/lock.js' {
@@ -40,14 +46,14 @@ declare module 'lucide-react-native/dist/esm/icons/mail.js' {
   export default Mail;
 }
 
+declare module 'lucide-react-native/dist/esm/icons/phone.js' {
+  import type { LucideIcon } from 'lucide-react-native';
+  const Phone: LucideIcon;
+  export default Phone;
+}
+
 declare module 'lucide-react-native/dist/esm/icons/user.js' {
   import type { LucideIcon } from 'lucide-react-native';
   const User: LucideIcon;
   export default User;
-}
-
-declare module 'lucide-react-native/dist/esm/icons/wallet.js' {
-  import type { LucideIcon } from 'lucide-react-native';
-  const Wallet: LucideIcon;
-  export default Wallet;
 }

@@ -1,5 +1,5 @@
 import { Link, useRouter } from 'expo-router';
-import { Lock, Mail } from '@/constants/lucideIcons';
+import { Lock } from '@/constants/lucideIcons';
 import { useMemo, useState } from 'react';
 import {
   Alert,
@@ -18,26 +18,29 @@ import {
   AuthBackground,
   AuthBranding,
   AuthCard,
-  AuthHelpButton,
+  AuthPasswordStrength,
   AuthPrimaryButton,
   AuthTextField,
   PasswordVisibilityToggle,
 } from '@/components/auth';
 import { Layout, Spacing, TextStyles } from '@/constants/uiStyles';
 import { followSignInResult } from '@/lib/auth/followSignInResult';
-import { setLastSignInEmail } from '@/lib/auth/lastSignInContext';
-import { signInWithEmailPassword } from '@/lib/auth/cognito';
-import { useScrollOnlyIfOverflow } from '@/hooks/use-scroll-only-if-overflow';
+import { getLastSignInEmail } from '@/lib/auth/lastSignInContext';
+import { submitSignInNewPassword } from '@/lib/auth/cognito';
+import {
+  passwordMeetsCognitoLikePolicy,
+  passwordMissingPartsSpanish,
+} from '@/lib/auth/passwordPolicy';
 
-export default function LoginScreen() {
+export default function NewPasswordScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
-  const { scrollEnabled, onScrollViewLayout, onContentSizeChange } = useScrollOnlyIfOverflow();
 
-  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [passwordVisible, setPasswordVisible] = useState(false);
+  const [confirmVisible, setConfirmVisible] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const scrollContentStyle = useMemo(
@@ -55,17 +58,26 @@ export default function LoginScreen() {
   );
 
   async function handleSubmit() {
-    if (!email.trim() || !password) {
-      Alert.alert('Datos incompletos', 'Ingresá correo y contraseña.');
+    if (!password) {
+      Alert.alert('Contraseña', 'Ingresá una nueva contraseña.');
       return;
     }
-    const trimmedEmail = email.trim().toLowerCase();
-    setLastSignInEmail(trimmedEmail);
+    if (password !== confirmPassword) {
+      Alert.alert('Contraseñas', 'La confirmación no coincide.');
+      return;
+    }
+    if (!passwordMeetsCognitoLikePolicy(password)) {
+      Alert.alert(
+        'Contraseña',
+        `Tu contraseña debe cumplir lo que pide Cognito. Falta: ${passwordMissingPartsSpanish(password)}.`,
+      );
+      return;
+    }
     setLoading(true);
-    const result = await signInWithEmailPassword(trimmedEmail, password);
+    const result = await submitSignInNewPassword(password);
     setLoading(false);
     await followSignInResult(router, result, {
-      email: trimmedEmail,
+      email: getLastSignInEmail(),
       setLoading,
     });
   }
@@ -80,68 +92,63 @@ export default function LoginScreen() {
           <ScrollView
             keyboardShouldPersistTaps="handled"
             contentContainerStyle={scrollContentStyle}
-            showsVerticalScrollIndicator={false}
-            scrollEnabled={scrollEnabled}
-            onLayout={onScrollViewLayout}
-            onContentSizeChange={onContentSizeChange}>
+            showsVerticalScrollIndicator={false}>
             <AuthBranding />
 
             <AuthCard>
               <View style={styles.sectionHeader}>
-                <Text style={TextStyles.screenTitle}>Bienvenido de nuevo</Text>
-                <Text style={[TextStyles.caption, styles.subtitle]} numberOfLines={1}>
-                  Iniciá sesión para continuar.
+                <Text style={TextStyles.screenTitle}>Nueva contraseña</Text>
+                <Text style={[TextStyles.caption, styles.subtitle]}>
+                  Tu cuenta requiere definir una contraseña nueva antes de continuar.
                 </Text>
               </View>
 
               <View style={Layout.formColumn}>
+                <View>
+                  <AuthTextField
+                    label="Nueva contraseña"
+                    placeholder="······"
+                    value={password}
+                    onChangeText={setPassword}
+                    icon={Lock}
+                    secureTextEntry={!passwordVisible}
+                    rightAccessory={
+                      <PasswordVisibilityToggle
+                        visible={passwordVisible}
+                        onToggle={() => setPasswordVisible((v) => !v)}
+                      />
+                    }
+                  />
+                  <AuthPasswordStrength password={password} />
+                </View>
                 <AuthTextField
-                  label="Correo electrónico"
-                  placeholder="correo"
-                  value={email}
-                  onChangeText={setEmail}
-                  icon={Mail}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                />
-                <AuthTextField
-                  label="Contraseña"
+                  label="Confirmar contraseña"
                   placeholder="······"
-                  value={password}
-                  onChangeText={setPassword}
+                  value={confirmPassword}
+                  onChangeText={setConfirmPassword}
                   icon={Lock}
-                  secureTextEntry={!passwordVisible}
+                  secureTextEntry={!confirmVisible}
                   rightAccessory={
                     <PasswordVisibilityToggle
-                      visible={passwordVisible}
-                      onToggle={() => setPasswordVisible((v) => !v)}
+                      visible={confirmVisible}
+                      onToggle={() => setConfirmVisible((v) => !v)}
                     />
                   }
                 />
-
-                <Pressable
-                  onPress={() => router.push('/forgot-password')}
-                  style={styles.forgot}
-                  hitSlop={8}>
-                  <Text style={TextStyles.linkSmall}>¿Olvidaste tu contraseña?</Text>
-                </Pressable>
-
-                <AuthPrimaryButton title="Iniciar sesión" onPress={handleSubmit} loading={loading} />
+                <AuthPrimaryButton title="Continuar" onPress={handleSubmit} loading={loading} />
               </View>
             </AuthCard>
 
             <View style={[Layout.rowWrapCenter, styles.footer]}>
-              <Text style={[TextStyles.bodyMedium, styles.footerMuted]}>¿No tenés cuenta?</Text>
-              <Link href="/register" asChild>
+              <Link href="/login" asChild>
                 <Pressable hitSlop={8}>
-                  <Text style={TextStyles.link}>Crear cuenta</Text>
+                  <Text style={TextStyles.link}>Volver al inicio de sesión</Text>
                 </Pressable>
               </Link>
             </View>
           </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>
-      <AuthHelpButton />
     </AuthBackground>
   );
 }
@@ -158,13 +165,7 @@ const styles = StyleSheet.create({
   subtitle: {
     marginTop: Spacing.xs,
   },
-  forgot: {
-    alignSelf: 'flex-end',
-  },
   footer: {
-    marginTop: Spacing.sm,
-  },
-  footerMuted: {
-    textAlign: 'center',
+    marginTop: Spacing.md,
   },
 });

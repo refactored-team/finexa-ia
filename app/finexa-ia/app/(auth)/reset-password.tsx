@@ -1,5 +1,5 @@
-import { Link, useRouter } from 'expo-router';
-import { Lock, Mail } from '@/constants/lucideIcons';
+import { Link, useLocalSearchParams, useRouter } from 'expo-router';
+import { Hash, Lock, Mail } from '@/constants/lucideIcons';
 import { useMemo, useState } from 'react';
 import {
   Alert,
@@ -18,26 +18,26 @@ import {
   AuthBackground,
   AuthBranding,
   AuthCard,
-  AuthHelpButton,
   AuthPrimaryButton,
   AuthTextField,
   PasswordVisibilityToggle,
 } from '@/components/auth';
 import { Layout, Spacing, TextStyles } from '@/constants/uiStyles';
-import { followSignInResult } from '@/lib/auth/followSignInResult';
-import { setLastSignInEmail } from '@/lib/auth/lastSignInContext';
-import { signInWithEmailPassword } from '@/lib/auth/cognito';
-import { useScrollOnlyIfOverflow } from '@/hooks/use-scroll-only-if-overflow';
+import { confirmPasswordReset } from '@/lib/auth/cognito';
 
-export default function LoginScreen() {
+export default function ResetPasswordScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ email?: string }>();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
-  const { scrollEnabled, onScrollViewLayout, onContentSizeChange } = useScrollOnlyIfOverflow();
 
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const initialEmail = typeof params.email === 'string' ? params.email : '';
+  const [email, setEmail] = useState(initialEmail);
+  const [code, setCode] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [passwordVisible, setPasswordVisible] = useState(false);
+  const [confirmVisible, setConfirmVisible] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const scrollContentStyle = useMemo(
@@ -55,19 +55,24 @@ export default function LoginScreen() {
   );
 
   async function handleSubmit() {
-    if (!email.trim() || !password) {
-      Alert.alert('Datos incompletos', 'Ingresá correo y contraseña.');
+    if (!email.trim() || !code.trim() || !newPassword) {
+      Alert.alert('Datos incompletos', 'Completá correo, código y nueva contraseña.');
       return;
     }
-    const trimmedEmail = email.trim().toLowerCase();
-    setLastSignInEmail(trimmedEmail);
+    if (newPassword !== confirmPassword) {
+      Alert.alert('Contraseñas', 'La confirmación no coincide con la nueva contraseña.');
+      return;
+    }
     setLoading(true);
-    const result = await signInWithEmailPassword(trimmedEmail, password);
+    const result = await confirmPasswordReset(email, code, newPassword);
     setLoading(false);
-    await followSignInResult(router, result, {
-      email: trimmedEmail,
-      setLoading,
-    });
+    if (!result.ok) {
+      Alert.alert('No se pudo restablecer', result.message);
+      return;
+    }
+    Alert.alert('Listo', 'Ya podés iniciar sesión con tu nueva contraseña.', [
+      { text: 'OK', onPress: () => router.replace('/login') },
+    ]);
   }
 
   return (
@@ -80,17 +85,14 @@ export default function LoginScreen() {
           <ScrollView
             keyboardShouldPersistTaps="handled"
             contentContainerStyle={scrollContentStyle}
-            showsVerticalScrollIndicator={false}
-            scrollEnabled={scrollEnabled}
-            onLayout={onScrollViewLayout}
-            onContentSizeChange={onContentSizeChange}>
+            showsVerticalScrollIndicator={false}>
             <AuthBranding />
 
             <AuthCard>
               <View style={styles.sectionHeader}>
-                <Text style={TextStyles.screenTitle}>Bienvenido de nuevo</Text>
-                <Text style={[TextStyles.caption, styles.subtitle]} numberOfLines={1}>
-                  Iniciá sesión para continuar.
+                <Text style={TextStyles.screenTitle}>Nueva contraseña</Text>
+                <Text style={[TextStyles.caption, styles.subtitle]}>
+                  Ingresá el código del correo y elegí una nueva contraseña.
                 </Text>
               </View>
 
@@ -105,10 +107,19 @@ export default function LoginScreen() {
                   autoCapitalize="none"
                 />
                 <AuthTextField
-                  label="Contraseña"
+                  label="Código de verificación"
+                  placeholder="123456"
+                  value={code}
+                  onChangeText={setCode}
+                  icon={Hash}
+                  keyboardType="number-pad"
+                  autoCapitalize="none"
+                />
+                <AuthTextField
+                  label="Nueva contraseña"
                   placeholder="······"
-                  value={password}
-                  onChangeText={setPassword}
+                  value={newPassword}
+                  onChangeText={setNewPassword}
                   icon={Lock}
                   secureTextEntry={!passwordVisible}
                   rightAccessory={
@@ -118,30 +129,34 @@ export default function LoginScreen() {
                     />
                   }
                 />
-
-                <Pressable
-                  onPress={() => router.push('/forgot-password')}
-                  style={styles.forgot}
-                  hitSlop={8}>
-                  <Text style={TextStyles.linkSmall}>¿Olvidaste tu contraseña?</Text>
-                </Pressable>
-
-                <AuthPrimaryButton title="Iniciar sesión" onPress={handleSubmit} loading={loading} />
+                <AuthTextField
+                  label="Confirmar contraseña"
+                  placeholder="······"
+                  value={confirmPassword}
+                  onChangeText={setConfirmPassword}
+                  icon={Lock}
+                  secureTextEntry={!confirmVisible}
+                  rightAccessory={
+                    <PasswordVisibilityToggle
+                      visible={confirmVisible}
+                      onToggle={() => setConfirmVisible((v) => !v)}
+                    />
+                  }
+                />
+                <AuthPrimaryButton title="Guardar contraseña" onPress={handleSubmit} loading={loading} />
               </View>
             </AuthCard>
 
             <View style={[Layout.rowWrapCenter, styles.footer]}>
-              <Text style={[TextStyles.bodyMedium, styles.footerMuted]}>¿No tenés cuenta?</Text>
-              <Link href="/register" asChild>
+              <Link href="/login" asChild>
                 <Pressable hitSlop={8}>
-                  <Text style={TextStyles.link}>Crear cuenta</Text>
+                  <Text style={TextStyles.link}>Volver al inicio de sesión</Text>
                 </Pressable>
               </Link>
             </View>
           </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>
-      <AuthHelpButton />
     </AuthBackground>
   );
 }
@@ -158,13 +173,7 @@ const styles = StyleSheet.create({
   subtitle: {
     marginTop: Spacing.xs,
   },
-  forgot: {
-    alignSelf: 'flex-end',
-  },
   footer: {
-    marginTop: Spacing.sm,
-  },
-  footerMuted: {
-    textAlign: 'center',
+    marginTop: Spacing.md,
   },
 });

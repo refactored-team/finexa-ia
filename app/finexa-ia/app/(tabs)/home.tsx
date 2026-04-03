@@ -1,13 +1,24 @@
-import { Link } from 'expo-router';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Link, useRouter } from 'expo-router';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { PrismColors } from '@/constants/theme';
 import { Layout, Radius, Shadow, Spacing, TextStyles } from '@/constants/uiStyles';
+import { isAmplifyAuthConfigured } from '@/lib/amplify/configure';
+import { signOutUser } from '@/lib/auth/cognito';
 
 export default function HomeScreen() {
+  const router = useRouter();
+
+  async function handleSignOut() {
+    if (isAmplifyAuthConfigured()) {
+      await signOutUser();
+    }
+    router.replace('/login');
+  }
+
   return (
     <ThemedView style={Layout.flex1}>
       <SafeAreaView style={Layout.flex1} edges={['top']}>
@@ -26,6 +37,11 @@ export default function HomeScreen() {
             <Link href="/modal">
               <Text style={TextStyles.tabLink}>Abrir modal de ejemplo</Text>
             </Link>
+            {isAmplifyAuthConfigured() ? (
+              <Pressable onPress={handleSignOut} style={styles.signOut} hitSlop={8}>
+                <Text style={TextStyles.linkSmall}>Cerrar sesión</Text>
+              </Pressable>
+            ) : null}
           </View>
         </ScrollView>
       </SafeAreaView>
@@ -61,5 +77,9 @@ const styles = StyleSheet.create({
   linkBlock: {
     paddingHorizontal: Spacing.lg,
     paddingTop: Spacing.xl,
+    gap: Spacing.md,
+  },
+  signOut: {
+    alignSelf: 'flex-start',
   },
 });
