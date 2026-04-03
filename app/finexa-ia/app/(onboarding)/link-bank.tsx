@@ -3,6 +3,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import {
+  ActivityIndicator,
   Alert,
   Platform,
   Pressable,
@@ -291,6 +292,7 @@ export default function LinkBankScreen() {
 
   const [linkToken, setLinkToken] = useState<string | null>(null);
   const [isLinking, setIsLinking] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
   const userId = '2';
 
   const clientIsExpoGo = useMemo(() => isExpoGo(), []);
@@ -325,10 +327,22 @@ export default function LinkBankScreen() {
   const bodyPaddingTop = useMemo(() => headerPaddingTop + (tightLayout ? 76 : 82), [headerPaddingTop, tightLayout]);
 
   async function handleSignOut() {
-    if (isAmplifyAuthConfigured()) {
-      await signOutUser();
+    if (signingOut) return;
+    setSigningOut(true);
+    try {
+      if (!isAmplifyAuthConfigured()) {
+        router.replace('/login');
+        return;
+      }
+      const result = await signOutUser();
+      if (!result.ok) {
+        Alert.alert('Cerrar sesión', result.message);
+        return;
+      }
+      router.replace('/login');
+    } finally {
+      setSigningOut(false);
     }
-    router.replace('/login');
   }
 
   function showDevBuildHelp() {
@@ -413,11 +427,24 @@ export default function LinkBankScreen() {
             <View style={styles.headerInner}>
               <Pressable
                 onPress={handleSignOut}
+                disabled={signingOut}
                 accessibilityRole="button"
                 accessibilityLabel="Cerrar sesión"
+                accessibilityState={{ disabled: signingOut }}
                 hitSlop={12}
-                style={({ pressed }) => [styles.signOutPress, pressed && styles.pressed]}>
-                <Text style={styles.signOutLabel}>Cerrar sesión</Text>
+                style={({ pressed }) => [
+                  styles.signOutPress,
+                  pressed && !signingOut && styles.pressed,
+                  signingOut && styles.signOutDisabled,
+                ]}>
+                {signingOut ? (
+                  <View style={styles.signOutRow}>
+                    <ActivityIndicator size="small" color={PrismColors.primary} />
+                    <Text style={styles.signOutLabel}>Cerrando sesión…</Text>
+                  </View>
+                ) : (
+                  <Text style={styles.signOutLabel}>Cerrar sesión</Text>
+                )}
               </Pressable>
               <View style={styles.headerTitles}>
                 <Text style={styles.headerTitle} numberOfLines={1}>
@@ -617,10 +644,20 @@ const styles = StyleSheet.create({
   signOutPress: {
     alignSelf: 'flex-start',
     paddingVertical: Spacing.xs,
+    minHeight: 24,
+    justifyContent: 'center',
+  },
+  signOutRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
   },
   signOutLabel: {
     ...TextStyles.link,
     fontSize: 13,
+  },
+  signOutDisabled: {
+    opacity: 0.85,
   },
   pressed: {
     opacity: 0.75,

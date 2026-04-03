@@ -357,10 +357,9 @@ export async function resendConfirmationCode(email: string): Promise<AuthResult>
   }
 }
 
+/** Cierra sesión en Cognito y limpia tokens locales. Sin `guardNativeAmplify`: debe poder ejecutarse en Expo Go. */
 export async function signOutUser(): Promise<AuthResult> {
   if (!isAmplifyAuthConfigured()) return notConfigured();
-  const blocked = guardNativeAmplify();
-  if (blocked) return blocked;
   try {
     await signOut();
     return { ok: true, data: undefined };
