@@ -3,6 +3,6 @@ go 1.25.0
 use (
 	./pkg/apiresult
 	./services/ms-plaid
-	./services/service-b
+	./services/ms-users
 	./services/service-c
 )

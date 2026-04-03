@@ -10,11 +10,11 @@ import (
 	"go.uber.org/fx"
 
 	"finexa-ia/apiresult"
-	"finexa-ia/service-b/internal/config"
-	"finexa-ia/service-b/internal/handlers"
-	"finexa-ia/service-b/internal/repository"
-	"finexa-ia/service-b/internal/services"
-	pkgdb "finexa-ia/service-b/pkg/db"
+	"finexa-ia/ms-users/internal/config"
+	"finexa-ia/ms-users/internal/handlers"
+	"finexa-ia/ms-users/internal/repository"
+	"finexa-ia/ms-users/internal/services"
+	pkgdb "finexa-ia/ms-users/pkg/db"
 )
 
 func main() {

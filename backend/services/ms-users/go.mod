@@ -1,4 +1,4 @@
-module finexa-ia/service-b
+module finexa-ia/ms-users
 
 go 1.25.0
 

@@ -52,3 +52,29 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 	err := row.Scan(&i.ID, &i.Name, &i.Email, &i.CreatedAt)
 	return i, err
 }
+
+type UpdateUserParams struct {
+	Name  string `json:"name"`
+	Email string `json:"email"`
+	ID    int64  `json:"id"`
+}
+
+const updateUser = `-- name: UpdateUser :one
+UPDATE users SET name = $1, email = $2 WHERE id = $3 RETURNING id, name, email, created_at`
+
+func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error) {
+	row := q.db.QueryRowContext(ctx, updateUser, arg.Name, arg.Email, arg.ID)
+	var i User
+	err := row.Scan(&i.ID, &i.Name, &i.Email, &i.CreatedAt)
+	return i, err
+}
+
+const deleteUser = `-- name: DeleteUser :one
+DELETE FROM users WHERE id = $1 RETURNING id, name, email, created_at`
+
+func (q *Queries) DeleteUser(ctx context.Context, id int64) (User, error) {
+	row := q.db.QueryRowContext(ctx, deleteUser, id)
+	var i User
+	err := row.Scan(&i.ID, &i.Name, &i.Email, &i.CreatedAt)
+	return i, err
+}
