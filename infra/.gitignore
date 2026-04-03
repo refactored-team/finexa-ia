@@ -11,6 +11,9 @@
 terraform.tfvars
 *.auto.tfvars
 
+# Local backend config (bucket/table names are account-specific)
+**/environments/**/backend.hcl
+
 # Crash logs
 crash.log
 crash.*.log
