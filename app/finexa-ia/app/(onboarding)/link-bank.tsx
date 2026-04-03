@@ -34,7 +34,11 @@ import { plaidService } from '@/src/services/api/plaid/plaidService';
 import type { LinkIOSPresentationStyle, LinkSuccess } from 'react-native-plaid-link-sdk';
 
 import { AuthBackground } from '@/components/auth';
-import { isAmplifyAuthConfigured } from '@/lib/amplify/configure';
+import {
+  getExpoGoDevBuildInstructions,
+  isAmplifyAuthConfigured,
+  isExpoGo,
+} from '@/lib/amplify/configure';
 import { signOutUser } from '@/lib/auth/cognito';
 import {
   ChevronRight,
@@ -287,7 +291,9 @@ export default function LinkBankScreen() {
 
   const [linkToken, setLinkToken] = useState<string | null>(null);
   const [isLinking, setIsLinking] = useState(false);
-  const userId = "2";
+  const userId = '2';
+
+  const clientIsExpoGo = useMemo(() => isExpoGo(), []);
 
   // Fase 1: Pedir Link Token al backend
   useEffect(() => {
@@ -325,8 +331,20 @@ export default function LinkBankScreen() {
     router.replace('/login');
   }
 
+  function showDevBuildHelp() {
+    const d = getExpoGoDevBuildInstructions();
+    if (d) {
+      Alert.alert('Development build', d);
+    }
+  }
+
   // Fase 3: Disparador del CTA — import dinámico del SDK solo si el nativo está presente.
   async function handleCtaPress() {
+    if (clientIsExpoGo) {
+      showDevBuildHelp();
+      return;
+    }
+
     if (!linkToken) {
       Alert.alert('Cargando', 'Preparando conexión segura, por favor espera un momento...');
       return;
@@ -344,8 +362,8 @@ export default function LinkBankScreen() {
       if (!nativePlaidPresent) {
         setIsLinking(false);
         Alert.alert(
-          'Plaid no disponible en esta app',
-          'Este SDK necesita código nativo enlazado. Usa un development build (expo prebuild + run) o EAS Dev Client; Expo Go no incluye react-native-plaid-link-sdk.',
+          'Plaid no está enlazado',
+          'Falta el módulo nativo del SDK. Volvé a compilar con npx expo run:ios (o run:android) después de instalar dependencias. Si usás Expo Go, no funcionará: necesitás un development build.',
         );
         return;
       }
@@ -420,6 +438,20 @@ export default function LinkBankScreen() {
             { paddingTop: bodyPaddingTop, paddingHorizontal: Spacing.lg },
           ]}>
           <View style={[Layout.flex1, styles.mainFill]}>
+            {clientIsExpoGo ? (
+              <View style={styles.expoGoBanner}>
+                <Text style={styles.expoGoBannerTitle}>Estás en Expo Go</Text>
+                <Text style={styles.expoGoBannerBody}>
+                  Plaid no puede abrirse aquí: Expo Go no incluye el SDK nativo. Compilá la app con{' '}
+                  <Text style={styles.expoGoBannerMono}>expo run:ios</Text> o{' '}
+                  <Text style={styles.expoGoBannerMono}>expo run:android</Text> y usá{' '}
+                  <Text style={styles.expoGoBannerMono}>npm run start:dev</Text>.
+                </Text>
+                <Pressable onPress={showDevBuildHelp} hitSlop={8} style={styles.expoGoBannerLinkWrap}>
+                  <Text style={styles.expoGoBannerLink}>Ver pasos detallados</Text>
+                </Pressable>
+              </View>
+            ) : null}
             <View style={[styles.glassCard, Shadow.card]}>
               <View style={styles.scoreSection}>
                 <EnterFadeSlide delay={70}>
@@ -525,21 +557,31 @@ export default function LinkBankScreen() {
             <EnterFadeSlide delay={400}>
               <TouchableOpacity
                 onPress={handleCtaPress}
-                disabled={isLinking}
+                disabled={clientIsExpoGo || isLinking}
                 style={[
                   styles.ctaPress,
                   Shadow.button,
-                  isLinking && styles.disabledButton
+                  (clientIsExpoGo || isLinking) && styles.disabledButton,
                 ]}>
                 <LinearGradient
-                  colors={[PrismColors.primary, PrismColors.secondary]}
+                  colors={
+                    clientIsExpoGo
+                      ? ['rgba(100,116,139,0.85)', 'rgba(71,85,105,0.9)']
+                      : [PrismColors.primary, PrismColors.secondary]
+                  }
                   start={{ x: 0, y: 0.5 }}
                   end={{ x: 1, y: 0.5 }}
                   style={styles.ctaGradient}>
                   <Text style={styles.ctaLabel} numberOfLines={1}>
-                    {isLinking ? 'Conectando...' : 'Vincular con Plaid'}
+                    {clientIsExpoGo
+                      ? 'Usá un dev build para Plaid'
+                      : isLinking
+                        ? 'Conectando...'
+                        : 'Vincular con Plaid'}
                   </Text>
-                  {!isLinking && <ChevronRight size={18} color="#FFFFFF" strokeWidth={2.5} />}
+                  {!clientIsExpoGo && !isLinking && (
+                    <ChevronRight size={18} color="#FFFFFF" strokeWidth={2.5} />
+                  )}
                 </LinearGradient>
               </TouchableOpacity>
             </EnterFadeSlide>
@@ -607,6 +649,39 @@ const styles = StyleSheet.create({
   mainFill: {
     justifyContent: 'center',
     minHeight: 0,
+    gap: Spacing.md,
+  },
+  expoGoBanner: {
+    borderRadius: Radius.md,
+    padding: Spacing.md,
+    backgroundColor: 'rgba(254, 243, 199, 0.95)',
+    borderWidth: 1,
+    borderColor: 'rgba(245, 158, 11, 0.45)',
+  },
+  expoGoBannerTitle: {
+    fontFamily: TextStyles.bodyMedium.fontFamily,
+    fontSize: 14,
+    color: '#92400E',
+    marginBottom: Spacing.xs,
+  },
+  expoGoBannerBody: {
+    fontFamily: TextStyles.caption.fontFamily,
+    fontSize: 12,
+    lineHeight: 17,
+    color: '#78350F',
+  },
+  expoGoBannerMono: {
+    fontFamily: TextStyles.bodyMedium.fontFamily,
+    fontSize: 12,
+    color: '#92400E',
+  },
+  expoGoBannerLinkWrap: {
+    alignSelf: 'flex-start',
+    marginTop: Spacing.sm,
+  },
+  expoGoBannerLink: {
+    ...TextStyles.linkSmall,
+    fontSize: 13,
   },
   footer: {
     flexShrink: 0,

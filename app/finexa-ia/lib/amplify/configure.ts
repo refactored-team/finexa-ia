@@ -14,13 +14,31 @@ export function isAmplifyAuthConfigured(): boolean {
   return configured && Boolean(userPoolId && userPoolClientId);
 }
 
+/** `true` en la app genérica Expo Go (sin tus módulos nativos: Amplify, Plaid, etc.). */
+export function isExpoGo(): boolean {
+  if (Platform.OS === 'web') return false;
+  return Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
+}
+
+/** Instrucciones compartidas cuando hace falta un binario con nativos (Plaid, Amplify RTN, etc.). */
+export function getExpoGoDevBuildInstructions(): string | null {
+  if (!isExpoGo()) return null;
+  return (
+    'Expo Go no incluye el código nativo de Plaid ni de otros SDK de este proyecto.\n\n' +
+    'Generá e instalá un development build:\n' +
+    '1) npx expo prebuild\n' +
+    '2) npx expo run:ios (o npx expo run:android)\n' +
+    '3) npm run start:dev\n\n' +
+    'Abrí la app Finexa desde el simulador o el teléfono, no desde Expo Go.'
+  );
+}
+
 /**
  * Expo Go no incluye el nativo `AmplifyRTNCore` de `@aws-amplify/react-native`.
  * En ese entorno Cognito/Amplify v6 falla al iniciar sesión hasta usar un development build.
  */
 export function getAmplifyNativeUnavailableMessage(): string | null {
-  if (Platform.OS === 'web') return null;
-  if (Constants.executionEnvironment !== ExecutionEnvironment.StoreClient) return null;
+  if (!isExpoGo()) return null;
   return (
     'AWS Amplify necesita un development build: Expo Go no incluye el módulo nativo @aws-amplify/react-native.\n\n' +
     '1) npx expo prebuild\n' +
