@@ -19,11 +19,11 @@ variable "aws_region" {
 variable "ecr_services" {
   description = "Service keys become ECR repo name suffix: {project}-{environment}-{service}."
   type        = set(string)
-  default     = ["app"]
+  default     = ["ms-plaid"]
 }
 
 variable "ecr_image_retention_count" {
   description = "Images to keep per ECR repository (lifecycle policy)."
   type        = number
-  default     = 10
+  default     = 5
 }

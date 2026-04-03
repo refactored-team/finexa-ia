@@ -40,6 +40,7 @@ export default function LoginScreen() {
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [loading, setLoading] = useState(false);
 
+
   const scrollContentStyle = useMemo(
     () => [
       styles.scrollContent,
