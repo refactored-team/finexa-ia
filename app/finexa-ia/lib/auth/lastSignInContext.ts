@@ -1,4 +1,4 @@
-/** Email del último intento de login (para reset de contraseña durante el flujo MFA). */
+/** Email del último intento de login (p. ej. confirmación o reset durante el flujo de sign-in). */
 let lastEmail = '';
 
 export function setLastSignInEmail(email: string): void {

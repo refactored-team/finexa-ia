@@ -11,26 +11,20 @@ import {
   signUp,
 } from 'aws-amplify/auth';
 
-import { isAmplifyAuthConfigured } from '@/lib/amplify/configure';
+import {
+  getAmplifyNativeUnavailableMessage,
+  isAmplifyAuthConfigured,
+} from '@/lib/amplify/configure';
 
 export type AuthResult<T = void> =
   | { ok: true; data: T }
   | { ok: false; message: string; code?: string };
-
-export type MfaMethod = 'SMS' | 'TOTP' | 'EMAIL';
 
 export type SignInNext =
   | { kind: 'signed_in' }
   | { kind: 'needs_confirm_sign_up'; email: string }
   | { kind: 'needs_password_reset'; email: string }
   | { kind: 'needs_new_password' }
-  | { kind: 'needs_verification_code'; channel: 'sms' | 'email' | 'totp' }
-  | {
-      kind: 'needs_mfa_selection';
-      allowedMFATypes: MfaMethod[];
-      isSetup: boolean;
-    }
-  | { kind: 'needs_totp_setup'; setupUri: string; sharedSecret: string }
   | { kind: 'unsupported_challenge'; signInStep: string };
 
 export type SignInResult = AuthResult<SignInNext>;
@@ -69,48 +63,153 @@ function notConfigured(): AuthResult<never> {
   };
 }
 
+/** Expo Go no enlaza `@aws-amplify/react-native` (AmplifyRTNCore). */
+function guardNativeAmplify(): AuthResult<never> | null {
+  const msg = getAmplifyNativeUnavailableMessage();
+  if (!msg) return null;
+  return { ok: false, message: msg, code: 'ExpoGoNotSupported' };
+}
+
 /** Dónde ocurrió el error: el mismo código de Cognito puede significar cosas distintas. */
 type AuthErrorContext = 'signInEmailPassword' | 'signUp' | 'default';
 
-function mapAuthError(err: unknown, context: AuthErrorContext = 'default'): AuthResult<never> {
-  if (err instanceof AuthError) {
-    const name = err.name;
-    const notAuthorizedByContext: Record<AuthErrorContext, string> = {
-      signInEmailPassword: 'Correo o contraseña incorrectos.',
-      signUp:
-        'Cognito rechazó el registro; no es el mismo caso que “contraseña débil” en pantalla. Revisá en AWS que el app client permita registro y, si usás Lambdas (pre sign-up), sus logs en CloudWatch. Si el correo ya existe, probá iniciar sesión.',
-      default: 'No autorizado o datos rechazados. Verificá la información o volvé a intentar.',
-    };
+/** Nombres de error de Amplify que envuelven la causa real en `underlyingError`. */
+const AMPLIFY_WRAPPER_NAMES = new Set([
+  'SignInException',
+  'OAuthSignInException',
+  'Unknown',
+]);
 
-    const messages: Record<string, string> = {
-      NotAuthorizedException: notAuthorizedByContext[context],
-      UserNotConfirmedException: 'Confirmá tu correo con el código que te enviamos.',
-      UsernameExistsException: 'Ya existe una cuenta con ese correo.',
-      UserAlreadyAuthenticatedException: 'Ya hay una sesión activa.',
-      InvalidPasswordException: 'La contraseña no cumple las reglas del servicio.',
-      LimitExceededException: 'Demasiados intentos. Probá más tarde.',
-      CodeMismatchException: 'El código no es válido.',
-      ExpiredCodeException: 'El código expiró. Pedí uno nuevo.',
-      InvalidParameterException: 'Revisá los datos ingresados.',
-      NetworkError: 'Sin conexión o error de red. Probá de nuevo.',
-      UserNotFoundException: 'No encontramos una cuenta con ese correo.',
-      UserLambdaValidationException:
-        'El registro fue rechazado por una validación en el servidor (Lambda de Cognito).',
-      InvalidLambdaResponseException:
-        'Error en la configuración del registro (respuesta inválida de Lambda en Cognito).',
-      UnexpectedLambdaException: 'Error temporal del servidor al registrarte. Probá más tarde.',
-      TooManyRequestsException: 'Demasiadas solicitudes. Esperá un momento e intentá de nuevo.',
+type ErrorChain = {
+  /** De externo a interno (p. ej. SignInException → NotAuthorizedException). */
+  names: string[];
+  deepestMessage: string;
+  recoverySuggestion?: string;
+};
+
+function collectErrorChain(err: unknown): ErrorChain {
+  const names: string[] = [];
+  let deepestMessage = '';
+  let recoverySuggestion: string | undefined;
+  const seen = new Set<unknown>();
+  let cur: unknown = err;
+
+  for (let i = 0; i < 8 && cur != null && !seen.has(cur); i++) {
+    seen.add(cur);
+    if (!(cur instanceof Error)) break;
+
+    names.push(cur.name);
+    deepestMessage = cur.message || deepestMessage;
+
+    const withMeta = cur as Error & {
+      underlyingError?: unknown;
+      recoverySuggestion?: string;
     };
-    return {
-      ok: false,
-      message: messages[name] ?? err.message ?? 'No se pudo completar la operación.',
-      code: name,
-    };
+    if (typeof withMeta.recoverySuggestion === 'string' && !recoverySuggestion) {
+      recoverySuggestion = withMeta.recoverySuggestion;
+    }
+
+    const next = withMeta.underlyingError;
+    if (next == null) break;
+    if (!AMPLIFY_WRAPPER_NAMES.has(cur.name)) break;
+    cur = next;
   }
-  if (err instanceof Error) {
-    return { ok: false, message: err.message, code: err.name };
+
+  if (names.length === 0 && err instanceof Error) {
+    names.push(err.name);
+    deepestMessage = err.message;
   }
-  return { ok: false, message: 'Ocurrió un error inesperado.' };
+
+  return { names, deepestMessage, recoverySuggestion };
+}
+
+/** Cognito / Amplify: preferir el código más interno con sufijo Exception u otros conocidos. */
+function pickServiceErrorCode(names: string[]): string | undefined {
+  for (let i = names.length - 1; i >= 0; i--) {
+    const n = names[i];
+    if (
+      n.endsWith('Exception') ||
+      n === 'NetworkError' ||
+      n === 'TimeoutError' ||
+      n === 'AbortError'
+    ) {
+      return n;
+    }
+  }
+  return names.length ? names[names.length - 1] : undefined;
+}
+
+function mapAuthError(err: unknown, context: AuthErrorContext = 'default'): AuthResult<never> {
+  const chain = collectErrorChain(err);
+  const code = pickServiceErrorCode(chain.names);
+  const notAuthorizedByContext: Record<AuthErrorContext, string> = {
+    signInEmailPassword: 'Correo o contraseña incorrectos.',
+    signUp:
+      'Cognito rechazó el registro; no es el mismo caso que “contraseña débil” en pantalla. Revisá en AWS que el app client permita registro y, si usás Lambdas (pre sign-up), sus logs en CloudWatch. Si el correo ya existe, probá iniciar sesión.',
+    default: 'No autorizado o datos rechazados. Verificá la información o volvé a intentar.',
+  };
+
+  const messages: Record<string, string> = {
+    NotAuthorizedException: notAuthorizedByContext[context],
+    UserNotConfirmedException: 'Confirmá tu correo con el código que te enviamos.',
+    UsernameExistsException: 'Ya existe una cuenta con ese correo.',
+    UserAlreadyAuthenticatedException: 'Ya hay una sesión activa.',
+    InvalidPasswordException: 'La contraseña no cumple las reglas del servicio.',
+    LimitExceededException: 'Demasiados intentos. Probá más tarde.',
+    CodeMismatchException: 'El código no es válido.',
+    ExpiredCodeException: 'El código expiró. Pedí uno nuevo.',
+    InvalidParameterException: 'Revisá los datos ingresados.',
+    NetworkError: 'Sin conexión o error de red. Probá de nuevo.',
+    UserNotFoundException: 'No encontramos una cuenta con ese correo.',
+    UserLambdaValidationException:
+      'El registro fue rechazado por una validación en el servidor (Lambda de Cognito).',
+    InvalidLambdaResponseException:
+      'Error en la configuración del registro (respuesta inválida de Lambda en Cognito).',
+    UnexpectedLambdaException: 'Error temporal del servidor al registrarte. Probá más tarde.',
+    TooManyRequestsException: 'Demasiadas solicitudes. Esperá un momento e intentá de nuevo.',
+    ResourceNotFoundException:
+      'No se encontró el recurso de Cognito. Revisá EXPO_PUBLIC_COGNITO_USER_POOL_ID y EXPO_PUBLIC_COGNITO_USER_POOL_CLIENT_ID (región y valores correctos).',
+    InvalidUserPoolConfigurationException:
+      'La configuración del user pool en AWS no coincide con el flujo de inicio de sesión (por ejemplo, USER_PASSWORD_AUTH debe estar permitido en el app client).',
+    ForbiddenException: 'Cognito rechazó la solicitud (permisos o política IAM/SMS). Revisá la consola de AWS.',
+    InternalErrorException: 'Error interno de AWS. Probá de nuevo en unos minutos.',
+    PasswordResetRequiredException: 'Tenés que restablecer la contraseña antes de entrar.',
+    TooManyFailedAttemptsException: 'Demasiados intentos fallidos. Esperá e intentá de nuevo.',
+    SignInException:
+      'No se pudo completar el inicio de sesión. Revisá la configuración del user pool o volvé a intentar.',
+    OAuthSignInException: 'Error en el inicio de sesión con el proveedor (Hosted UI / OAuth). Revisá la configuración del app client.',
+    Unknown:
+      'Ocurrió un error no identificado. Verificá conexión a internet y que las variables EXPO_PUBLIC_COGNITO_* estén bien cargadas.',
+    TypeError: 'Falló la comunicación con el servidor (red o respuesta inesperada). Probá de nuevo.',
+    TimeoutError: 'La solicitud tardó demasiado. Probá con mejor señal o más tarde.',
+    AbortError: 'La solicitud fue cancelada. Intentá de nuevo.',
+  };
+
+  const mapped = code ? messages[code] : undefined;
+  let message =
+    mapped ??
+    (code && chain.deepestMessage && !/unknown error/i.test(chain.deepestMessage)
+      ? chain.deepestMessage
+      : undefined) ??
+    (code
+      ? `No se pudo completar la operación (código: ${code}). Si persiste, contactá soporte.`
+      : 'Ocurrió un error inesperado.');
+
+  if (chain.recoverySuggestion && (code === 'SignInException' || code === 'Unknown' || !mapped)) {
+    message = `${message}\n\n${chain.recoverySuggestion}`;
+  }
+
+  if (__DEV__) {
+    const trace = chain.names.length ? chain.names.join(' → ') : String(err);
+    console.warn('[Auth]', trace, chain.deepestMessage || err);
+  }
+
+  const isAuthError = err instanceof AuthError;
+  return {
+    ok: false,
+    message,
+    code: code ?? (isAuthError ? err.name : chain.names[0]),
+  };
 }
 
 type SignInStepOutput = Awaited<ReturnType<typeof signIn>>;
@@ -127,43 +226,6 @@ function mapSignInOutput(out: SignInStepOutput, email: string): SignInNext {
       return { kind: 'needs_password_reset', email };
     case 'CONFIRM_SIGN_IN_WITH_NEW_PASSWORD_REQUIRED':
       return { kind: 'needs_new_password' };
-    case 'CONFIRM_SIGN_IN_WITH_SMS_CODE':
-      return { kind: 'needs_verification_code', channel: 'sms' };
-    case 'CONFIRM_SIGN_IN_WITH_EMAIL_CODE':
-      return { kind: 'needs_verification_code', channel: 'email' };
-    case 'CONFIRM_SIGN_IN_WITH_TOTP_CODE':
-      return { kind: 'needs_verification_code', channel: 'totp' };
-    case 'CONTINUE_SIGN_IN_WITH_MFA_SELECTION': {
-      const allowed = (
-        out.nextStep as { allowedMFATypes?: MfaMethod[] }
-      ).allowedMFATypes;
-      const list =
-        allowed && allowed.length > 0 ? allowed : (['SMS', 'TOTP'] as MfaMethod[]);
-      return { kind: 'needs_mfa_selection', allowedMFATypes: list, isSetup: false };
-    }
-    case 'CONTINUE_SIGN_IN_WITH_MFA_SETUP_SELECTION': {
-      const allowed = (
-        out.nextStep as { allowedMFATypes?: MfaMethod[] }
-      ).allowedMFATypes;
-      const list =
-        allowed && allowed.length > 0 ? allowed : (['SMS', 'TOTP', 'EMAIL'] as MfaMethod[]);
-      return { kind: 'needs_mfa_selection', allowedMFATypes: list, isSetup: true };
-    }
-    case 'CONTINUE_SIGN_IN_WITH_TOTP_SETUP': {
-      const ns = out.nextStep as {
-        signInStep: 'CONTINUE_SIGN_IN_WITH_TOTP_SETUP';
-        totpSetupDetails: {
-          sharedSecret: string;
-          getSetupUri: (appName: string, accountName: string) => URL;
-        };
-      };
-      const uri = ns.totpSetupDetails.getSetupUri('Finexa', email || 'Usuario').toString();
-      return {
-        kind: 'needs_totp_setup',
-        setupUri: uri,
-        sharedSecret: ns.totpSetupDetails.sharedSecret,
-      };
-    }
     default:
       return { kind: 'unsupported_challenge', signInStep: step };
   }
@@ -174,6 +236,8 @@ export async function signInWithEmailPassword(
   password: string,
 ): Promise<SignInResult> {
   if (!isAmplifyAuthConfigured()) return notConfigured();
+  const blocked = guardNativeAmplify();
+  if (blocked) return blocked;
   const trimmed = email.trim().toLowerCase();
   try {
     const out = await signIn({ username: trimmed, password });
@@ -183,28 +247,10 @@ export async function signInWithEmailPassword(
   }
 }
 
-export async function submitSignInChallengeCode(code: string): Promise<SignInResult> {
-  if (!isAmplifyAuthConfigured()) return notConfigured();
-  try {
-    const out = await confirmSignIn({ challengeResponse: code.trim() });
-    return { ok: true, data: mapSignInOutput(out, '') };
-  } catch (e) {
-    return mapAuthError(e);
-  }
-}
-
-export async function submitSignInMfaChoice(method: MfaMethod): Promise<SignInResult> {
-  if (!isAmplifyAuthConfigured()) return notConfigured();
-  try {
-    const out = await confirmSignIn({ challengeResponse: method });
-    return { ok: true, data: mapSignInOutput(out, '') };
-  } catch (e) {
-    return mapAuthError(e);
-  }
-}
-
 export async function submitSignInNewPassword(newPassword: string): Promise<SignInResult> {
   if (!isAmplifyAuthConfigured()) return notConfigured();
+  const blocked = guardNativeAmplify();
+  if (blocked) return blocked;
   try {
     const out = await confirmSignIn({ challengeResponse: newPassword });
     return { ok: true, data: mapSignInOutput(out, '') };
@@ -215,6 +261,8 @@ export async function submitSignInNewPassword(newPassword: string): Promise<Sign
 
 export async function requestPasswordReset(email: string): Promise<AuthResult> {
   if (!isAmplifyAuthConfigured()) return notConfigured();
+  const blocked = guardNativeAmplify();
+  if (blocked) return blocked;
   const trimmed = email.trim().toLowerCase();
   try {
     await resetPassword({ username: trimmed });
@@ -230,6 +278,8 @@ export async function confirmPasswordReset(
   newPassword: string,
 ): Promise<AuthResult> {
   if (!isAmplifyAuthConfigured()) return notConfigured();
+  const blocked = guardNativeAmplify();
+  if (blocked) return blocked;
   const trimmed = email.trim().toLowerCase();
   try {
     await confirmResetPassword({
@@ -249,6 +299,8 @@ export async function signUpWithProfile(
   profile: SignUpProfile,
 ): Promise<AuthResult<{ nextStep: SignUpNext }>> {
   if (!isAmplifyAuthConfigured()) return notConfigured();
+  const blocked = guardNativeAmplify();
+  if (blocked) return blocked;
   const email = profile.email.trim().toLowerCase();
   const phone = profile.phone_number.trim();
   try {
@@ -281,6 +333,8 @@ export async function signUpWithProfile(
 
 export async function confirmSignUpCode(email: string, code: string): Promise<AuthResult> {
   if (!isAmplifyAuthConfigured()) return notConfigured();
+  const blocked = guardNativeAmplify();
+  if (blocked) return blocked;
   const trimmed = email.trim().toLowerCase();
   try {
     await confirmSignUp({ username: trimmed, confirmationCode: code.trim() });
@@ -292,6 +346,8 @@ export async function confirmSignUpCode(email: string, code: string): Promise<Au
 
 export async function resendConfirmationCode(email: string): Promise<AuthResult> {
   if (!isAmplifyAuthConfigured()) return notConfigured();
+  const blocked = guardNativeAmplify();
+  if (blocked) return blocked;
   const trimmed = email.trim().toLowerCase();
   try {
     await resendSignUpCode({ username: trimmed });
@@ -303,6 +359,8 @@ export async function resendConfirmationCode(email: string): Promise<AuthResult>
 
 export async function signOutUser(): Promise<AuthResult> {
   if (!isAmplifyAuthConfigured()) return notConfigured();
+  const blocked = guardNativeAmplify();
+  if (blocked) return blocked;
   try {
     await signOut();
     return { ok: true, data: undefined };
@@ -313,6 +371,7 @@ export async function signOutUser(): Promise<AuthResult> {
 
 export async function hasAuthenticatedUser(): Promise<boolean> {
   if (!isAmplifyAuthConfigured()) return false;
+  if (getAmplifyNativeUnavailableMessage()) return false;
   try {
     await getCurrentUser();
     return true;

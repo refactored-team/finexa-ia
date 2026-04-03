@@ -2,13 +2,8 @@ import { Alert } from 'react-native';
 
 import type { Router } from 'expo-router';
 
-import {
-  requestPasswordReset,
-  submitSignInMfaChoice,
-  type SignInResult,
-} from '@/lib/auth/cognito';
+import { requestPasswordReset, type SignInResult } from '@/lib/auth/cognito';
 import { getLastSignInEmail } from '@/lib/auth/lastSignInContext';
-import { clearPendingTotpSetup, setPendingTotpSetup } from '@/lib/auth/totpSetupStore';
 
 type Ctx = {
   email: string;
@@ -17,7 +12,7 @@ type Ctx = {
 
 /**
  * Navega o muestra alertas según el resultado de signIn / confirmSignIn.
- * Reutilizable en login, selección MFA, código, nueva contraseña y TOTP setup.
+ * Cubre login, confirmación de cuenta, nueva contraseña obligatoria y reset por correo.
  */
 export async function followSignInResult(
   router: Router,
@@ -50,7 +45,6 @@ export async function followSignInResult(
 
   switch (data.kind) {
     case 'signed_in':
-      clearPendingTotpSetup();
       router.replace('/(tabs)/home');
       return;
     case 'needs_confirm_sign_up':
@@ -86,35 +80,6 @@ export async function followSignInResult(
     }
     case 'needs_new_password':
       router.push('/new-password');
-      return;
-    case 'needs_verification_code':
-      router.push({
-        pathname: '/sign-in-challenge',
-        params: { channel: data.channel },
-      });
-      return;
-    case 'needs_mfa_selection':
-      if (data.allowedMFATypes.length === 1) {
-        setLoading(true);
-        const next = await submitSignInMfaChoice(data.allowedMFATypes[0]);
-        setLoading(false);
-        await followSignInResult(router, next, ctx);
-        return;
-      }
-      router.push({
-        pathname: '/mfa-select',
-        params: {
-          types: data.allowedMFATypes.join(','),
-          isSetup: data.isSetup ? '1' : '0',
-        },
-      });
-      return;
-    case 'needs_totp_setup':
-      setPendingTotpSetup({
-        setupUri: data.setupUri,
-        sharedSecret: data.sharedSecret,
-      });
-      router.push('/totp-setup');
       return;
     case 'unsupported_challenge':
       Alert.alert(

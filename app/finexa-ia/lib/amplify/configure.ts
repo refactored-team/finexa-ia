@@ -1,3 +1,5 @@
+import Constants, { ExecutionEnvironment } from 'expo-constants';
+import { Platform } from 'react-native';
 import { Amplify } from 'aws-amplify';
 import { cognitoUserPoolsTokenProvider } from 'aws-amplify/auth/cognito';
 
@@ -10,6 +12,22 @@ let configured = false;
 
 export function isAmplifyAuthConfigured(): boolean {
   return configured && Boolean(userPoolId && userPoolClientId);
+}
+
+/**
+ * Expo Go no incluye el nativo `AmplifyRTNCore` de `@aws-amplify/react-native`.
+ * En ese entorno Cognito/Amplify v6 falla al iniciar sesión hasta usar un development build.
+ */
+export function getAmplifyNativeUnavailableMessage(): string | null {
+  if (Platform.OS === 'web') return null;
+  if (Constants.executionEnvironment !== ExecutionEnvironment.StoreClient) return null;
+  return (
+    'AWS Amplify necesita un development build: Expo Go no incluye el módulo nativo @aws-amplify/react-native.\n\n' +
+    '1) npx expo prebuild\n' +
+    '2) npx expo run:ios (o npx expo run:android)\n' +
+    '3) npm run start:dev\n\n' +
+    'Abrí la app Finexa instalada en simulador o dispositivo, no la de Expo Go.'
+  );
 }
 
 /**
@@ -41,4 +59,11 @@ export function configureAmplify(): void {
   });
 
   configured = true;
+
+  if (__DEV__) {
+    const expoGo = getAmplifyNativeUnavailableMessage();
+    if (expoGo) {
+      console.warn('[Amplify]', expoGo.replace(/\n\n/g, ' '));
+    }
+  }
 }

@@ -62,7 +62,7 @@ export default function LoginScreen() {
     const trimmedEmail = email.trim().toLowerCase();
     setLastSignInEmail(trimmedEmail);
     setLoading(true);
-    const result = await signInWithEmailPassword(email, password);
+    const result = await signInWithEmailPassword(trimmedEmail, password);
     setLoading(false);
     await followSignInResult(router, result, {
       email: trimmedEmail,
