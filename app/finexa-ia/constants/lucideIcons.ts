@@ -1,7 +1,6 @@
 /**
- * Iconos Lucide vía rutas directas a los módulos en `dist/esm/icons`.
- * No usar el entry `lucide-react-native`: importa todos los iconos y Metro puede
- * fallar (p. ej. si falta un `.js` suelto) o el bundle crece innecesariamente.
+ * Iconos desde `lucide-react-native/icons` (subpath oficial en `package.json` → `exports`).
+ * Evita warnings de Metro: "not listed in the exports" al importar `dist/esm/icons/*.js`.
  */
 export type { LucideIcon } from 'lucide-react-native';
 

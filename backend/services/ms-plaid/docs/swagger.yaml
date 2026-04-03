@@ -1,0 +1,269 @@
+basePath: /
+definitions:
+  apiresult.ErrResult:
+    properties:
+      error:
+        $ref: '#/definitions/apiresult.ErrorPayload'
+      ok:
+        type: boolean
+    type: object
+  apiresult.ErrorPayload:
+    properties:
+      code:
+        type: string
+      details:
+        additionalProperties: {}
+        type: object
+      message:
+        type: string
+    type: object
+  finexa-ia_ms-plaid_internal_models.CreateLinkTokenBody:
+    properties:
+      redirect_uri:
+        type: string
+      webhook_url:
+        type: string
+    type: object
+  finexa-ia_ms-plaid_internal_models.CreatePlaidItemRequest:
+    properties:
+      access_token:
+        type: string
+      institution_id:
+        type: string
+      institution_name:
+        type: string
+      plaid_item_id:
+        type: string
+    type: object
+  finexa-ia_ms-plaid_internal_models.HealthResponse:
+    properties:
+      database:
+        description: '"ok" cuando Ping a Postgres funciona'
+        example: ok
+        type: string
+      status:
+        example: ok
+        type: string
+    type: object
+  finexa-ia_ms-plaid_internal_models.LinkTokenOKResult:
+    properties:
+      data:
+        $ref: '#/definitions/finexa-ia_ms-plaid_internal_models.LinkTokenResponse'
+      ok:
+        type: boolean
+    type: object
+  finexa-ia_ms-plaid_internal_models.LinkTokenResponse:
+    properties:
+      expiration:
+        type: string
+      link_token:
+        type: string
+      request_id:
+        type: string
+    type: object
+  finexa-ia_ms-plaid_internal_models.PlaidItemDeleteData:
+    properties:
+      deleted:
+        type: boolean
+    type: object
+  finexa-ia_ms-plaid_internal_models.PlaidItemDeleteOKResult:
+    properties:
+      data:
+        $ref: '#/definitions/finexa-ia_ms-plaid_internal_models.PlaidItemDeleteData'
+      ok:
+        type: boolean
+    type: object
+  finexa-ia_ms-plaid_internal_models.PlaidItemOKResult:
+    properties:
+      data:
+        $ref: '#/definitions/finexa-ia_ms-plaid_internal_models.PlaidItemResponse'
+      ok:
+        type: boolean
+    type: object
+  finexa-ia_ms-plaid_internal_models.PlaidItemResponse:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: integer
+      institution_id:
+        type: string
+      institution_name:
+        type: string
+      plaid_item_id:
+        type: string
+      updated_at:
+        type: string
+      user_id:
+        type: integer
+    type: object
+info:
+  contact: {}
+  description: 'Microservicio Plaid: una conexión activa por usuario. La identidad
+    debe validarse en el API gateway; aquí se usa userId en la ruta.'
+  title: ms-plaid API
+  version: 1.0.0
+paths:
+  /health:
+    get:
+      description: Comprueba que el proceso responde y que la base de datos acepta
+        conexión
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/finexa-ia_ms-plaid_internal_models.HealthResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/finexa-ia_ms-plaid_internal_models.HealthResponse'
+      summary: Health check
+      tags:
+      - health
+  /v1/users/{userId}/plaid-item:
+    delete:
+      parameters:
+      - description: ID interno de usuario (FK)
+        in: path
+        name: userId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/finexa-ia_ms-plaid_internal_models.PlaidItemDeleteOKResult'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apiresult.ErrResult'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/apiresult.ErrResult'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apiresult.ErrResult'
+      summary: Desconectar Plaid (baja lógica)
+      tags:
+      - plaid-item
+    get:
+      description: Como máximo una conexión activa por usuario (sin access_token en
+        respuesta)
+      parameters:
+      - description: ID interno de usuario (FK)
+        in: path
+        name: userId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/finexa-ia_ms-plaid_internal_models.PlaidItemOKResult'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apiresult.ErrResult'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/apiresult.ErrResult'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apiresult.ErrResult'
+      summary: Obtener conexión Plaid
+      tags:
+      - plaid-item
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID interno de usuario (FK)
+        in: path
+        name: userId
+        required: true
+        type: integer
+      - description: Cuerpo
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/finexa-ia_ms-plaid_internal_models.CreatePlaidItemRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/finexa-ia_ms-plaid_internal_models.PlaidItemOKResult'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apiresult.ErrResult'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apiresult.ErrResult'
+      summary: Registrar o actualizar conexión Plaid
+      tags:
+      - plaid-item
+  /v1/users/{userId}/plaid/link-token:
+    post:
+      consumes:
+      - application/json
+      description: 'Inicializa una sesión Link: llama a Plaid y persiste metadatos
+        (sin guardar el link_token).'
+      parameters:
+      - description: ID interno de usuario (FK)
+        in: path
+        name: userId
+        required: true
+        type: integer
+      - description: Overrides opcionales (webhook, redirect)
+        in: body
+        name: body
+        schema:
+          $ref: '#/definitions/finexa-ia_ms-plaid_internal_models.CreateLinkTokenBody'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/finexa-ia_ms-plaid_internal_models.LinkTokenOKResult'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apiresult.ErrResult'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/apiresult.ErrResult'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apiresult.ErrResult'
+        "502":
+          description: Bad Gateway
+          schema:
+            $ref: '#/definitions/apiresult.ErrResult'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/apiresult.ErrResult'
+      summary: Crear link token Plaid
+      tags:
+      - plaid-link
+schemes:
+- http
+- https
+swagger: "2.0"

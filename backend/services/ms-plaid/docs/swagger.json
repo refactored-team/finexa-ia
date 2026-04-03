@@ -1,0 +1,404 @@
+{
+    "schemes": [
+        "http",
+        "https"
+    ],
+    "swagger": "2.0",
+    "info": {
+        "description": "Microservicio Plaid: una conexión activa por usuario. La identidad debe validarse en el API gateway; aquí se usa userId en la ruta.",
+        "title": "ms-plaid API",
+        "contact": {},
+        "version": "1.0.0"
+    },
+    "basePath": "/",
+    "paths": {
+        "/health": {
+            "get": {
+                "description": "Comprueba que el proceso responde y que la base de datos acepta conexión",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "health"
+                ],
+                "summary": "Health check",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/finexa-ia_ms-plaid_internal_models.HealthResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/finexa-ia_ms-plaid_internal_models.HealthResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/users/{userId}/plaid-item": {
+            "get": {
+                "description": "Como máximo una conexión activa por usuario (sin access_token en respuesta)",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "plaid-item"
+                ],
+                "summary": "Obtener conexión Plaid",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID interno de usuario (FK)",
+                        "name": "userId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/finexa-ia_ms-plaid_internal_models.PlaidItemOKResult"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apiresult.ErrResult"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/apiresult.ErrResult"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apiresult.ErrResult"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "plaid-item"
+                ],
+                "summary": "Registrar o actualizar conexión Plaid",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID interno de usuario (FK)",
+                        "name": "userId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Cuerpo",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/finexa-ia_ms-plaid_internal_models.CreatePlaidItemRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/finexa-ia_ms-plaid_internal_models.PlaidItemOKResult"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apiresult.ErrResult"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apiresult.ErrResult"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "plaid-item"
+                ],
+                "summary": "Desconectar Plaid (baja lógica)",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID interno de usuario (FK)",
+                        "name": "userId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/finexa-ia_ms-plaid_internal_models.PlaidItemDeleteOKResult"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apiresult.ErrResult"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/apiresult.ErrResult"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apiresult.ErrResult"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/users/{userId}/plaid/link-token": {
+            "post": {
+                "description": "Inicializa una sesión Link: llama a Plaid y persiste metadatos (sin guardar el link_token).",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "plaid-link"
+                ],
+                "summary": "Crear link token Plaid",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID interno de usuario (FK)",
+                        "name": "userId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Overrides opcionales (webhook, redirect)",
+                        "name": "body",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/finexa-ia_ms-plaid_internal_models.CreateLinkTokenBody"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/finexa-ia_ms-plaid_internal_models.LinkTokenOKResult"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apiresult.ErrResult"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/apiresult.ErrResult"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apiresult.ErrResult"
+                        }
+                    },
+                    "502": {
+                        "description": "Bad Gateway",
+                        "schema": {
+                            "$ref": "#/definitions/apiresult.ErrResult"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/apiresult.ErrResult"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "apiresult.ErrResult": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "$ref": "#/definitions/apiresult.ErrorPayload"
+                },
+                "ok": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "apiresult.ErrorPayload": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string"
+                },
+                "details": {
+                    "type": "object",
+                    "additionalProperties": {}
+                },
+                "message": {
+                    "type": "string"
+                }
+            }
+        },
+        "finexa-ia_ms-plaid_internal_models.CreateLinkTokenBody": {
+            "type": "object",
+            "properties": {
+                "redirect_uri": {
+                    "type": "string"
+                },
+                "webhook_url": {
+                    "type": "string"
+                }
+            }
+        },
+        "finexa-ia_ms-plaid_internal_models.CreatePlaidItemRequest": {
+            "type": "object",
+            "properties": {
+                "access_token": {
+                    "type": "string"
+                },
+                "institution_id": {
+                    "type": "string"
+                },
+                "institution_name": {
+                    "type": "string"
+                },
+                "plaid_item_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "finexa-ia_ms-plaid_internal_models.HealthResponse": {
+            "type": "object",
+            "properties": {
+                "database": {
+                    "description": "\"ok\" cuando Ping a Postgres funciona",
+                    "type": "string",
+                    "example": "ok"
+                },
+                "status": {
+                    "type": "string",
+                    "example": "ok"
+                }
+            }
+        },
+        "finexa-ia_ms-plaid_internal_models.LinkTokenOKResult": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/finexa-ia_ms-plaid_internal_models.LinkTokenResponse"
+                },
+                "ok": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "finexa-ia_ms-plaid_internal_models.LinkTokenResponse": {
+            "type": "object",
+            "properties": {
+                "expiration": {
+                    "type": "string"
+                },
+                "link_token": {
+                    "type": "string"
+                },
+                "request_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "finexa-ia_ms-plaid_internal_models.PlaidItemDeleteData": {
+            "type": "object",
+            "properties": {
+                "deleted": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "finexa-ia_ms-plaid_internal_models.PlaidItemDeleteOKResult": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/finexa-ia_ms-plaid_internal_models.PlaidItemDeleteData"
+                },
+                "ok": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "finexa-ia_ms-plaid_internal_models.PlaidItemOKResult": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/finexa-ia_ms-plaid_internal_models.PlaidItemResponse"
+                },
+                "ok": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "finexa-ia_ms-plaid_internal_models.PlaidItemResponse": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "institution_id": {
+                    "type": "string"
+                },
+                "institution_name": {
+                    "type": "string"
+                },
+                "plaid_item_id": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "user_id": {
+                    "type": "integer"
+                }
+            }
+        }
+    }
+}

@@ -1,6 +1,6 @@
 .PHONY: compose-up compose-down sqlc-all build-all tidy-all test-all
 
-SERVICES := service-a service-b service-c
+SERVICES := ms-plaid service-b service-c
 
 # ── Docker Compose ─────────────────────────────────────────────────────────────
 compose-up:
@@ -37,6 +37,6 @@ test-all:
 	  $(MAKE) -C services/$$svc test; \
 	done
 
-# ── Quick local run (choose which service via SVC=service-a) ───────────────────
+# ── Quick local run (choose which service via SVC=ms-plaid) ───────────────────
 run:
 	$(MAKE) -C services/$(SVC) run
