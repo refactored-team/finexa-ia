@@ -32,3 +32,29 @@ output "cognito_hosted_ui_base_url" {
   description = "Cognito hosted domain base URL."
   value       = module.cognito.hosted_ui_base_url
 }
+
+output "aurora_cluster_endpoint" {
+  description = "Aurora PostgreSQL writer endpoint (null if enable_aurora_postgres is false)."
+  value       = length(module.aurora_postgres) > 0 ? module.aurora_postgres[0].cluster_endpoint : null
+}
+
+output "aurora_cluster_reader_endpoint" {
+  description = "Aurora reader endpoint."
+  value       = length(module.aurora_postgres) > 0 ? module.aurora_postgres[0].cluster_reader_endpoint : null
+}
+
+output "aurora_cluster_port" {
+  description = "PostgreSQL port."
+  value       = length(module.aurora_postgres) > 0 ? module.aurora_postgres[0].cluster_port : null
+}
+
+output "aurora_master_user_secret_arn" {
+  description = "Secrets Manager ARN for master credentials (retrieve password from here)."
+  value       = length(module.aurora_postgres) > 0 ? module.aurora_postgres[0].master_user_secret_arn : null
+  sensitive   = true
+}
+
+output "aurora_security_group_id" {
+  description = "Security group attached to Aurora."
+  value       = length(module.aurora_postgres) > 0 ? module.aurora_postgres[0].security_group_id : null
+}
