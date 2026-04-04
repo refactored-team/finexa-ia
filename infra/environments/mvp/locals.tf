@@ -47,7 +47,7 @@ locals {
       image_tag         = coalesce(try(v.image_tag, null), "latest")
       route_path_prefix = v.route_path_prefix
       memory_size       = coalesce(try(v.memory_size, null), 512)
-      timeout           = coalesce(try(v.timeout, null), 30)
+      timeout           = coalesce(try(v.timeout, null), 60)
       environment_variables = merge(
         coalesce(try(v.environment_variables, null), {}),
         length(module.app_secrets) > 0 ? {

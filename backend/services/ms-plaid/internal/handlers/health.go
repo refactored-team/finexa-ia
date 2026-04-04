@@ -20,7 +20,17 @@ func NewHealthHandler(db *sql.DB) *HealthHandler {
 }
 
 func (h *HealthHandler) Register(e *echo.Echo) {
+	// /ready: HTTP up sin tocar la BD (Lambda Web Adapter readiness; debe devolver 200 rápido).
+	// /health: Ping a Postgres (503 si RDS no responde; no usar como único readiness en Lambda).
+	e.GET("/ready", h.ready)
 	e.GET("/health", h.check)
+}
+
+func (h *HealthHandler) ready(c *echo.Context) error {
+	return c.JSON(http.StatusOK, models.HealthResponse{
+		Status:   "ok",
+		Database: "not_checked",
+	})
 }
 
 // check verifica conectividad con Postgres (Ping).

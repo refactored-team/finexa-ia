@@ -1,19 +1,33 @@
 # Build from backend/ (monorepo root):
-#   docker build --platform linux/amd64 -f services/ms-plaid/Dockerfile.lambda -t ms-plaid:lambda .
+#   docker build --platform linux/amd64 --provenance=false --sbom=false -f services/ms-plaid/Dockerfile.lambda -t ms-plaid:lambda .
 #
 # Do not copy go.work: it lists other services not present in the image. Build ms-plaid as a single module (GOWORK=off).
 # Target: AWS Lambda container (x86_64) + Lambda Web Adapter.
-FROM golang:1.25-alpine AS builder
+#
+# Builder: pinned Go + Alpine 3.21 for reproducible prod builds.
+# Runtime: aws-lambda-adapter is minimal; CA bundle is copied from Alpine so HTTPS (Secrets Manager, RDS) validates TLS.
+FROM --platform=linux/amd64 golang:1.25-alpine3.21 AS builder
 WORKDIR /src
 COPY pkg/apiresult ./pkg/apiresult
 COPY services/ms-plaid ./services/ms-plaid
 WORKDIR /src/services/ms-plaid
 ENV GOWORK=off
 RUN go mod download
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o /server ./cmd/server
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o /server ./cmd/server
 
-FROM public.ecr.aws/awsguru/aws-lambda-adapter:0.8.4-x86_64
+FROM --platform=linux/amd64 alpine:3.21 AS certs
+RUN apk add --no-cache ca-certificates
+
+FROM --platform=linux/amd64 public.ecr.aws/awsguru/aws-lambda-adapter:0.8.4-x86_64
+COPY --from=certs /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 COPY --from=builder /server /server
 ENV AWS_LWA_PORT=8080
-ENV AWS_LWA_READINESS_CHECK_PATH=/health
+# /ready devuelve 200 sin DB. /health hace Ping a Postgres (503 si falla) y rompe el init de LWA si se usa aquí.
+ENV AWS_LWA_READINESS_CHECK_PATH=/ready
+# Lambda solo da ~10s de CPU para init (extension); VPC + DB + Secrets puede superarlo.
+# LWA: marcar init completo tras ~9.8s si hace falta y seguir comprobando /ready en la primera invocación.
+# Ver: https://aws.github.io/aws-lambda-web-adapter/configuration/async-init.html
+# Imágenes 0.8.x pueden leer solo ASYNC_INIT; 1.x usa AWS_LWA_ASYNC_INIT (ambas coexisten hasta v2).
+ENV AWS_LWA_ASYNC_INIT=true
+ENV ASYNC_INIT=true
 CMD ["/server"]
