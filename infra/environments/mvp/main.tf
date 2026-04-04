@@ -78,8 +78,28 @@ module "http_api" {
 
   vpc_subnet_ids         = var.lambda_attach_to_vpc ? module.vpc.private_subnet_ids : []
   vpc_security_group_ids = var.lambda_attach_to_vpc ? var.lambda_vpc_security_group_ids : []
+}
 
-  microservices_secret_arn = length(module.app_secrets) > 0 ? module.app_secrets[0].microservices_secret_arn : null
+# IAM for Lambdas to read the shared secret (kept in root module so Terraform LS resolves module.http_api inputs).
+data "aws_iam_policy_document" "lambda_microservices_secret" {
+  count = length(module.app_secrets) > 0 && length(module.http_api) > 0 ? 1 : 0
+
+  statement {
+    sid    = "ReadSharedMicroservicesSecret"
+    effect = "Allow"
+    actions = [
+      "secretsmanager:GetSecretValue",
+      "secretsmanager:DescribeSecret",
+    ]
+    resources = [module.app_secrets[0].microservices_secret_arn]
+  }
+}
+
+resource "aws_iam_role_policy" "lambda_microservices_secret_read" {
+  count  = length(module.app_secrets) > 0 && length(module.http_api) > 0 ? 1 : 0
+  name   = "microservices-secret-read"
+  role   = module.http_api[0].lambda_execution_role_name
+  policy = data.aws_iam_policy_document.lambda_microservices_secret[0].json
 }
 
 module "cloudwatch_http_api" {

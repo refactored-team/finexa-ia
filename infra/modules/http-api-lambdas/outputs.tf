@@ -17,3 +17,8 @@ output "lambda_function_arns" {
   description = "Lambda ARNs per service key."
   value       = { for k, f in aws_lambda_function.service : k => f.arn }
 }
+
+output "lambda_execution_role_name" {
+  description = "Lambda execution role name (for attaching extra IAM policies in the root module)."
+  value       = aws_iam_role.lambda.name
+}

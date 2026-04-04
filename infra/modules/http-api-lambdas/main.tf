@@ -24,27 +24,6 @@ resource "aws_iam_role_policy_attachment" "lambda_vpc" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
 }
 
-data "aws_iam_policy_document" "lambda_secrets" {
-  count = var.microservices_secret_arn != null ? 1 : 0
-
-  statement {
-    sid    = "ReadSharedMicroservicesSecret"
-    effect = "Allow"
-    actions = [
-      "secretsmanager:GetSecretValue",
-      "secretsmanager:DescribeSecret",
-    ]
-    resources = [var.microservices_secret_arn]
-  }
-}
-
-resource "aws_iam_role_policy" "lambda_secrets" {
-  count  = var.microservices_secret_arn != null ? 1 : 0
-  name   = "microservices-secret-read"
-  role   = aws_iam_role.lambda.id
-  policy = data.aws_iam_policy_document.lambda_secrets[0].json
-}
-
 resource "aws_apigatewayv2_api" "this" {
   name          = "${var.project}-${var.environment}-http"
   protocol_type = "HTTP"
@@ -93,7 +72,6 @@ resource "aws_lambda_function" "service" {
         HTTP_PORT        = "8080"
         HTTP_PATH_PREFIX = each.value.route_path_prefix
       },
-      var.microservices_secret_arn != null ? { MICROSERVICES_SECRET_ARN = var.microservices_secret_arn } : {},
       each.value.environment_variables
     )
   }

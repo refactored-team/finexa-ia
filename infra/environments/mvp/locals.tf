@@ -36,12 +36,15 @@ locals {
   # HTTP API + Lambda: merge ECR URLs with per-service route/memory; keys must exist in ecr_services.
   http_lambda_services = {
     for k, v in var.lambda_http_services : k => {
-      repository_url        = module.ecr[k].repository_url
-      image_tag             = coalesce(try(v.image_tag, null), "latest")
-      route_path_prefix     = v.route_path_prefix
-      memory_size           = coalesce(try(v.memory_size, null), 512)
-      timeout               = coalesce(try(v.timeout, null), 30)
-      environment_variables = coalesce(try(v.environment_variables, null), {})
+      repository_url    = module.ecr[k].repository_url
+      image_tag         = coalesce(try(v.image_tag, null), "latest")
+      route_path_prefix = v.route_path_prefix
+      memory_size       = coalesce(try(v.memory_size, null), 512)
+      timeout           = coalesce(try(v.timeout, null), 30)
+      environment_variables = merge(
+        coalesce(try(v.environment_variables, null), {}),
+        length(module.app_secrets) > 0 ? { MICROSERVICES_SECRET_ARN = module.app_secrets[0].microservices_secret_arn } : {},
+      )
     } if contains(var.ecr_services, k)
   }
 }
