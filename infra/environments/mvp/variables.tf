@@ -99,7 +99,13 @@ variable "cognito_sns_external_id" {
 # Aurora PostgreSQL Serverless v2 — uses module.vpc private subnets.
 
 variable "enable_aurora_postgres" {
-  description = "Create Aurora PostgreSQL Serverless v2 in the shared VPC private subnets."
+  description = "Aurora PostgreSQL Serverless v2 in the VPC (full configuration). AWS Free Tier requires CreateDBCluster with WithExpressConfiguration; the Terraform AWS provider does not support that flag yet (see hashicorp/terraform-provider-aws#47117), and Express uses a different networking model (internet access gateway / IAM), not this VPC+SG module. Mutually exclusive with enable_rds_postgres."
+  type        = bool
+  default     = false
+}
+
+variable "enable_rds_postgres" {
+  description = "RDS PostgreSQL single instance in the VPC (Free Tier friendly: db.t4g.micro). Mutually exclusive with enable_aurora_postgres. Reuses aurora_allowed_* for ingress rules."
   type        = bool
   default     = true
 }
@@ -141,15 +147,15 @@ variable "aurora_serverless_min_capacity" {
 }
 
 variable "aurora_serverless_max_capacity" {
-  description = "Serverless v2 max ACU."
+  description = "Serverless v2 max ACU. AWS Free Tier allows at most 4 ACU; raise after upgrading the account."
   type        = number
-  default     = 16
+  default     = 4
 }
 
 variable "aurora_backup_retention_period" {
-  description = "Backup retention days."
+  description = "Automated backup retention in days. AWS Free Tier caps this (often 1 day); use 7+ on a paid account if needed."
   type        = number
-  default     = 7
+  default     = 1
 }
 
 variable "aurora_skip_final_snapshot" {
@@ -160,6 +166,56 @@ variable "aurora_skip_final_snapshot" {
 
 variable "aurora_deletion_protection" {
   description = "Protect cluster from accidental deletion."
+  type        = bool
+  default     = false
+}
+
+# RDS PostgreSQL (non-Aurora) — same VPC/subnets; reuses aurora_allowed_* ingress lists.
+
+variable "rds_instance_class" {
+  description = "RDS instance class (db.t4g.micro or db.t3.micro for Free Tier)."
+  type        = string
+  default     = "db.t4g.micro"
+}
+
+variable "rds_engine_version" {
+  description = "RDS PostgreSQL engine_version (major.minor; region-specific, not Aurora version strings)."
+  type        = string
+  default     = "16.4"
+}
+
+variable "rds_allocated_storage" {
+  description = "Allocated storage in GiB (gp3)."
+  type        = number
+  default     = 20
+}
+
+variable "rds_database_name" {
+  description = "Initial database name (RDS PostgreSQL allows only letters, digits, underscore)."
+  type        = string
+  default     = "finexa_ia_db"
+}
+
+variable "rds_master_username" {
+  description = "Master user (password stored in Secrets Manager)."
+  type        = string
+  default     = "finexa"
+}
+
+variable "rds_backup_retention_period" {
+  description = "Automated backup retention in days (Free Tier often caps at 1)."
+  type        = number
+  default     = 1
+}
+
+variable "rds_skip_final_snapshot" {
+  description = "Skip final snapshot on destroy (MVP/dev)."
+  type        = bool
+  default     = true
+}
+
+variable "rds_deletion_protection" {
+  description = "Protect instance from accidental deletion."
   type        = bool
   default     = false
 }
@@ -187,6 +243,12 @@ variable "enable_cloudwatch_dashboard" {
 
 variable "enable_aurora_cloudwatch_alarms" {
   description = "Add Aurora CPU alarm when Aurora cluster exists (requires enable_aurora_postgres)."
+  type        = bool
+  default     = false
+}
+
+variable "enable_rds_cloudwatch_alarms" {
+  description = "Add RDS CPU alarm when RDS PostgreSQL instance exists (requires enable_rds_postgres)."
   type        = bool
   default     = false
 }

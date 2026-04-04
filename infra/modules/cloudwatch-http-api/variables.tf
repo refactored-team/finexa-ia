@@ -78,6 +78,25 @@ variable "aurora_cpu_threshold_percent" {
   default     = 85
 }
 
+variable "enable_rds_cpu_alarm" {
+  type        = bool
+  description = "Create RDS instance CPU alarm (requires rds_db_instance_identifier)."
+  default     = false
+}
+
+variable "rds_db_instance_identifier" {
+  type        = string
+  description = "RDS DBInstanceIdentifier for CloudWatch metrics."
+  default     = null
+  nullable    = true
+}
+
+variable "rds_cpu_threshold_percent" {
+  type        = number
+  description = "Average CPUUtilization above this (0-100) triggers RDS alarm."
+  default     = 85
+}
+
 variable "enable_dashboard" {
   type        = bool
   description = "Create a CloudWatch dashboard for API Gateway + Lambdas."

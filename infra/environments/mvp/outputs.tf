@@ -103,3 +103,29 @@ output "aurora_security_group_id" {
   description = "Security group attached to Aurora."
   value       = length(module.aurora_postgres) > 0 ? module.aurora_postgres[0].security_group_id : null
 }
+
+output "rds_instance_address" {
+  description = "RDS PostgreSQL hostname (null if enable_rds_postgres is false)."
+  value       = length(module.rds_postgres) > 0 ? module.rds_postgres[0].address : null
+}
+
+output "rds_instance_port" {
+  description = "PostgreSQL port for RDS."
+  value       = length(module.rds_postgres) > 0 ? module.rds_postgres[0].port : null
+}
+
+output "rds_master_user_secret_arn" {
+  description = "Secrets Manager ARN for RDS master credentials (retrieve password from here)."
+  value       = length(module.rds_postgres) > 0 ? module.rds_postgres[0].master_user_secret_arn : null
+  sensitive   = true
+}
+
+output "rds_security_group_id" {
+  description = "Security group attached to RDS PostgreSQL."
+  value       = length(module.rds_postgres) > 0 ? module.rds_postgres[0].security_group_id : null
+}
+
+output "rds_db_instance_identifier" {
+  description = "RDS instance identifier (CloudWatch DBInstanceIdentifier)."
+  value       = length(module.rds_postgres) > 0 ? module.rds_postgres[0].db_instance_identifier : null
+}

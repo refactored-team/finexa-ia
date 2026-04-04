@@ -64,7 +64,29 @@ module "aurora_postgres" {
   deletion_protection     = var.aurora_deletion_protection
 }
 
-# Lambda ENIs need a security group when using VPC. If none is passed, create one (egress only; Aurora allows VPC CIDR).
+module "rds_postgres" {
+  source = "../../modules/rds-postgresql"
+  count  = var.enable_rds_postgres ? 1 : 0
+
+  project     = var.project
+  environment = var.environment
+  vpc_id      = module.vpc.vpc_id
+  subnet_ids  = module.vpc.private_subnet_ids
+
+  allowed_security_group_ids = var.aurora_allowed_security_group_ids
+  allowed_cidr_blocks        = local.aurora_ingress_cidr_blocks
+
+  database_name           = var.rds_database_name
+  master_username         = var.rds_master_username
+  engine_version          = var.rds_engine_version
+  instance_class          = var.rds_instance_class
+  allocated_storage       = var.rds_allocated_storage
+  backup_retention_period = var.rds_backup_retention_period
+  skip_final_snapshot     = var.rds_skip_final_snapshot
+  deletion_protection     = var.rds_deletion_protection
+}
+
+# Lambda ENIs need a security group when using VPC. If none is passed, create one (egress only; Postgres allows VPC CIDR).
 resource "aws_security_group" "lambda_vpc" {
   count = var.lambda_attach_to_vpc && length(var.lambda_vpc_security_group_ids) == 0 ? 1 : 0
 
@@ -139,4 +161,7 @@ module "cloudwatch_http_api" {
 
   enable_aurora_alarms      = var.enable_aurora_cloudwatch_alarms && length(module.aurora_postgres) > 0
   aurora_cluster_identifier = length(module.aurora_postgres) > 0 ? module.aurora_postgres[0].cluster_identifier : null
+
+  enable_rds_cpu_alarm       = var.enable_rds_cloudwatch_alarms && length(module.rds_postgres) > 0
+  rds_db_instance_identifier = length(module.rds_postgres) > 0 ? module.rds_postgres[0].db_instance_identifier : null
 }

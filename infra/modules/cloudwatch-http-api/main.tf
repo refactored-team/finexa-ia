@@ -27,7 +27,7 @@ resource "aws_cloudwatch_metric_alarm" "apigw_5xx" {
   evaluation_periods  = var.evaluation_periods
   datapoints_to_alarm = var.datapoints_to_alarm
   threshold           = var.api_gateway_5xx_threshold
-  treat_missing_data    = "notBreaching"
+  treat_missing_data  = "notBreaching"
 
   metric_name = "5xx"
   namespace   = "AWS/ApiGateway"
@@ -52,7 +52,7 @@ resource "aws_cloudwatch_metric_alarm" "lambda_errors" {
   evaluation_periods  = var.evaluation_periods
   datapoints_to_alarm = var.datapoints_to_alarm
   threshold           = 0
-  treat_missing_data    = "notBreaching"
+  treat_missing_data  = "notBreaching"
 
   metric_name = "Errors"
   namespace   = "AWS/Lambda"
@@ -76,7 +76,7 @@ resource "aws_cloudwatch_metric_alarm" "lambda_throttles" {
   evaluation_periods  = var.evaluation_periods
   datapoints_to_alarm = var.datapoints_to_alarm
   threshold           = 0
-  treat_missing_data    = "notBreaching"
+  treat_missing_data  = "notBreaching"
 
   metric_name = "Throttles"
   namespace   = "AWS/Lambda"
@@ -100,7 +100,7 @@ resource "aws_cloudwatch_metric_alarm" "aurora_cpu" {
   evaluation_periods  = var.evaluation_periods
   datapoints_to_alarm = var.datapoints_to_alarm
   threshold           = var.aurora_cpu_threshold_percent
-  treat_missing_data    = "notBreaching"
+  treat_missing_data  = "notBreaching"
 
   metric_name = "CPUUtilization"
   namespace   = "AWS/RDS"
@@ -112,6 +112,30 @@ resource "aws_cloudwatch_metric_alarm" "aurora_cpu" {
   }
 
   alarm_description = "Aurora cluster average CPU above threshold."
+  alarm_actions     = local.alarm_actions
+  ok_actions        = local.ok_actions
+}
+
+resource "aws_cloudwatch_metric_alarm" "rds_cpu" {
+  count = var.enable_rds_cpu_alarm && var.rds_db_instance_identifier != null ? 1 : 0
+
+  alarm_name          = "${local.name}-rds-cpu-high"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = var.evaluation_periods
+  datapoints_to_alarm = var.datapoints_to_alarm
+  threshold           = var.rds_cpu_threshold_percent
+  treat_missing_data  = "notBreaching"
+
+  metric_name = "CPUUtilization"
+  namespace   = "AWS/RDS"
+  period      = var.alarm_period_seconds
+  statistic   = "Average"
+
+  dimensions = {
+    DBInstanceIdentifier = var.rds_db_instance_identifier
+  }
+
+  alarm_description = "RDS instance average CPU above threshold."
   alarm_actions     = local.alarm_actions
   ok_actions        = local.ok_actions
 }
