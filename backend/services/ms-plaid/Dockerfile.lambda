@@ -1,13 +1,14 @@
-# Build from backend/ workspace root:
-#   docker build -f services/ms-plaid/Dockerfile.lambda -t ms-plaid:lambda .
+# Build from backend/ (monorepo root):
+#   docker build --platform linux/amd64 -f services/ms-plaid/Dockerfile.lambda -t ms-plaid:lambda .
 #
+# Do not copy go.work: it lists other services not present in the image. Build ms-plaid as a single module (GOWORK=off).
 # Target: AWS Lambda container (x86_64) + Lambda Web Adapter.
 FROM golang:1.25-alpine AS builder
 WORKDIR /src
-COPY go.work go.work.sum ./
 COPY pkg/apiresult ./pkg/apiresult
 COPY services/ms-plaid ./services/ms-plaid
 WORKDIR /src/services/ms-plaid
+ENV GOWORK=off
 RUN go mod download
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o /server ./cmd/server
 

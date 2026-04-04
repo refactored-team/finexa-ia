@@ -2,7 +2,7 @@
 
 ## Despliegue (MVP)
 
-1. **Build** de la imagen Lambda (contexto `backend/`):
+1. **Build** de la imagen Lambda (contexto `backend/`; el Dockerfile no usa `go.work` del monorepo, solo `ms-plaid` + `pkg/apiresult`):
 
    ```bash
    cd backend
