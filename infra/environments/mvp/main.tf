@@ -69,3 +69,20 @@ module "http_api" {
   vpc_subnet_ids         = var.lambda_attach_to_vpc ? module.vpc.private_subnet_ids : []
   vpc_security_group_ids = var.lambda_attach_to_vpc ? var.lambda_vpc_security_group_ids : []
 }
+
+module "cloudwatch_http_api" {
+  source = "../../modules/cloudwatch-http-api"
+  count  = var.enable_cloudwatch_alarms && length(module.http_api) > 0 ? 1 : 0
+
+  project     = var.project
+  environment = var.environment
+  aws_region  = var.aws_region
+
+  api_id                   = module.http_api[0].api_id
+  lambda_function_names    = module.http_api[0].lambda_function_names
+  alarm_notification_email = var.cloudwatch_alarm_email
+  enable_dashboard         = var.enable_cloudwatch_dashboard
+
+  enable_aurora_alarms      = var.enable_aurora_cloudwatch_alarms && length(module.aurora_postgres) > 0
+  aurora_cluster_identifier = length(module.aurora_postgres) > 0 ? module.aurora_postgres[0].cluster_identifier : null
+}

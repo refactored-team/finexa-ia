@@ -28,6 +28,16 @@ output "http_api_lambda_function_names" {
   value       = length(module.http_api) > 0 ? module.http_api[0].lambda_function_names : null
 }
 
+output "cloudwatch_alarm_sns_topic_arn" {
+  description = "SNS topic for CloudWatch alarms (null if monitoring disabled or no HTTP API)."
+  value       = length(module.cloudwatch_http_api) > 0 ? module.cloudwatch_http_api[0].sns_topic_arn : null
+}
+
+output "cloudwatch_dashboard_name" {
+  description = "CloudWatch dashboard name (null if disabled or no HTTP API)."
+  value       = length(module.cloudwatch_http_api) > 0 ? module.cloudwatch_http_api[0].dashboard_name : null
+}
+
 output "ecr_repository_urls" {
   description = "Docker registry URLs per service (docker push/pull)."
   value       = { for k, m in module.ecr : k => m.repository_url }

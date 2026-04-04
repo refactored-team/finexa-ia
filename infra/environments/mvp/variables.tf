@@ -119,13 +119,13 @@ variable "aurora_allowed_cidr_blocks" {
 variable "aurora_database_name" {
   description = "Initial database name."
   type        = string
-  default     = "app"
+  default     = "finexa-ia-db"
 }
 
 variable "aurora_master_username" {
   description = "Master user (password stored in Secrets Manager)."
   type        = string
-  default     = "postgres"
+  default     = "finexa"
 }
 
 variable "aurora_engine_version" {
@@ -160,6 +160,33 @@ variable "aurora_skip_final_snapshot" {
 
 variable "aurora_deletion_protection" {
   description = "Protect cluster from accidental deletion."
+  type        = bool
+  default     = false
+}
+
+# CloudWatch — API Gateway + Lambda (+ optional Aurora); SNS email alerts.
+
+variable "enable_cloudwatch_alarms" {
+  description = "Create CloudWatch alarms and SNS topic when HTTP API exists."
+  type        = bool
+  default     = true
+}
+
+variable "cloudwatch_alarm_email" {
+  description = "Email for SNS subscription (confirm in AWS after apply). Empty = topic without email."
+  type        = string
+  default     = "esalinasga@gmail.com"
+  sensitive   = true
+}
+
+variable "enable_cloudwatch_dashboard" {
+  description = "Create CloudWatch dashboard for HTTP API and Lambda metrics."
+  type        = bool
+  default     = true
+}
+
+variable "enable_aurora_cloudwatch_alarms" {
+  description = "Add Aurora CPU alarm when Aurora cluster exists (requires enable_aurora_postgres)."
   type        = bool
   default     = false
 }
