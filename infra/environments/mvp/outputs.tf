@@ -18,6 +18,16 @@ output "vpc_nat_gateway_id" {
   value       = module.vpc.nat_gateway_id
 }
 
+output "http_api_endpoint" {
+  description = "Invoke URL for API Gateway HTTP API (stage $default)."
+  value       = length(module.http_api) > 0 ? module.http_api[0].api_endpoint : null
+}
+
+output "http_api_lambda_function_names" {
+  description = "Lambda function names per service key."
+  value       = length(module.http_api) > 0 ? module.http_api[0].lambda_function_names : null
+}
+
 output "ecr_repository_urls" {
   description = "Docker registry URLs per service (docker push/pull)."
   value       = { for k, m in module.ecr : k => m.repository_url }

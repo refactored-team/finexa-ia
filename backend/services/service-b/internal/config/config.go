@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
@@ -14,6 +15,8 @@ import (
 type App struct {
 	DatabaseURL string `json:"database_url"`
 	HTTPPort    string `json:"http_port"`
+	// HTTPPathPrefix strips this prefix from paths behind API Gateway (e.g. /service-b).
+	HTTPPathPrefix string `json:"http_path_prefix,omitempty"`
 }
 
 // Load resolves configuration from AWS Secrets Manager when AWS_SECRET_ID is set,
@@ -35,7 +38,11 @@ func fromEnv() (*App, error) {
 	if port == "" {
 		port = "8080"
 	}
-	return &App{DatabaseURL: dbURL, HTTPPort: port}, nil
+	return &App{
+		DatabaseURL:    dbURL,
+		HTTPPort:       port,
+		HTTPPathPrefix: strings.TrimSpace(os.Getenv("HTTP_PATH_PREFIX")),
+	}, nil
 }
 
 func fromSecretsManager(secretID string) (*App, error) {

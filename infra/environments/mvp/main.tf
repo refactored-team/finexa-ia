@@ -53,3 +53,19 @@ module "aurora_postgres" {
   skip_final_snapshot     = var.aurora_skip_final_snapshot
   deletion_protection     = var.aurora_deletion_protection
 }
+
+module "http_api" {
+  source = "../../modules/http-api-lambdas"
+  count  = var.enable_http_api && length(local.http_lambda_services) > 0 ? 1 : 0
+
+  project     = var.project
+  environment = var.environment
+  aws_region  = var.aws_region
+
+  cognito_issuer_url = module.cognito.issuer_url
+  cognito_client_id  = module.cognito.client_id
+  services           = local.http_lambda_services
+
+  vpc_subnet_ids         = var.lambda_attach_to_vpc ? module.vpc.private_subnet_ids : []
+  vpc_security_group_ids = var.lambda_attach_to_vpc ? var.lambda_vpc_security_group_ids : []
+}

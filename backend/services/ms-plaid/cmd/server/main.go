@@ -75,10 +75,14 @@ func provideDB(lc fx.Lifecycle, cfg *config.App) (*sql.DB, error) {
 
 func registerRoutes(
 	e *echo.Echo,
+	cfg *config.App,
 	health *handlers.HealthHandler,
 	plaid *handlers.PlaidItemHandler,
 	plaidLink *handlers.PlaidLinkHandler,
 ) {
+	if p := cfg.HTTPPathPrefix; p != "" {
+		e.Use(apiresult.HTTPPathPrefixMiddleware(p))
+	}
 	// Swagger UI + swagger.json (generado con `make swag`; ver docs/docs.go).
 	e.GET("/swagger/*", echo.WrapHandler(httpSwagger.WrapHandler))
 	e.GET("/docs", func(c *echo.Context) error {
