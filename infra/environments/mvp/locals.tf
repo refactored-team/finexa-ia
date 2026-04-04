@@ -21,9 +21,9 @@ variable "lambda_http_services" {
 }
 
 variable "lambda_attach_to_vpc" {
-  description = "Place Lambdas in VPC private subnets (needed to reach Aurora; requires lambda_vpc_security_group_ids)."
+  description = "Place Lambdas in VPC private subnets (needed to reach Aurora). If true and lambda_vpc_security_group_ids is empty, a dedicated SG is created."
   type        = bool
-  default     = false
+  default     = true
 }
 
 variable "lambda_vpc_security_group_ids" {
@@ -33,6 +33,13 @@ variable "lambda_vpc_security_group_ids" {
 }
 
 locals {
+  # When Aurora is enabled and no explicit ingress is set, allow the whole VPC CIDR to reach Postgres:5432 (MVP).
+  aurora_ingress_cidr_blocks = (
+    length(var.aurora_allowed_security_group_ids) > 0 || length(var.aurora_allowed_cidr_blocks) > 0
+    ? var.aurora_allowed_cidr_blocks
+    : [var.vpc_cidr]
+  )
+
   # HTTP API + Lambda: merge ECR URLs with per-service route/memory; keys must exist in ecr_services.
   http_lambda_services = {
     for k, v in var.lambda_http_services : k => {
@@ -43,7 +50,10 @@ locals {
       timeout           = coalesce(try(v.timeout, null), 30)
       environment_variables = merge(
         coalesce(try(v.environment_variables, null), {}),
-        length(module.app_secrets) > 0 ? { MICROSERVICES_SECRET_ARN = module.app_secrets[0].microservices_secret_arn } : {},
+        length(module.app_secrets) > 0 ? {
+          MICROSERVICES_SECRET_ARN = module.app_secrets[0].microservices_secret_arn
+          AWS_SECRET_ID            = module.app_secrets[0].microservices_secret_arn
+        } : {},
       )
     } if contains(var.ecr_services, k)
   }
@@ -56,9 +66,3 @@ check "lambda_ecr_keys" {
   }
 }
 
-check "lambda_vpc_sg" {
-  assert {
-    condition     = !var.lambda_attach_to_vpc || length(var.lambda_vpc_security_group_ids) > 0
-    error_message = "When lambda_attach_to_vpc is true, set lambda_vpc_security_group_ids (Lambda ENIs need a security group)."
-  }
-}

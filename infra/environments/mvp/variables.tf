@@ -101,7 +101,7 @@ variable "cognito_sns_external_id" {
 variable "enable_aurora_postgres" {
   description = "Create Aurora PostgreSQL Serverless v2 in the shared VPC private subnets."
   type        = bool
-  default     = false
+  default     = true
 }
 
 variable "aurora_allowed_security_group_ids" {

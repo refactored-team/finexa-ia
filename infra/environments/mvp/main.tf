@@ -52,7 +52,7 @@ module "aurora_postgres" {
   subnet_ids  = module.vpc.private_subnet_ids
 
   allowed_security_group_ids = var.aurora_allowed_security_group_ids
-  allowed_cidr_blocks        = var.aurora_allowed_cidr_blocks
+  allowed_cidr_blocks        = local.aurora_ingress_cidr_blocks
 
   database_name           = var.aurora_database_name
   master_username         = var.aurora_master_username
@@ -62,6 +62,26 @@ module "aurora_postgres" {
   backup_retention_period = var.aurora_backup_retention_period
   skip_final_snapshot     = var.aurora_skip_final_snapshot
   deletion_protection     = var.aurora_deletion_protection
+}
+
+# Lambda ENIs need a security group when using VPC. If none is passed, create one (egress only; Aurora allows VPC CIDR).
+resource "aws_security_group" "lambda_vpc" {
+  count = var.lambda_attach_to_vpc && length(var.lambda_vpc_security_group_ids) == 0 ? 1 : 0
+
+  name_prefix = "${var.project}-${var.environment}-lambda-"
+  vpc_id      = module.vpc.vpc_id
+  description = "Lambda in private subnets (default when lambda_vpc_security_group_ids is empty)"
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Name = "${var.project}-${var.environment}-lambda-vpc"
+  }
 }
 
 module "http_api" {
@@ -76,8 +96,10 @@ module "http_api" {
   cognito_client_id  = module.cognito.client_id
   services           = local.http_lambda_services
 
-  vpc_subnet_ids         = var.lambda_attach_to_vpc ? module.vpc.private_subnet_ids : []
-  vpc_security_group_ids = var.lambda_attach_to_vpc ? var.lambda_vpc_security_group_ids : []
+  vpc_subnet_ids = var.lambda_attach_to_vpc ? module.vpc.private_subnet_ids : []
+  vpc_security_group_ids = var.lambda_attach_to_vpc ? (
+    length(var.lambda_vpc_security_group_ids) > 0 ? var.lambda_vpc_security_group_ids : [aws_security_group.lambda_vpc[0].id]
+  ) : []
 }
 
 # IAM for Lambdas to read the shared secret (kept in root module so Terraform LS resolves module.http_api inputs).
