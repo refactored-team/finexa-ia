@@ -43,3 +43,10 @@ variable "vpc_security_group_ids" {
   type        = list(string)
   default     = []
 }
+
+variable "microservices_secret_arn" {
+  description = "Secrets Manager ARN for shared JSON env; Lambdas get MICROSERVICES_SECRET_ARN and iam:GetSecretValue."
+  type        = string
+  default     = null
+  nullable    = true
+}

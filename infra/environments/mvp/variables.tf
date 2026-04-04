@@ -190,3 +190,17 @@ variable "enable_aurora_cloudwatch_alarms" {
   type        = bool
   default     = false
 }
+
+# Secrets Manager — shared JSON for all Lambdas/microservices.
+
+variable "enable_app_secrets" {
+  description = "Create Secrets Manager secret shared by all microservice Lambdas."
+  type        = bool
+  default     = true
+}
+
+variable "app_secrets_microservices_initial_json" {
+  description = "Initial JSON string for the microservices secret; after apply edit in AWS Console (Terraform ignores value changes)."
+  type        = string
+  default     = "{}"
+}

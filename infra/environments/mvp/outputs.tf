@@ -38,6 +38,11 @@ output "cloudwatch_dashboard_name" {
   value       = length(module.cloudwatch_http_api) > 0 ? module.cloudwatch_http_api[0].dashboard_name : null
 }
 
+output "microservices_secret_arn" {
+  description = "Shared Secrets Manager ARN for all microservice Lambdas (JSON). Null if enable_app_secrets is false."
+  value       = length(module.app_secrets) > 0 ? module.app_secrets[0].microservices_secret_arn : null
+}
+
 output "ecr_repository_urls" {
   description = "Docker registry URLs per service (docker push/pull)."
   value       = { for k, m in module.ecr : k => m.repository_url }

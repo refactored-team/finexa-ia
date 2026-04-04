@@ -32,6 +32,16 @@ module "cognito" {
   aws_region             = var.aws_region
 }
 
+module "app_secrets" {
+  source = "../../modules/app-secrets"
+  count  = var.enable_app_secrets ? 1 : 0
+
+  project     = var.project
+  environment = var.environment
+
+  microservices_initial_json = var.app_secrets_microservices_initial_json
+}
+
 module "aurora_postgres" {
   source = "../../modules/aurora-postgresql-serverless"
   count  = var.enable_aurora_postgres ? 1 : 0
@@ -68,6 +78,8 @@ module "http_api" {
 
   vpc_subnet_ids         = var.lambda_attach_to_vpc ? module.vpc.private_subnet_ids : []
   vpc_security_group_ids = var.lambda_attach_to_vpc ? var.lambda_vpc_security_group_ids : []
+
+  microservices_secret_arn = length(module.app_secrets) > 0 ? module.app_secrets[0].microservices_secret_arn : null
 }
 
 module "cloudwatch_http_api" {
