@@ -14,12 +14,12 @@ output "ecr_repository_names" {
 }
 
 output "cognito_user_pool_id" {
-  description = "Cognito user pool ID."
+  description = "Cognito user pool ID. Map to app EXPO_PUBLIC_COGNITO_USER_POOL_ID after apply."
   value       = module.cognito.user_pool_id
 }
 
 output "cognito_client_id" {
-  description = "Cognito app client ID."
+  description = "Cognito app client ID (public client). Map to app EXPO_PUBLIC_COGNITO_USER_POOL_CLIENT_ID."
   value       = module.cognito.client_id
 }
 

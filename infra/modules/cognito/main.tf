@@ -58,9 +58,29 @@ resource "aws_cognito_user_pool" "this" {
     attributes_require_verification_before_update = []
   }
 
-  # Only non-default standard attribute settings (required flags, constraints).
-  # Omitting the rest keeps Cognito defaults; full explicit list hits Terraform's
-  # 20-character limit on schema.name (e.g. phone_number_verified).
+  schema {
+    name                     = "profile"
+    attribute_data_type      = "String"
+    developer_only_attribute = false
+    mutable                  = true
+    required                 = false
+    string_attribute_constraints {
+      min_length = 0
+      max_length = 2048
+    }
+  }
+
+  schema {
+    name                     = "address"
+    attribute_data_type      = "String"
+    developer_only_attribute = false
+    mutable                  = true
+    required                 = false
+    string_attribute_constraints {
+      min_length = 0
+      max_length = 2048
+    }
+  }
 
   schema {
     name                     = "birthdate"
@@ -75,6 +95,30 @@ resource "aws_cognito_user_pool" "this" {
   }
 
   schema {
+    name                     = "gender"
+    attribute_data_type      = "String"
+    developer_only_attribute = false
+    mutable                  = true
+    required                 = false
+    string_attribute_constraints {
+      min_length = 0
+      max_length = 2048
+    }
+  }
+
+  schema {
+    name                     = "preferred_username"
+    attribute_data_type      = "String"
+    developer_only_attribute = false
+    mutable                  = true
+    required                 = false
+    string_attribute_constraints {
+      min_length = 0
+      max_length = 2048
+    }
+  }
+
+  schema {
     name                     = "updated_at"
     attribute_data_type      = "Number"
     developer_only_attribute = false
@@ -82,6 +126,42 @@ resource "aws_cognito_user_pool" "this" {
     required                 = false
     number_attribute_constraints {
       min_value = "0"
+    }
+  }
+
+  schema {
+    name                     = "website"
+    attribute_data_type      = "String"
+    developer_only_attribute = false
+    mutable                  = true
+    required                 = false
+    string_attribute_constraints {
+      min_length = 0
+      max_length = 2048
+    }
+  }
+
+  schema {
+    name                     = "picture"
+    attribute_data_type      = "String"
+    developer_only_attribute = false
+    mutable                  = true
+    required                 = false
+    string_attribute_constraints {
+      min_length = 0
+      max_length = 2048
+    }
+  }
+
+  schema {
+    name                     = "identities"
+    attribute_data_type      = "String"
+    developer_only_attribute = false
+    mutable                  = true
+    required                 = false
+    string_attribute_constraints {
+      min_length = 0
+      max_length = 2048
     }
   }
 
@@ -110,11 +190,67 @@ resource "aws_cognito_user_pool" "this" {
   }
 
   schema {
+    name                     = "zoneinfo"
+    attribute_data_type      = "String"
+    developer_only_attribute = false
+    mutable                  = true
+    required                 = false
+    string_attribute_constraints {
+      min_length = 0
+      max_length = 2048
+    }
+  }
+
+  schema {
+    name                     = "locale"
+    attribute_data_type      = "String"
+    developer_only_attribute = false
+    mutable                  = true
+    required                 = false
+    string_attribute_constraints {
+      min_length = 0
+      max_length = 2048
+    }
+  }
+
+  schema {
     name                     = "email"
     attribute_data_type      = "String"
     developer_only_attribute = false
     mutable                  = true
     required                 = true
+    string_attribute_constraints {
+      min_length = 0
+      max_length = 2048
+    }
+  }
+
+  schema {
+    name                     = "email_verified"
+    attribute_data_type      = "Boolean"
+    developer_only_attribute = false
+    mutable                  = true
+    required                 = false
+  }
+
+  schema {
+    name                     = "given_name"
+    attribute_data_type      = "String"
+    developer_only_attribute = false
+    mutable                  = true
+    required                 = false
+    string_attribute_constraints {
+      min_length = 0
+      max_length = 2048
+    }
+  }
+
+  schema {
+    name                     = "family_name"
+    attribute_data_type      = "String"
+    developer_only_attribute = false
+    mutable                  = true
+    required                 = false
     string_attribute_constraints {
       min_length = 0
       max_length = 2048
@@ -139,6 +275,18 @@ resource "aws_cognito_user_pool" "this" {
     developer_only_attribute = false
     mutable                  = true
     required                 = true
+    string_attribute_constraints {
+      min_length = 0
+      max_length = 2048
+    }
+  }
+
+  schema {
+    name                     = "nickname"
+    attribute_data_type      = "String"
+    developer_only_attribute = false
+    mutable                  = true
+    required                 = false
     string_attribute_constraints {
       min_length = 0
       max_length = 2048
