@@ -20,8 +20,10 @@ func NewHealthHandler(db *sql.DB) *HealthHandler {
 }
 
 func (h *HealthHandler) Register(e *echo.Echo) {
+	// /: responde 200 inmediato; LWA 0.8.x llama GET / como readiness por defecto.
 	// /ready: HTTP up sin tocar la BD (Lambda Web Adapter readiness; debe devolver 200 rápido).
 	// /health: Ping a Postgres (503 si RDS no responde; no usar como único readiness en Lambda).
+	e.GET("/", h.ready)
 	e.GET("/ready", h.ready)
 	e.GET("/health", h.check)
 }

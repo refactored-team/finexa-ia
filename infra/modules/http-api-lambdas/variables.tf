@@ -27,7 +27,7 @@ variable "services" {
     image_tag             = string
     route_path_prefix     = string
     memory_size           = optional(number, 512)
-    timeout               = optional(number, 30)
+    timeout               = optional(number, 60)
     environment_variables = optional(map(string), {})
   }))
 }
