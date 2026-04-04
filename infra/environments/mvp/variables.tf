@@ -16,6 +16,26 @@ variable "aws_region" {
   default     = "us-east-1"
 }
 
+# VPC — shared by Aurora, ECS/Fargate, Lambda in VPC, etc.
+
+variable "vpc_cidr" {
+  description = "CIDR for the VPC (subnets are derived from this block)."
+  type        = string
+  default     = "10.0.0.0/16"
+}
+
+variable "vpc_az_count" {
+  description = "Number of AZs (≥2 for Aurora). Public and private subnets are created per AZ."
+  type        = number
+  default     = 2
+}
+
+variable "vpc_enable_nat_gateway" {
+  description = "NAT Gateway for private subnet egress (needed for ECS/Lambda outbound; Aurora does not require it)."
+  type        = bool
+  default     = true
+}
+
 variable "ecr_services" {
   description = "Service keys become ECR repo name suffix: {project}-{environment}-{service}."
   type        = set(string)
@@ -76,24 +96,12 @@ variable "cognito_sns_external_id" {
   default     = "5fb1777f-89c6-4bac-b831-eab731b35b25"
 }
 
-# Aurora PostgreSQL Serverless v2 — set enable_aurora_postgres = true and provide VPC + private subnets.
+# Aurora PostgreSQL Serverless v2 — uses module.vpc private subnets.
 
 variable "enable_aurora_postgres" {
-  description = "Create Aurora PostgreSQL Serverless v2 cluster (requires VPC and subnets)."
+  description = "Create Aurora PostgreSQL Serverless v2 in the shared VPC private subnets."
   type        = bool
   default     = false
-}
-
-variable "aurora_vpc_id" {
-  description = "VPC ID for Aurora (private subnets only recommended)."
-  type        = string
-  default     = ""
-}
-
-variable "aurora_subnet_ids" {
-  description = "Private subnet IDs for the DB subnet group (≥2 AZs)."
-  type        = list(string)
-  default     = []
 }
 
 variable "aurora_allowed_security_group_ids" {

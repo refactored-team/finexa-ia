@@ -1,3 +1,13 @@
+module "vpc" {
+  source = "../../modules/vpc"
+
+  project            = var.project
+  environment        = var.environment
+  vpc_cidr           = var.vpc_cidr
+  az_count           = var.vpc_az_count
+  enable_nat_gateway = var.vpc_enable_nat_gateway
+}
+
 module "ecr" {
   source   = "../../modules/ecr"
   for_each = var.ecr_services
@@ -28,8 +38,8 @@ module "aurora_postgres" {
 
   project     = var.project
   environment = var.environment
-  vpc_id      = var.aurora_vpc_id
-  subnet_ids  = var.aurora_subnet_ids
+  vpc_id      = module.vpc.vpc_id
+  subnet_ids  = module.vpc.private_subnet_ids
 
   allowed_security_group_ids = var.aurora_allowed_security_group_ids
   allowed_cidr_blocks        = var.aurora_allowed_cidr_blocks

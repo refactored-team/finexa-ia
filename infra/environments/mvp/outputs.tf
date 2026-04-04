@@ -1,3 +1,23 @@
+output "vpc_id" {
+  description = "Shared VPC ID (use for ECS, Lambda, RDS, etc.)."
+  value       = module.vpc.vpc_id
+}
+
+output "vpc_private_subnet_ids" {
+  description = "Private subnets for workloads and databases."
+  value       = module.vpc.private_subnet_ids
+}
+
+output "vpc_public_subnet_ids" {
+  description = "Public subnets (ALB, NAT)."
+  value       = module.vpc.public_subnet_ids
+}
+
+output "vpc_nat_gateway_id" {
+  description = "NAT Gateway ID if vpc_enable_nat_gateway is true."
+  value       = module.vpc.nat_gateway_id
+}
+
 output "ecr_repository_urls" {
   description = "Docker registry URLs per service (docker push/pull)."
   value       = { for k, m in module.ecr : k => m.repository_url }
