@@ -12,7 +12,9 @@ import (
 	"database/sql"
 	"fmt"
 	"log/slog"
+	"net"
 	"os"
+	"time"
 
 	"github.com/labstack/echo/v5"
 	"github.com/labstack/echo/v5/middleware"
@@ -75,10 +77,14 @@ func provideDB(lc fx.Lifecycle, cfg *config.App) (*sql.DB, error) {
 
 func registerRoutes(
 	e *echo.Echo,
+	cfg *config.App,
 	health *handlers.HealthHandler,
 	plaid *handlers.PlaidItemHandler,
 	plaidLink *handlers.PlaidLinkHandler,
 ) {
+	if p := cfg.HTTPPathPrefix; p != "" {
+		e.Use(apiresult.HTTPPathPrefixMiddleware(p))
+	}
 	// Swagger UI + swagger.json (generado con `make swag`; ver docs/docs.go).
 	e.GET("/swagger/*", echo.WrapHandler(httpSwagger.WrapHandler))
 	e.GET("/docs", func(c *echo.Context) error {
@@ -87,6 +93,24 @@ func registerRoutes(
 	health.Register(e)
 	plaid.Register(e)
 	plaidLink.Register(e)
+}
+
+// waitForTCPListen blocks until something accepts connections on addr (or ctx done).
+// Lambda Web Adapter polls /ready immediately; Echo Start runs in a goroutine and can
+// briefly race, causing init readiness to fail for ~10s.
+func waitForTCPListen(ctx context.Context, addr string) error {
+	d := net.Dialer{Timeout: 150 * time.Millisecond}
+	for {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		c, err := d.DialContext(ctx, "tcp", addr)
+		if err == nil {
+			c.Close()
+			return nil
+		}
+		time.Sleep(25 * time.Millisecond)
+	}
 }
 
 func startServer(lc fx.Lifecycle, e *echo.Echo, cfg *config.App) {
@@ -104,6 +128,13 @@ func startServer(lc fx.Lifecycle, e *echo.Echo, cfg *config.App) {
 					e.Logger.Error("server stopped", "error", err)
 				}
 			}()
+			waitCtx, waitCancel := context.WithTimeout(ctx, 10*time.Second)
+			defer waitCancel()
+			addr := net.JoinHostPort("127.0.0.1", cfg.HTTPPort)
+			if err := waitForTCPListen(waitCtx, addr); err != nil {
+				cancel()
+				return fmt.Errorf("echo did not listen on %s: %w", addr, err)
+			}
 			return nil
 		},
 		OnStop: func(ctx context.Context) error {

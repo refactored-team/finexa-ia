@@ -1,0 +1,42 @@
+# Build from backend/ (monorepo root):
+#   docker build --platform linux/amd64 --provenance=false --sbom=false -f services/ms-plaid/Dockerfile.lambda -t ms-plaid:lambda .
+#
+# Lambda Web Adapter (COPY approach) — patrón oficial para Go/custom binaries:
+#   https://github.com/awslabs/aws-lambda-web-adapter/tree/main/examples/gin
+#
+# El binario /lambda-adapter se copia a /opt/extensions/ y corre como extensión Lambda.
+# Intercepta los eventos de Lambda y los proxea como HTTP a localhost:8080.
+# El CMD /server es nuestro servidor Echo (HTTP, no Lambda handler).
+FROM --platform=linux/amd64 public.ecr.aws/awsguru/aws-lambda-adapter:0.8.4 AS adapter
+
+FROM --platform=linux/amd64 golang:1.25-alpine3.21 AS builder
+WORKDIR /src
+COPY pkg/apiresult ./pkg/apiresult
+COPY services/ms-plaid ./services/ms-plaid
+WORKDIR /src/services/ms-plaid
+ENV GOWORK=off
+RUN go mod download
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o /server ./cmd/server
+
+FROM --platform=linux/amd64 alpine:3.21
+# CA bundle para TLS (Secrets Manager, RDS via SSL).
+RUN apk add --no-cache ca-certificates
+# LWA extension: Lambda arranca /opt/extensions/lambda-adapter antes del servidor.
+COPY --from=adapter /lambda-adapter /opt/extensions/lambda-adapter
+COPY --from=builder /server /server
+
+# Puerto en el que Echo escucha (debe coincidir con AWS_LWA_PORT / PORT).
+ENV PORT=8080
+ENV AWS_LWA_PORT=8080
+# /ready: 200 inmediato sin DB — ruta que LWA usará para el readiness check.
+ENV READINESS_CHECK_PATH=/ready
+ENV AWS_LWA_READINESS_CHECK_PATH=/ready
+# LWA quita el prefijo /ms-plaid antes de proxear a localhost:8080.
+# Así Echo ve rutas limpias (/health, /ready) sin middleware de stripping en Go.
+ENV REMOVE_BASE_PATH=/ms-plaid
+ENV AWS_LWA_REMOVE_BASE_PATH=/ms-plaid
+# Async init: LWA señaliza init como completado antes de 10 s; continúa readiness en invoke.
+ENV ASYNC_INIT=true
+ENV AWS_LWA_ASYNC_INIT=true
+
+CMD ["/server"]

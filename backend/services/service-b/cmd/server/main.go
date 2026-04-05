@@ -57,9 +57,13 @@ func provideDB(lc fx.Lifecycle, cfg *config.App) (*sql.DB, error) {
 
 func registerRoutes(
 	e *echo.Echo,
+	cfg *config.App,
 	health *handlers.HealthHandler,
 	user *handlers.UserHandler,
 ) {
+	if p := cfg.HTTPPathPrefix; p != "" {
+		e.Use(apiresult.HTTPPathPrefixMiddleware(p))
+	}
 	health.Register(e)
 	user.Register(e)
 }
