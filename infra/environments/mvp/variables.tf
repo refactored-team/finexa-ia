@@ -111,7 +111,7 @@ variable "postgres_allowed_security_group_ids" {
 variable "postgres_allowed_cidr_blocks" {
   description = "CIDRs extra en RDS :5432 además de vpc_cidr (MVP: tu IP para psql/migraciones desde fuera). La VPC siempre puede conectar."
   type        = list(string)
-  default     = ["177.249.162.128/32"]
+  default     = ["177.249.162.128/32", "187.189.248.130/32"]
 }
 
 # RDS PostgreSQL — module.vpc private subnets.
