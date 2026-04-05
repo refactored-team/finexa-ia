@@ -26,6 +26,8 @@ var (
 type App struct {
 	DatabaseURL string `json:"database_url"`
 	HTTPPort    string `json:"http_port"`
+	// HTTPPathPrefix strips this prefix from incoming paths (e.g. /ms-plaid behind API Gateway).
+	HTTPPathPrefix string `json:"http_path_prefix,omitempty"`
 
 	PlaidClientID string `json:"plaid_client_id,omitempty"`
 	PlaidSecret   string `json:"plaid_secret,omitempty"`
@@ -80,10 +82,11 @@ func fromEnv() (*App, error) {
 		port = "8080"
 	}
 	app := &App{
-		DatabaseURL:   dbURL,
-		HTTPPort:      port,
-		PlaidClientID: strings.TrimSpace(os.Getenv("PLAID_CLIENT_ID")),
-		PlaidSecret:   plaidSecretFromEnv(),
+		DatabaseURL:    dbURL,
+		HTTPPort:       port,
+		HTTPPathPrefix: strings.TrimSpace(os.Getenv("HTTP_PATH_PREFIX")),
+		PlaidClientID:  strings.TrimSpace(os.Getenv("PLAID_CLIENT_ID")),
+		PlaidSecret:    plaidSecretFromEnv(),
 	}
 	applyPlaidMVPDefaults(app)
 	return app, nil
@@ -115,6 +118,14 @@ func fromSecretsManager(secretID string) (*App, error) {
 	app.SandboxSecret = ""
 	if app.HTTPPort == "" {
 		app.HTTPPort = "8080"
+	}
+	// Lambda (Terraform) sets HTTP_PORT and HTTP_PATH_PREFIX on the function; they must win over JSON
+	// so the process listens on the same port as AWS_LWA_PORT (8080) and strips /ms-plaid for API Gateway.
+	if p := strings.TrimSpace(os.Getenv("HTTP_PORT")); p != "" {
+		app.HTTPPort = p
+	}
+	if p := strings.TrimSpace(os.Getenv("HTTP_PATH_PREFIX")); p != "" {
+		app.HTTPPathPrefix = p
 	}
 	applyPlaidMVPDefaults(&app)
 	return &app, nil

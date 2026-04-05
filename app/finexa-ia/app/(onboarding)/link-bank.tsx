@@ -32,7 +32,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle, Defs, G, Stop, LinearGradient as SvgLinearGradient } from 'react-native-svg';
 
 import { plaidService } from '@/src/services/api/plaid/plaidService';
-import type { LinkIOSPresentationStyle, LinkSuccess } from 'react-native-plaid-link-sdk';
+import {
+  create as plaidCreate,
+  open as plaidOpen,
+  type LinkIOSPresentationStyle,
+  type LinkSuccess,
+} from 'react-native-plaid-link-sdk';
 
 import { AuthBackground } from '@/components/auth';
 import {
@@ -290,31 +295,11 @@ export default function LinkBankScreen() {
   const { height: windowH } = useWindowDimensions();
   const router = useRouter();
 
-  const [linkToken, setLinkToken] = useState<string | null>(null);
   const [isLinking, setIsLinking] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
-  const userId = '2';
+  const userId = '3';
 
   const clientIsExpoGo = useMemo(() => isExpoGo(), []);
-
-  // Fase 1: Pedir Link Token al backend
-  useEffect(() => {
-    async function fetchLinkToken() {
-      try {
-        const data = await plaidService.createLinkToken(userId);
-        const token = data.data?.link_token ?? null;
-        setLinkToken(token);
-      } catch (error) {
-        console.error('Error al obtener el link_token:', error);
-        Alert.alert('Error', 'No se pudo conectar con el servidor bancario.');
-      }
-    }
-    fetchLinkToken();
-  }, []);
-
-  // Nota: no llamamos `create()` aquí. Lo hacemos solo cuando el usuario presiona CTA
-  // para evitar problemas con la interacción requerida por el SDK nativo.
-  // -------------------------
 
   const tightLayout = windowH < 700;
   const ringSize = tightLayout ? 148 : RING_SIZE;
@@ -352,44 +337,53 @@ export default function LinkBankScreen() {
     }
   }
 
-  // Fase 3: Disparador del CTA — import dinámico del SDK solo si el nativo está presente.
+  /** Link token solo al pulsar el CTA: se pide al backend y luego se abre el SDK en la misma interacción. */
   async function handleCtaPress() {
     if (clientIsExpoGo) {
       showDevBuildHelp();
       return;
     }
 
-    if (!linkToken) {
-      Alert.alert('Cargando', 'Preparando conexión segura, por favor espera un momento...');
+    if (isLinking) return;
+
+    const rnLinksdk = TurboModuleRegistry.get('RNLinksdk');
+    const plaidAndroid = TurboModuleRegistry.get('PlaidAndroid');
+    const nativePlaidPresent =
+      Platform.OS === 'ios' ? rnLinksdk != null : plaidAndroid != null;
+
+    if (!nativePlaidPresent) {
+      Alert.alert(
+        'Plaid no está enlazado',
+        'Falta el módulo nativo del SDK. Volvé a compilar con npx expo run:ios (o run:android) después de instalar dependencias. Si usás Expo Go, no funcionará: necesitás un development build.',
+      );
       return;
     }
 
-    if (isLinking) return;
     setIsLinking(true);
 
     try {
-      const rnLinksdk = TurboModuleRegistry.get('RNLinksdk');
-      const plaidAndroid = TurboModuleRegistry.get('PlaidAndroid');
-      const nativePlaidPresent =
-        Platform.OS === 'ios' ? rnLinksdk != null : plaidAndroid != null;
-
-      if (!nativePlaidPresent) {
+      let linkToken: string | null = null;
+      try {
+        const data = await plaidService.createLinkToken(userId);
+        linkToken = data.data?.link_token ?? null;
+      } catch (error) {
+        console.error('Error al obtener el link_token:', error);
+        Alert.alert('Error', 'No se pudo conectar con el servidor bancario.');
         setIsLinking(false);
-        Alert.alert(
-          'Plaid no está enlazado',
-          'Falta el módulo nativo del SDK. Volvé a compilar con npx expo run:ios (o run:android) después de instalar dependencias. Si usás Expo Go, no funcionará: necesitás un development build.',
-        );
         return;
       }
 
-      const plaidSdk = await import('react-native-plaid-link-sdk');
-      const { create, open } = plaidSdk;
+      if (!linkToken) {
+        Alert.alert('Error', 'No se recibió un token de enlace válido. Intentá de nuevo.');
+        setIsLinking(false);
+        return;
+      }
 
-      create({
+      plaidCreate({
         token: linkToken,
       });
 
-      open({
+      plaidOpen({
         iOSPresentationStyle: 'MODAL' as unknown as LinkIOSPresentationStyle,
         onSuccess: async (success: LinkSuccess) => {
           try {

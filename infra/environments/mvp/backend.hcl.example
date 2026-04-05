@@ -1,0 +1,9 @@
+# Copy to backend.hcl and fill from `terraform output` in infra/bootstrap (or AWS console).
+# State object for the MVP / hackathon stack — keep key unique per environment root.
+# Init: terraform init -backend-config=backend.hcl
+
+bucket         = "finexa-infra-terraform-state-ACCOUNT_ID"
+key            = "mvp/terraform.tfstate"
+region         = "us-east-1"
+dynamodb_table = "finexa-infra-terraform-locks"
+encrypt        = true
