@@ -12,7 +12,7 @@ import (
 
 var (
 	ErrInvalidUserID           = errors.New("invalid user id")
-	ErrInvalidPlaidItemPayload = errors.New("plaid_item_id and access_token are required")
+	ErrInvalidPlaidItemPayload = errors.New("public_token and access_token are required")
 )
 
 type PlaidItemService struct {
@@ -43,7 +43,7 @@ func (s *PlaidItemService) UpsertForUser(ctx context.Context, userID int64, in m
 	if userID <= 0 {
 		return models.PlaidItemResponse{}, ErrInvalidUserID
 	}
-	if strings.TrimSpace(in.PlaidItemID) == "" || strings.TrimSpace(in.AccessToken) == "" {
+	if strings.TrimSpace(in.PublicToken) == "" || strings.TrimSpace(in.AccessToken) == "" {
 		return models.PlaidItemResponse{}, ErrInvalidPlaidItemPayload
 	}
 	return s.repo.UpsertForUser(ctx, userID, in)

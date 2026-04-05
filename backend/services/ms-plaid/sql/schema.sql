@@ -9,7 +9,7 @@ CREATE TABLE users (
 
 CREATE TABLE plaid_items_audit (
     id             bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-    plaid_item_id  text,
+    public_token   text,
     action         text,
     changed_at     timestamptz
 );
@@ -17,7 +17,7 @@ CREATE TABLE plaid_items_audit (
 CREATE TABLE plaid_items (
     id                bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
     user_id           bigint NOT NULL REFERENCES users (id),
-    plaid_item_id     text NOT NULL,
+    public_token      text NOT NULL,
     access_token      text NOT NULL,
     institution_id    text,
     institution_name  text,

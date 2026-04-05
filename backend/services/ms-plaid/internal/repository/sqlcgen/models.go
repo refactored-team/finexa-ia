@@ -12,7 +12,7 @@ import (
 type PlaidItem struct {
 	ID              int64          `json:"id"`
 	UserID          int64          `json:"user_id"`
-	PlaidItemID     string         `json:"plaid_item_id"`
+	PublicToken     string         `json:"public_token"`
 	AccessToken     string         `json:"access_token"`
 	InstitutionID   sql.NullString `json:"institution_id"`
 	InstitutionName sql.NullString `json:"institution_name"`
@@ -23,7 +23,7 @@ type PlaidItem struct {
 
 type PlaidItemsAudit struct {
 	ID          int64          `json:"id"`
-	PlaidItemID sql.NullString `json:"plaid_item_id"`
+	PublicToken sql.NullString `json:"public_token"`
 	Action      sql.NullString `json:"action"`
 	ChangedAt   sql.NullTime   `json:"changed_at"`
 }

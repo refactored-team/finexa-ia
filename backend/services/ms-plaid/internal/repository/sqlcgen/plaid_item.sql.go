@@ -12,7 +12,7 @@ import (
 )
 
 const getPlaidItemByUserID = `-- name: GetPlaidItemByUserID :one
-SELECT id, user_id, plaid_item_id, institution_id, institution_name, created_at, updated_at, deleted_at
+SELECT id, user_id, public_token, institution_id, institution_name, created_at, updated_at, deleted_at
 FROM plaid_items
 WHERE user_id = $1 AND deleted_at IS NULL
 LIMIT 1
@@ -21,7 +21,7 @@ LIMIT 1
 type GetPlaidItemByUserIDRow struct {
 	ID              int64          `json:"id"`
 	UserID          int64          `json:"user_id"`
-	PlaidItemID     string         `json:"plaid_item_id"`
+	PublicToken     string         `json:"public_token"`
 	InstitutionID   sql.NullString `json:"institution_id"`
 	InstitutionName sql.NullString `json:"institution_name"`
 	CreatedAt       time.Time      `json:"created_at"`
@@ -35,7 +35,7 @@ func (q *Queries) GetPlaidItemByUserID(ctx context.Context, userID int64) (GetPl
 	err := row.Scan(
 		&i.ID,
 		&i.UserID,
-		&i.PlaidItemID,
+		&i.PublicToken,
 		&i.InstitutionID,
 		&i.InstitutionName,
 		&i.CreatedAt,
@@ -60,20 +60,20 @@ func (q *Queries) SoftDeletePlaidItemForUser(ctx context.Context, userID int64) 
 }
 
 const upsertPlaidItemForUser = `-- name: UpsertPlaidItemForUser :one
-INSERT INTO plaid_items (user_id, plaid_item_id, access_token, institution_id, institution_name)
+INSERT INTO plaid_items (user_id, public_token, access_token, institution_id, institution_name)
 VALUES ($1, $2, $3, $4, $5)
 ON CONFLICT (user_id) WHERE (deleted_at IS NULL) DO UPDATE SET
-    plaid_item_id = EXCLUDED.plaid_item_id,
+    public_token = EXCLUDED.public_token,
     access_token = EXCLUDED.access_token,
     institution_id = EXCLUDED.institution_id,
     institution_name = EXCLUDED.institution_name,
     updated_at = now()
-RETURNING id, user_id, plaid_item_id, institution_id, institution_name, created_at, updated_at, deleted_at
+RETURNING id, user_id, public_token, institution_id, institution_name, created_at, updated_at, deleted_at
 `
 
 type UpsertPlaidItemForUserParams struct {
 	UserID          int64          `json:"user_id"`
-	PlaidItemID     string         `json:"plaid_item_id"`
+	PublicToken     string         `json:"public_token"`
 	AccessToken     string         `json:"access_token"`
 	InstitutionID   sql.NullString `json:"institution_id"`
 	InstitutionName sql.NullString `json:"institution_name"`
@@ -82,7 +82,7 @@ type UpsertPlaidItemForUserParams struct {
 type UpsertPlaidItemForUserRow struct {
 	ID              int64          `json:"id"`
 	UserID          int64          `json:"user_id"`
-	PlaidItemID     string         `json:"plaid_item_id"`
+	PublicToken     string         `json:"public_token"`
 	InstitutionID   sql.NullString `json:"institution_id"`
 	InstitutionName sql.NullString `json:"institution_name"`
 	CreatedAt       time.Time      `json:"created_at"`
@@ -93,7 +93,7 @@ type UpsertPlaidItemForUserRow struct {
 func (q *Queries) UpsertPlaidItemForUser(ctx context.Context, arg UpsertPlaidItemForUserParams) (UpsertPlaidItemForUserRow, error) {
 	row := q.db.QueryRowContext(ctx, upsertPlaidItemForUser,
 		arg.UserID,
-		arg.PlaidItemID,
+		arg.PublicToken,
 		arg.AccessToken,
 		arg.InstitutionID,
 		arg.InstitutionName,
@@ -102,7 +102,7 @@ func (q *Queries) UpsertPlaidItemForUser(ctx context.Context, arg UpsertPlaidIte
 	err := row.Scan(
 		&i.ID,
 		&i.UserID,
-		&i.PlaidItemID,
+		&i.PublicToken,
 		&i.InstitutionID,
 		&i.InstitutionName,
 		&i.CreatedAt,

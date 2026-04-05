@@ -6,7 +6,7 @@ import "time"
 type PlaidItemResponse struct {
 	ID              int64      `json:"id"`
 	UserID          int64      `json:"user_id"`
-	PlaidItemID     string     `json:"plaid_item_id"`
+	PublicToken     string     `json:"public_token"`
 	InstitutionID   *string    `json:"institution_id,omitempty"`
 	InstitutionName *string    `json:"institution_name,omitempty"`
 	CreatedAt       time.Time  `json:"created_at"`
@@ -15,7 +15,7 @@ type PlaidItemResponse struct {
 
 // CreatePlaidItemRequest is the JSON body for POST /plaid-item (includes secret token for storage only).
 type CreatePlaidItemRequest struct {
-	PlaidItemID     string  `json:"plaid_item_id"`
+	PublicToken     string  `json:"public_token"`
 	AccessToken     string  `json:"access_token"`
 	InstitutionID   *string `json:"institution_id,omitempty"`
 	InstitutionName *string `json:"institution_name,omitempty"`

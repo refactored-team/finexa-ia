@@ -303,7 +303,7 @@ const docTemplate = `{
                 "institution_name": {
                     "type": "string"
                 },
-                "plaid_item_id": {
+                "public_token": {
                     "type": "string"
                 }
             }
@@ -392,7 +392,7 @@ const docTemplate = `{
                 "institution_name": {
                     "type": "string"
                 },
-                "plaid_item_id": {
+                "public_token": {
                     "type": "string"
                 },
                 "updated_at": {
