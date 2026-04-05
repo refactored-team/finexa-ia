@@ -1,4 +1,4 @@
-.PHONY: run build tidy test sqlc swag migrate-up migrate-up-remote migrate-down-remote migrate-help
+.PHONY: run build tidy test sqlc swag migrate-up migrate-up-remote migrate-up-remote-file migrate-down-remote migrate-help
 
 ENV_FILE ?= .env.dev
 # Para RDS / BD publicada: `make migrate-up-remote` (lee DATABASE_URL de este archivo).
@@ -44,7 +44,8 @@ migrate-up:
 # Requiere `psql` en PATH (macOS: brew install libpq && brew link --force libpq).
 # Usa DATABASE_URL desde ENV_FILE_REMOTE (por defecto .env.prod).
 #
-#   make migrate-up-remote
+#   make migrate-up-remote          → aplica TODAS las migraciones en orden (solo BD vacía / primera vez).
+#   make migrate-up-remote-file FILE=migrations/0008_....sql  → una sola migración (RDS ya inicializada).
 #   make migrate-up-remote ENV_FILE_REMOTE=.env.staging
 #
 # migrate-down-remote aplica los bloques -- migrate:down en orden INVERSO (peligroso en prod).
@@ -61,6 +62,21 @@ migrate-up-remote:
 	done
 	@echo "OK: migraciones :up aplicadas contra la BD de $(ENV_FILE_REMOTE)"
 
+# Aplica solo el bloque :up de UN archivo (cuando la BD remota ya tiene 0001..0007 aplicadas).
+# Ejemplo: make migrate-up-remote-file FILE=migrations/0008_plaid_items_public_token.sql
+migrate-up-remote-file:
+	@command -v psql >/dev/null 2>&1 || { echo "Falta psql. Ej: brew install libpq && brew link --force libpq"; exit 1; }
+	@test -f "$(ENV_FILE_REMOTE)" || { echo "No existe $(ENV_FILE_REMOTE)"; exit 1; }
+	@test -n "$(FILE)" || { echo "Uso: make migrate-up-remote-file FILE=migrations/0008_algo.sql"; exit 1; }
+	@test -f "$(FILE)" || { echo "No existe $(FILE)"; exit 1; }
+	@set -a && . ./$(ENV_FILE_REMOTE) && set +a && \
+	if [ -z "$$DATABASE_URL" ]; then echo "DATABASE_URL vacío en $(ENV_FILE_REMOTE)"; exit 1; fi && \
+	masked=$$(echo "$$DATABASE_URL" | sed 's/:[^:@]*@/:****@/'); echo "Conexión (enmascarada): $$masked" && \
+	echo "Applying $(FILE) (:up only)" && \
+	awk '/^-- migrate:up/{p=1;next}/^-- migrate:down/{p=0}p' "$(FILE)" | \
+	psql "$$DATABASE_URL" -v ON_ERROR_STOP=1 && \
+	echo "OK: $(FILE) aplicado contra $(ENV_FILE_REMOTE)"
+
 migrate-down-remote:
 	@command -v psql >/dev/null 2>&1 || { echo "Falta psql. Ej: brew install libpq && brew link --force libpq"; exit 1; }
 	@test -f "$(ENV_FILE_REMOTE)" || { echo "No existe $(ENV_FILE_REMOTE)"; exit 1; }
@@ -75,6 +91,7 @@ migrate-down-remote:
 	@echo "OK: bloques :down aplicados (orden inverso)"
 
 migrate-help:
-	@echo "Migraciones locales (Docker):  make migrate-up"
-	@echo "Migraciones RDS / remoto:     make migrate-up-remote   [ENV_FILE_REMOTE=.env.prod]"
-	@echo "Revertir remoto (cuidado):    make migrate-down-remote"
+	@echo "Migraciones locales (Docker):     make migrate-up"
+	@echo "Remoto, todas (BD vacía):         make migrate-up-remote   [ENV_FILE_REMOTE=.env.prod]"
+	@echo "Remoto, un solo archivo (RDS):   make migrate-up-remote-file FILE=migrations/0008_....sql"
+	@echo "Revertir remoto (cuidado):        make migrate-down-remote"
