@@ -1,16 +1,28 @@
-# Build from backend/ workspace root:
-#   docker build -f services/service-b/Dockerfile.lambda -t service-b:lambda .
-FROM golang:1.25-alpine AS builder
-WORKDIR /src
-COPY go.work go.work.sum ./
-COPY pkg/apiresult ./pkg/apiresult
-COPY services/service-b ./services/service-b
-WORKDIR /src/services/service-b
-RUN go mod download
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o /server ./cmd/server
+# Build from backend/ (monorepo root):
+#   docker build --platform linux/amd64 --provenance=false --sbom=false -f services/ms-users/Dockerfile.lambda -t ms-users:lambda .
+FROM --platform=linux/amd64 public.ecr.aws/awsguru/aws-lambda-adapter:0.8.4 AS adapter
 
-FROM public.ecr.aws/awsguru/aws-lambda-adapter:0.8.4-x86_64
+FROM --platform=linux/amd64 golang:1.25-alpine3.21 AS builder
+WORKDIR /src
+COPY pkg/apiresult ./pkg/apiresult
+COPY services/ms-users ./services/ms-users
+WORKDIR /src/services/ms-users
+ENV GOWORK=off
+RUN go mod download
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o /server ./cmd/server
+
+FROM --platform=linux/amd64 alpine:3.21
+RUN apk add --no-cache ca-certificates
+COPY --from=adapter /lambda-adapter /opt/extensions/lambda-adapter
 COPY --from=builder /server /server
+
+ENV PORT=8080
 ENV AWS_LWA_PORT=8080
-ENV AWS_LWA_READINESS_CHECK_PATH=/health
+ENV READINESS_CHECK_PATH=/ready
+ENV AWS_LWA_READINESS_CHECK_PATH=/ready
+ENV REMOVE_BASE_PATH=/ms-users
+ENV AWS_LWA_REMOVE_BASE_PATH=/ms-users
+ENV ASYNC_INIT=true
+ENV AWS_LWA_ASYNC_INIT=true
+
 CMD ["/server"]

@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"strings"
 
 	"finexa-ia/ms-users/internal/models"
 	"finexa-ia/ms-users/internal/repository/sqlcgen"
@@ -16,6 +17,17 @@ func NewUserRepository(db *sql.DB) *UserRepository {
 	return &UserRepository{q: sqlcgen.New(db)}
 }
 
+func (r *UserRepository) UpsertByCognitoSub(ctx context.Context, cognitoSub string, email *string) (models.User, error) {
+	u, err := r.q.UpsertUserByCognitoSub(ctx, sqlcgen.UpsertUserByCognitoSubParams{
+		CognitoSub: strings.TrimSpace(cognitoSub),
+		Email:      stringPtrToNull(email),
+	})
+	if err != nil {
+		return models.User{}, err
+	}
+	return toModel(u), nil
+}
+
 func (r *UserRepository) GetByID(ctx context.Context, id int64) (models.User, error) {
 	u, err := r.q.GetUserByID(ctx, id)
 	if err != nil {
@@ -24,47 +36,35 @@ func (r *UserRepository) GetByID(ctx context.Context, id int64) (models.User, er
 	return toModel(u), nil
 }
 
-func (r *UserRepository) List(ctx context.Context) ([]models.User, error) {
-	rows, err := r.q.ListUsers(ctx)
-	if err != nil {
-		return nil, err
-	}
-	out := make([]models.User, len(rows))
-	for i, u := range rows {
-		out[i] = toModel(u)
-	}
-	return out, nil
-}
-
-func (r *UserRepository) Create(ctx context.Context, name, email string) (models.User, error) {
-	u, err := r.q.CreateUser(ctx, sqlcgen.CreateUserParams{Name: name, Email: email})
+func (r *UserRepository) GetByCognitoSub(ctx context.Context, cognitoSub string) (models.User, error) {
+	u, err := r.q.GetUserByCognitoSub(ctx, strings.TrimSpace(cognitoSub))
 	if err != nil {
 		return models.User{}, err
 	}
 	return toModel(u), nil
 }
 
-func (r *UserRepository) Update(ctx context.Context, id int64, name, email string) (models.User, error) {
-	u, err := r.q.UpdateUser(ctx, sqlcgen.UpdateUserParams{ID: id, Name: name, Email: email})
-	if err != nil {
-		return models.User{}, err
+func stringPtrToNull(p *string) sql.NullString {
+	if p == nil {
+		return sql.NullString{}
 	}
-	return toModel(u), nil
-}
-
-func (r *UserRepository) Delete(ctx context.Context, id int64) (models.User, error) {
-	u, err := r.q.DeleteUser(ctx, id)
-	if err != nil {
-		return models.User{}, err
+	s := strings.TrimSpace(*p)
+	if s == "" {
+		return sql.NullString{}
 	}
-	return toModel(u), nil
+	return sql.NullString{String: s, Valid: true}
 }
 
 func toModel(u sqlcgen.User) models.User {
-	return models.User{
-		ID:        u.ID,
-		Name:      u.Name,
-		Email:     u.Email,
-		CreatedAt: u.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
+	out := models.User{
+		ID:         u.ID,
+		CognitoSub: u.CognitoSub,
+		CreatedAt:  u.CreatedAt,
+		UpdatedAt:  u.UpdatedAt,
 	}
+	if u.Email.Valid {
+		s := u.Email.String
+		out.Email = &s
+	}
+	return out
 }

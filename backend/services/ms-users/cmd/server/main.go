@@ -1,8 +1,8 @@
-// Microservicio de usuarios: CRUD sobre la tabla users.
+// Microservicio de usuarios: tabla users (Cognito) compartida con ms-plaid; API /v1/users.
 //
 //	@title			ms-users API
 //	@version		1.0.0
-//	@description	API REST de usuarios (Postgres). Documentación OpenAPI vía Swagger UI en /swagger.
+//	@description	Usuarios internos (Cognito sub) en Postgres; misma BD que ms-plaid para FK.
 //	@BasePath		/
 //	@schemes		http https
 package main
@@ -12,7 +12,9 @@ import (
 	"database/sql"
 	"fmt"
 	"log/slog"
+	"net"
 	"os"
+	"time"
 
 	"github.com/labstack/echo/v5"
 	"github.com/labstack/echo/v5/middleware"
@@ -75,17 +77,30 @@ func registerRoutes(
 	health *handlers.HealthHandler,
 	user *handlers.UserHandler,
 ) {
-	// Swagger UI + swagger.json (generado con `make swag`; ver docs/docs.go).
+	if p := cfg.HTTPPathPrefix; p != "" {
+		e.Use(apiresult.HTTPPathPrefixMiddleware(p))
+	}
 	e.GET("/swagger/*", echo.WrapHandler(httpSwagger.WrapHandler))
 	e.GET("/docs", func(c *echo.Context) error {
 		return c.Redirect(302, "/swagger/index.html")
 	})
-
-	if p := cfg.HTTPPathPrefix; p != "" {
-		e.Use(apiresult.HTTPPathPrefixMiddleware(p))
-	}
 	health.Register(e)
 	user.Register(e)
+}
+
+func waitForTCPListen(ctx context.Context, addr string) error {
+	d := net.Dialer{Timeout: 150 * time.Millisecond}
+	for {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		c, err := d.DialContext(ctx, "tcp", addr)
+		if err == nil {
+			c.Close()
+			return nil
+		}
+		time.Sleep(25 * time.Millisecond)
+	}
 }
 
 func startServer(lc fx.Lifecycle, e *echo.Echo, cfg *config.App) {
@@ -103,6 +118,13 @@ func startServer(lc fx.Lifecycle, e *echo.Echo, cfg *config.App) {
 					e.Logger.Error("server stopped", "error", err)
 				}
 			}()
+			waitCtx, waitCancel := context.WithTimeout(ctx, 10*time.Second)
+			defer waitCancel()
+			addr := net.JoinHostPort("127.0.0.1", cfg.HTTPPort)
+			if err := waitForTCPListen(waitCtx, addr); err != nil {
+				cancel()
+				return fmt.Errorf("echo did not listen on %s: %w", addr, err)
+			}
 			return nil
 		},
 		OnStop: func(ctx context.Context) error {

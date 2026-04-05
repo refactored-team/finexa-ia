@@ -17,15 +17,6 @@ definitions:
       message:
         type: string
     type: object
-  finexa-ia_ms-users_internal_models.CreateUserRequest:
-    properties:
-      email:
-        example: jane@example.com
-        type: string
-      name:
-        example: Jane
-        type: string
-    type: object
   finexa-ia_ms-users_internal_models.HealthResponse:
     properties:
       database:
@@ -36,34 +27,27 @@ definitions:
         example: ok
         type: string
     type: object
-  finexa-ia_ms-users_internal_models.UpdateUserRequest:
+  finexa-ia_ms-users_internal_models.UpsertUserRequest:
     properties:
+      cognito_sub:
+        example: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+        type: string
       email:
         example: jane@example.com
-        type: string
-      name:
-        example: Jane
         type: string
     type: object
   finexa-ia_ms-users_internal_models.User:
     properties:
+      cognito_sub:
+        type: string
       created_at:
         type: string
       email:
         type: string
       id:
         type: integer
-      name:
+      updated_at:
         type: string
-    type: object
-  finexa-ia_ms-users_internal_models.UserListOKResult:
-    properties:
-      data:
-        items:
-          $ref: '#/definitions/finexa-ia_ms-users_internal_models.User'
-        type: array
-      ok:
-        type: boolean
     type: object
   finexa-ia_ms-users_internal_models.UserOKResult:
     properties:
@@ -74,8 +58,8 @@ definitions:
     type: object
 info:
   contact: {}
-  description: API REST de usuarios (Postgres). Documentación OpenAPI vía Swagger
-    UI en /swagger.
+  description: Usuarios internos (Cognito sub) en Postgres; misma BD que ms-plaid
+    para FK.
   title: ms-users API
   version: 1.0.0
 paths:
@@ -97,59 +81,18 @@ paths:
       summary: Health check
       tags:
       - health
-  /users:
-    get:
-      description: Lista registros de la tabla users
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/finexa-ia_ms-users_internal_models.UserListOKResult'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/apiresult.ErrResult'
-      summary: Listar usuarios
-      tags:
-      - users
+  /v1/users:
     post:
       consumes:
       - application/json
+      description: Upsert por cognito_sub; email opcional
       parameters:
       - description: Cuerpo
         in: body
         name: body
         required: true
         schema:
-          $ref: '#/definitions/finexa-ia_ms-users_internal_models.CreateUserRequest'
-      produces:
-      - application/json
-      responses:
-        "201":
-          description: Created
-          schema:
-            $ref: '#/definitions/finexa-ia_ms-users_internal_models.UserOKResult'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/apiresult.ErrResult'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/apiresult.ErrResult'
-      summary: Crear usuario
-      tags:
-      - users
-  /users/{id}:
-    delete:
-      parameters:
-      - description: ID de usuario
-        in: path
-        name: id
-        required: true
-        type: integer
+          $ref: '#/definitions/finexa-ia_ms-users_internal_models.UpsertUserRequest'
       produces:
       - application/json
       responses:
@@ -161,20 +104,17 @@ paths:
           description: Bad Request
           schema:
             $ref: '#/definitions/apiresult.ErrResult'
-        "404":
-          description: Not Found
-          schema:
-            $ref: '#/definitions/apiresult.ErrResult'
         "500":
           description: Internal Server Error
           schema:
             $ref: '#/definitions/apiresult.ErrResult'
-      summary: Eliminar usuario
+      summary: Registrar o actualizar usuario
       tags:
       - users
+  /v1/users/{id}:
     get:
       parameters:
-      - description: ID de usuario
+      - description: ID interno
         in: path
         name: id
         required: true
@@ -198,24 +138,17 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/apiresult.ErrResult'
-      summary: Obtener usuario
+      summary: Obtener usuario por id
       tags:
       - users
-    put:
-      consumes:
-      - application/json
+  /v1/users/by-cognito:
+    get:
       parameters:
-      - description: ID de usuario
-        in: path
-        name: id
+      - description: Sub del JWT Cognito
+        in: query
+        name: cognito_sub
         required: true
-        type: integer
-      - description: Cuerpo
-        in: body
-        name: body
-        required: true
-        schema:
-          $ref: '#/definitions/finexa-ia_ms-users_internal_models.UpdateUserRequest'
+        type: string
       produces:
       - application/json
       responses:
@@ -235,7 +168,7 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/apiresult.ErrResult'
-      summary: Actualizar usuario
+      summary: Obtener usuario por Cognito sub
       tags:
       - users
 schemes:

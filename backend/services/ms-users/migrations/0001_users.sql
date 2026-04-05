@@ -1,4 +1,4 @@
--- Tabla canónica de usuarios (identidad Cognito). Compartida con ms-plaid vía misma DATABASE_URL (FK en plaid_*).
+-- migrate:up
 CREATE TABLE users (
     id           bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
     cognito_sub  text NOT NULL UNIQUE,
@@ -9,3 +9,7 @@ CREATE TABLE users (
 );
 
 CREATE INDEX idx_users_cognito_sub ON users USING btree (cognito_sub);
+
+-- migrate:down
+DROP INDEX IF EXISTS idx_users_cognito_sub;
+DROP TABLE IF EXISTS users;

@@ -39,7 +39,7 @@ variable "vpc_enable_nat_gateway" {
 variable "ecr_services" {
   description = "Service keys become ECR repo name suffix: {project}-{environment}-{service}."
   type        = set(string)
-  default     = ["ms-plaid"]
+  default     = ["ms-plaid", "ms-users"]
 }
 
 variable "ecr_image_retention_count" {

@@ -57,6 +57,8 @@ import {
   isExpoGo,
 } from '@/lib/amplify/configure';
 import { signOutUser } from '@/lib/auth/cognito';
+import { fetchAuthSession } from 'aws-amplify/auth';
+import { upsertCurrentUser } from '@/src/services/api/users/usersService';
 
 const RING_SIZE = 168;
 const RING_R = 58;
@@ -297,7 +299,6 @@ export default function LinkBankScreen() {
 
   const [isLinking, setIsLinking] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
-  const userId = '1';
 
   const clientIsExpoGo = useMemo(() => isExpoGo(), []);
 
@@ -362,9 +363,34 @@ export default function LinkBankScreen() {
     setIsLinking(true);
 
     try {
+      let internalUserId: string;
+      try {
+        if (isAmplifyAuthConfigured()) {
+          const session = await fetchAuthSession();
+          const payload = session.tokens?.idToken?.payload;
+          const sub = payload?.sub;
+          if (typeof sub !== 'string' || sub.length === 0) {
+            Alert.alert('Sesión', 'No se pudo obtener tu identidad. Iniciá sesión de nuevo.');
+            setIsLinking(false);
+            return;
+          }
+          const email =
+            typeof payload?.email === 'string' ? payload.email : undefined;
+          const id = await upsertCurrentUser(sub, email);
+          internalUserId = String(id);
+        } else {
+          internalUserId = '1';
+        }
+      } catch (e) {
+        console.error('Error al registrar usuario interno:', e);
+        Alert.alert('Error', 'No se pudo sincronizar tu usuario con el servidor.');
+        setIsLinking(false);
+        return;
+      }
+
       let linkToken: string | null = null;
       try {
-        const data = await plaidService.createLinkToken(userId);
+        const data = await plaidService.createLinkToken(internalUserId);
         linkToken = data.data?.link_token ?? null;
       } catch (error) {
         console.error('Error al obtener el link_token:', error);
@@ -387,7 +413,7 @@ export default function LinkBankScreen() {
         iOSPresentationStyle: 'MODAL' as unknown as LinkIOSPresentationStyle,
         onSuccess: async (success: LinkSuccess) => {
           try {
-            await plaidService.exchangePublicToken(userId, success.publicToken);
+            await plaidService.exchangePublicToken(internalUserId, success.publicToken);
             router.replace('/(tabs)/explore');
           } catch (error) {
             console.error('Error al guardar conexión bancaria:', error);

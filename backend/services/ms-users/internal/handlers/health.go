@@ -20,7 +20,16 @@ func NewHealthHandler(db *sql.DB) *HealthHandler {
 }
 
 func (h *HealthHandler) Register(e *echo.Echo) {
+	e.GET("/", h.ready)
+	e.GET("/ready", h.ready)
 	e.GET("/health", h.check)
+}
+
+func (h *HealthHandler) ready(c *echo.Context) error {
+	return c.JSON(http.StatusOK, models.HealthResponse{
+		Status:   "ok",
+		Database: "not_checked",
+	})
 }
 
 // check verifica conectividad con Postgres (Ping).
@@ -42,7 +51,6 @@ func (h *HealthHandler) check(c *echo.Context) error {
 			Database: "unavailable",
 		})
 	}
-
 	return c.JSON(http.StatusOK, models.HealthResponse{
 		Status:   "ok",
 		Database: "ok",

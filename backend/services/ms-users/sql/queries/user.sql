@@ -1,28 +1,18 @@
--- name: GetUserByID :one
-SELECT id, name, email, created_at
-FROM users
-WHERE id = $1
-LIMIT 1;
-
--- name: ListUsers :many
-SELECT id, name, email, created_at
-FROM users
-ORDER BY id;
-
--- name: CreateUser :one
-INSERT INTO users (name, email)
+-- name: UpsertUserByCognitoSub :one
+INSERT INTO users (cognito_sub, email)
 VALUES ($1, $2)
-RETURNING id, name, email, created_at;
+ON CONFLICT (cognito_sub) DO UPDATE SET
+    email = COALESCE(EXCLUDED.email, users.email),
+    deleted_at = NULL,
+    updated_at = now()
+RETURNING id, cognito_sub, email, created_at, updated_at, deleted_at;
 
--- name: UpdateUser :one
-UPDATE users
-SET
-    name = $1,
-    email = $2
-WHERE id = $3
-RETURNING id, name, email, created_at;
+-- name: GetUserByID :one
+SELECT id, cognito_sub, email, created_at, updated_at, deleted_at
+FROM users
+WHERE id = $1 AND deleted_at IS NULL;
 
--- name: DeleteUser :one
-DELETE FROM users
-WHERE id = $1
-RETURNING id, name, email, created_at;
+-- name: GetUserByCognitoSub :one
+SELECT id, cognito_sub, email, created_at, updated_at, deleted_at
+FROM users
+WHERE cognito_sub = $1 AND deleted_at IS NULL;

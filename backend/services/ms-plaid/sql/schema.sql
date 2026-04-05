@@ -1,11 +1,4 @@
-CREATE TABLE users (
-    id           bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-    cognito_sub  text NOT NULL UNIQUE,
-    email        text,
-    created_at   timestamptz NOT NULL DEFAULT now(),
-    updated_at   timestamptz NOT NULL DEFAULT now(),
-    deleted_at   timestamptz
-);
+-- users: definido y migrado por ms-users (misma BD compartida).
 
 CREATE TABLE plaid_items_audit (
     id             bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY,

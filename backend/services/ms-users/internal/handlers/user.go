@@ -15,9 +15,7 @@ import (
 // Referencias para que swag resuelva models.* en comentarios // @Success / @Param.
 var _ = []any{
 	models.UserOKResult{},
-	models.UserListOKResult{},
-	models.CreateUserRequest{},
-	models.UpdateUserRequest{},
+	models.UpsertUserRequest{},
 }
 
 type UserHandler struct {
@@ -29,48 +27,56 @@ func NewUserHandler(svc *services.UserService) *UserHandler {
 }
 
 func (h *UserHandler) Register(e *echo.Echo) {
-	g := e.Group("/users")
-	g.GET("", h.list)
+	g := e.Group("/v1/users")
+	g.POST("", h.upsert)
+	g.GET("/by-cognito", h.getByCognitoSub)
 	g.GET("/:id", h.getByID)
-	g.POST("", h.create)
-	g.PUT("/:id", h.update)
-	g.DELETE("/:id", h.delete)
 }
 
-// list devuelve todos los usuarios ordenados por id.
+// upsert crea o actualiza un usuario por cognito_sub (reactiva si estaba soft-deleted).
 //
-//	@Summary		Listar usuarios
-//	@Description	Lista registros de la tabla users
+//	@Summary		Registrar o actualizar usuario
+//	@Description	Upsert por cognito_sub; email opcional
 //	@Tags			users
+//	@Accept			json
 //	@Produce		json
-//	@Success		200	{object}	models.UserListOKResult
+//	@Param			body	body		models.UpsertUserRequest	true	"Cuerpo"
+//	@Success		200	{object}	models.UserOKResult
+//	@Failure		400	{object}	apiresult.ErrResult
 //	@Failure		500	{object}	apiresult.ErrResult
-//	@Router			/users [get]
-func (h *UserHandler) list(c *echo.Context) error {
-	users, err := h.svc.ListUsers(c.Request().Context())
+//	@Router			/v1/users [post]
+func (h *UserHandler) upsert(c *echo.Context) error {
+	var in models.UpsertUserRequest
+	if err := c.Bind(&in); err != nil {
+		return apiresult.RespondError(c, http.StatusBadRequest, apiresult.CodeValidationError, "invalid request body", nil)
+	}
+	user, err := h.svc.Upsert(c.Request().Context(), in)
 	if err != nil {
+		if errors.Is(err, services.ErrInvalidUserInput) {
+			return apiresult.RespondError(c, http.StatusBadRequest, apiresult.CodeValidationError, err.Error(), nil)
+		}
 		return apiresult.RespondError(c, http.StatusInternalServerError, apiresult.CodeInternalError, http.StatusText(http.StatusInternalServerError), nil)
 	}
-	return apiresult.RespondOK(c, http.StatusOK, users)
+	return apiresult.RespondOK(c, http.StatusOK, user)
 }
 
-// getByID obtiene un usuario por id.
+// getByID obtiene un usuario activo por id interno.
 //
-//	@Summary		Obtener usuario
+//	@Summary		Obtener usuario por id
 //	@Tags			users
 //	@Produce		json
-//	@Param			id	path		int	true	"ID de usuario"
+//	@Param			id	path		int	true	"ID interno"
 //	@Success		200	{object}	models.UserOKResult
 //	@Failure		400	{object}	apiresult.ErrResult
 //	@Failure		404	{object}	apiresult.ErrResult
 //	@Failure		500	{object}	apiresult.ErrResult
-//	@Router			/users/{id} [get]
+//	@Router			/v1/users/{id} [get]
 func (h *UserHandler) getByID(c *echo.Context) error {
 	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
-	if err != nil {
+	if err != nil || id <= 0 {
 		return apiresult.RespondError(c, http.StatusBadRequest, apiresult.CodeValidationError, "invalid user id", nil)
 	}
-	user, err := h.svc.GetUser(c.Request().Context(), id)
+	user, err := h.svc.GetByID(c.Request().Context(), id)
 	if err != nil {
 		if errors.Is(err, services.ErrInvalidUserID) {
 			return apiresult.RespondError(c, http.StatusBadRequest, apiresult.CodeValidationError, err.Error(), nil)
@@ -83,97 +89,28 @@ func (h *UserHandler) getByID(c *echo.Context) error {
 	return apiresult.RespondOK(c, http.StatusOK, user)
 }
 
-// create inserta un usuario (name, email único).
+// getByCognitoSub obtiene un usuario activo por cognito_sub (query: cognito_sub).
 //
-//	@Summary		Crear usuario
+//	@Summary		Obtener usuario por Cognito sub
 //	@Tags			users
-//	@Accept			json
 //	@Produce		json
-//	@Param			body	body		models.CreateUserRequest	true	"Cuerpo"
-//	@Success		201	{object}	models.UserOKResult
+//	@Param			cognito_sub	query		string	true	"Sub del JWT Cognito"
+//	@Success		200	{object}	models.UserOKResult
 //	@Failure		400	{object}	apiresult.ErrResult
+//	@Failure		404	{object}	apiresult.ErrResult
 //	@Failure		500	{object}	apiresult.ErrResult
-//	@Router			/users [post]
-func (h *UserHandler) create(c *echo.Context) error {
-	var in services.CreateUserInput
-	if err := c.Bind(&in); err != nil {
-		return apiresult.RespondError(c, http.StatusBadRequest, apiresult.CodeValidationError, "invalid request body", nil)
-	}
-	user, err := h.svc.CreateUser(c.Request().Context(), in)
+//	@Router			/v1/users/by-cognito [get]
+func (h *UserHandler) getByCognitoSub(c *echo.Context) error {
+	sub := c.QueryParam("cognito_sub")
+	user, err := h.svc.GetByCognitoSub(c.Request().Context(), sub)
 	if err != nil {
-		if errors.Is(err, services.ErrInvalidUserInput) {
+		if errors.Is(err, services.ErrCognitoSubMissing) {
 			return apiresult.RespondError(c, http.StatusBadRequest, apiresult.CodeValidationError, err.Error(), nil)
+		}
+		if errors.Is(err, services.ErrUserNotFound) {
+			return apiresult.RespondError(c, http.StatusNotFound, apiresult.CodeNotFound, http.StatusText(http.StatusNotFound), nil)
 		}
 		return apiresult.RespondError(c, http.StatusInternalServerError, apiresult.CodeInternalError, http.StatusText(http.StatusInternalServerError), nil)
-	}
-	return apiresult.RespondOK(c, http.StatusCreated, user)
-}
-
-// update actualiza nombre y email de un usuario.
-//
-//	@Summary		Actualizar usuario
-//	@Tags			users
-//	@Accept			json
-//	@Produce		json
-//	@Param			id		path		int							true	"ID de usuario"
-//	@Param			body	body		models.UpdateUserRequest	true	"Cuerpo"
-//	@Success		200	{object}	models.UserOKResult
-//	@Failure		400	{object}	apiresult.ErrResult
-//	@Failure		404	{object}	apiresult.ErrResult
-//	@Failure		500	{object}	apiresult.ErrResult
-//	@Router			/users/{id} [put]
-func (h *UserHandler) update(c *echo.Context) error {
-	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
-	if err != nil {
-		return apiresult.RespondError(c, http.StatusBadRequest, apiresult.CodeValidationError, "invalid user id", nil)
-	}
-
-	var in services.UpdateUserInput
-	if err := c.Bind(&in); err != nil {
-		return apiresult.RespondError(c, http.StatusBadRequest, apiresult.CodeValidationError, "invalid request body", nil)
-	}
-
-	user, err := h.svc.UpdateUser(c.Request().Context(), id, in)
-	if err != nil {
-		switch {
-		case errors.Is(err, services.ErrInvalidUserID), errors.Is(err, services.ErrInvalidUserInput):
-			return apiresult.RespondError(c, http.StatusBadRequest, apiresult.CodeValidationError, err.Error(), nil)
-		case errors.Is(err, services.ErrUserNotFound):
-			return apiresult.RespondError(c, http.StatusNotFound, apiresult.CodeNotFound, http.StatusText(http.StatusNotFound), nil)
-		default:
-			return apiresult.RespondError(c, http.StatusInternalServerError, apiresult.CodeInternalError, http.StatusText(http.StatusInternalServerError), nil)
-		}
-	}
-	return apiresult.RespondOK(c, http.StatusOK, user)
-}
-
-// delete elimina un usuario y devuelve el registro borrado.
-//
-//	@Summary		Eliminar usuario
-//	@Tags			users
-//	@Produce		json
-//	@Param			id	path		int	true	"ID de usuario"
-//	@Success		200	{object}	models.UserOKResult
-//	@Failure		400	{object}	apiresult.ErrResult
-//	@Failure		404	{object}	apiresult.ErrResult
-//	@Failure		500	{object}	apiresult.ErrResult
-//	@Router			/users/{id} [delete]
-func (h *UserHandler) delete(c *echo.Context) error {
-	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
-	if err != nil {
-		return apiresult.RespondError(c, http.StatusBadRequest, apiresult.CodeValidationError, "invalid user id", nil)
-	}
-
-	user, err := h.svc.DeleteUser(c.Request().Context(), id)
-	if err != nil {
-		switch {
-		case errors.Is(err, services.ErrInvalidUserID):
-			return apiresult.RespondError(c, http.StatusBadRequest, apiresult.CodeValidationError, err.Error(), nil)
-		case errors.Is(err, services.ErrUserNotFound):
-			return apiresult.RespondError(c, http.StatusNotFound, apiresult.CodeNotFound, http.StatusText(http.StatusNotFound), nil)
-		default:
-			return apiresult.RespondError(c, http.StatusInternalServerError, apiresult.CodeInternalError, http.StatusText(http.StatusInternalServerError), nil)
-		}
 	}
 	return apiresult.RespondOK(c, http.StatusOK, user)
 }

@@ -41,32 +41,9 @@ const docTemplate = `{
                 }
             }
         },
-        "/users": {
-            "get": {
-                "description": "Lista registros de la tabla users",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "users"
-                ],
-                "summary": "Listar usuarios",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/finexa-ia_ms-users_internal_models.UserListOKResult"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/apiresult.ErrResult"
-                        }
-                    }
-                }
-            },
+        "/v1/users": {
             "post": {
+                "description": "Upsert por cognito_sub; email opcional",
                 "consumes": [
                     "application/json"
                 ],
@@ -76,7 +53,7 @@ const docTemplate = `{
                 "tags": [
                     "users"
                 ],
-                "summary": "Crear usuario",
+                "summary": "Registrar o actualizar usuario",
                 "parameters": [
                     {
                         "description": "Cuerpo",
@@ -84,13 +61,13 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/finexa-ia_ms-users_internal_models.CreateUserRequest"
+                            "$ref": "#/definitions/finexa-ia_ms-users_internal_models.UpsertUserRequest"
                         }
                     }
                 ],
                 "responses": {
-                    "201": {
-                        "description": "Created",
+                    "200": {
+                        "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/finexa-ia_ms-users_internal_models.UserOKResult"
                         }
@@ -110,7 +87,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/users/{id}": {
+        "/v1/users/by-cognito": {
             "get": {
                 "produces": [
                     "application/json"
@@ -118,13 +95,13 @@ const docTemplate = `{
                 "tags": [
                     "users"
                 ],
-                "summary": "Obtener usuario",
+                "summary": "Obtener usuario por Cognito sub",
                 "parameters": [
                     {
-                        "type": "integer",
-                        "description": "ID de usuario",
-                        "name": "id",
-                        "in": "path",
+                        "type": "string",
+                        "description": "Sub del JWT Cognito",
+                        "name": "cognito_sub",
+                        "in": "query",
                         "required": true
                     }
                 ],
@@ -154,75 +131,21 @@ const docTemplate = `{
                         }
                     }
                 }
-            },
-            "put": {
-                "consumes": [
-                    "application/json"
-                ],
+            }
+        },
+        "/v1/users/{id}": {
+            "get": {
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
                     "users"
                 ],
-                "summary": "Actualizar usuario",
+                "summary": "Obtener usuario por id",
                 "parameters": [
                     {
                         "type": "integer",
-                        "description": "ID de usuario",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "Cuerpo",
-                        "name": "body",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/finexa-ia_ms-users_internal_models.UpdateUserRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/finexa-ia_ms-users_internal_models.UserOKResult"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/apiresult.ErrResult"
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/apiresult.ErrResult"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/apiresult.ErrResult"
-                        }
-                    }
-                }
-            },
-            "delete": {
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "users"
-                ],
-                "summary": "Eliminar usuario",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "ID de usuario",
+                        "description": "ID interno",
                         "name": "id",
                         "in": "path",
                         "required": true
@@ -284,19 +207,6 @@ const docTemplate = `{
                 }
             }
         },
-        "finexa-ia_ms-users_internal_models.CreateUserRequest": {
-            "type": "object",
-            "properties": {
-                "email": {
-                    "type": "string",
-                    "example": "jane@example.com"
-                },
-                "name": {
-                    "type": "string",
-                    "example": "Jane"
-                }
-            }
-        },
         "finexa-ia_ms-users_internal_models.HealthResponse": {
             "type": "object",
             "properties": {
@@ -311,22 +221,25 @@ const docTemplate = `{
                 }
             }
         },
-        "finexa-ia_ms-users_internal_models.UpdateUserRequest": {
+        "finexa-ia_ms-users_internal_models.UpsertUserRequest": {
             "type": "object",
             "properties": {
+                "cognito_sub": {
+                    "type": "string",
+                    "example": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+                },
                 "email": {
                     "type": "string",
                     "example": "jane@example.com"
-                },
-                "name": {
-                    "type": "string",
-                    "example": "Jane"
                 }
             }
         },
         "finexa-ia_ms-users_internal_models.User": {
             "type": "object",
             "properties": {
+                "cognito_sub": {
+                    "type": "string"
+                },
                 "created_at": {
                     "type": "string"
                 },
@@ -336,22 +249,8 @@ const docTemplate = `{
                 "id": {
                     "type": "integer"
                 },
-                "name": {
+                "updated_at": {
                     "type": "string"
-                }
-            }
-        },
-        "finexa-ia_ms-users_internal_models.UserListOKResult": {
-            "type": "object",
-            "properties": {
-                "data": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/finexa-ia_ms-users_internal_models.User"
-                    }
-                },
-                "ok": {
-                    "type": "boolean"
                 }
             }
         },
@@ -376,7 +275,7 @@ var SwaggerInfo = &swag.Spec{
 	BasePath:         "/",
 	Schemes:          []string{"http", "https"},
 	Title:            "ms-users API",
-	Description:      "API REST de usuarios (Postgres). Documentación OpenAPI vía Swagger UI en /swagger.",
+	Description:      "Usuarios internos (Cognito sub) en Postgres; misma BD que ms-plaid para FK.",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
 	LeftDelim:        "{{",
