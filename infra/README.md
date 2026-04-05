@@ -1,6 +1,6 @@
 # Infraestructura AWS (Terraform) — guía de lanzamiento MVP
 
-Este directorio contiene la definición en Terraform del entorno **MVP**: red, contenedores (ECR), autenticación (Cognito), API HTTP (API Gateway v2) con Lambdas en contenedor, secretos compartidos (Secrets Manager), base de datos opcional (Aurora PostgreSQL Serverless v2) y observabilidad opcional (CloudWatch + SNS).
+Este directorio contiene la definición en Terraform del entorno **MVP**: red, contenedores (ECR), autenticación (Cognito), API HTTP (API Gateway v2) con Lambdas en contenedor, secretos compartidos (Secrets Manager), base de datos opcional (**RDS PostgreSQL** en la VPC) y observabilidad opcional (CloudWatch + SNS).
 
 ## Arquitectura (orden de creación lógico)
 
@@ -12,7 +12,7 @@ Los recursos se declaran en [`environments/mvp/main.tf`](environments/mvp/main.t
 | **ECR** | Un repositorio por clave en `ecr_services`. |
 | **Cognito** | User pool + app client (JWT para API Gateway). |
 | **Secrets Manager** | Secreto JSON compartido para todas las Lambdas (opcional). |
-| **Aurora** | PostgreSQL Serverless v2 en subnets privadas (opcional). |
+| **RDS PostgreSQL** | Instancia en subnets privadas (opcional; `enable_rds_postgres`). |
 | **HTTP API + Lambdas** | API Gateway HTTP v2, rutas por prefijo por microservicio, imágenes desde ECR. |
 | **CloudWatch** | Alarmas métricas + SNS + dashboard opcional (opcional). |
 
@@ -30,13 +30,13 @@ flowchart LR
     COG[Cognito]
     ECR[ECR]
     SM[Secrets_Manager]
-    AUR[Aurora_opcional]
+    RDS[RDS_Postgres_opcional]
   end
   APIGW --> L
   L --> ECR
   COG --> APIGW
   SM --> L
-  AUR -.->|si_Lambda_en_VPC| L
+  RDS -.->|si_Lambda_en_VPC| L
 ```
 
 ## Prerrequisitos
@@ -72,7 +72,7 @@ terraform apply
 ```
 
 - El proveedor AWS aplica **tags por defecto** (`Project`, `Environment`, `ManagedBy`) definidos en [`environments/mvp/provider.tf`](environments/mvp/provider.tf).
-- Tras el apply, revisa [`environments/mvp/outputs.tf`](environments/mvp/outputs.tf): URL del API, IDs de Cognito, URLs de ECR, endpoints de Aurora (si aplica), ARN del topic SNS, ARN del secreto compartido, etc.
+- Tras el apply, revisa [`environments/mvp/outputs.tf`](environments/mvp/outputs.tf): URL del API, IDs de Cognito, URLs de ECR, endpoint de RDS (si aplica), ARN del topic SNS, ARN del secreto compartido, etc.
 
 ### Imágenes Docker (antes o después del primer apply de Lambdas)
 
@@ -85,8 +85,8 @@ Las Lambdas esperan una imagen en ECR con el tag configurado (`image_tag`, por d
 | **Cognito** | `cognito_domain_prefix` único en la región/cuenta; `cognito_callback_urls` y `cognito_logout_urls` alineados con la app (p. ej. Expo / React Native). |
 | **ECR ↔ Lambdas** | Cada clave de `lambda_http_services` debe existir en `ecr_services`; subir imagen con el **mismo tag** que uses en Terraform. |
 | **Secrets Manager** | Si `enable_app_secrets` es `true`, completar el JSON del secreto compartido en la consola de AWS tras el primer apply (el módulo ignora cambios posteriores del string en Terraform). Las Lambdas reciben `MICROSERVICES_SECRET_ARN` vía [`locals.tf`](environments/mvp/locals.tf). |
-| **Aurora** | Si activas `enable_aurora_postgres`, el módulo exige al menos `aurora_allowed_security_group_ids` o `aurora_allowed_cidr_blocks`. Para que las Lambdas accedan a la base: `lambda_attach_to_vpc = true`, security groups correctos y **NAT** (o endpoints VPC) para tráfico saliente (p. ej. Secrets Manager). |
-| **Coste** | NAT Gateway, ACU de Aurora Serverless, retención de backups, alarmas CloudWatch estándar. |
+| **RDS** | Con `enable_rds_postgres`, el módulo exige al menos `postgres_allowed_security_group_ids` o `postgres_allowed_cidr_blocks` (si ambos están vacíos, se usa el CIDR de la VPC). Para Lambdas en VPC: `lambda_attach_to_vpc = true`, SGs correctos y **NAT** (o endpoints VPC) para salida a internet (p. ej. Secrets Manager). |
+| **Coste** | NAT Gateway, instancia RDS, retención de backups, alarmas CloudWatch estándar. |
 | **Cuenta / IAM** | Revisar valores por defecto que asuman otra cuenta (p. ej. rol SNS de Cognito en `variables.tf`) si despliegas en otra cuenta AWS. |
 
 ## Checklist posterior al apply
@@ -106,9 +106,9 @@ Definidas principalmente en [`environments/mvp/variables.tf`](environments/mvp/v
 | **Red** | `vpc_cidr`, `vpc_az_count`, `vpc_enable_nat_gateway` |
 | **ECR** | `ecr_services`, `ecr_image_retention_count` |
 | **Cognito** | `cognito_user_pool_name`, `cognito_client_name`, `cognito_domain_prefix`, `cognito_reply_to_email`, `cognito_callback_urls`, `cognito_logout_urls`, `cognito_sns_caller_arn`, `cognito_sns_external_id` |
-| **Aurora** | `enable_aurora_postgres`, `aurora_allowed_*`, `aurora_database_name`, `aurora_master_username`, `aurora_engine_version`, `aurora_serverless_*`, backups, `aurora_skip_final_snapshot`, `aurora_deletion_protection` |
+| **RDS** | `enable_rds_postgres`, `postgres_allowed_*`, `rds_database_name`, `rds_master_username`, `rds_engine_version`, `rds_instance_class`, `rds_allocated_storage`, backups, `rds_skip_final_snapshot`, `rds_deletion_protection` |
 | **HTTP API / Lambda** | `enable_http_api`, `lambda_http_services`, `lambda_attach_to_vpc`, `lambda_vpc_security_group_ids` (en `locals.tf`) |
-| **CloudWatch** | `enable_cloudwatch_alarms`, `cloudwatch_alarm_email`, `enable_cloudwatch_dashboard`, `enable_aurora_cloudwatch_alarms` |
+| **CloudWatch** | `enable_cloudwatch_alarms`, `cloudwatch_alarm_email`, `enable_cloudwatch_dashboard`, `enable_rds_cloudwatch_alarms` |
 | **Secretos** | `enable_app_secrets`, `app_secrets_microservices_initial_json` |
 
 ## Referencias

@@ -33,7 +33,7 @@ variable "services" {
 }
 
 variable "vpc_subnet_ids" {
-  description = "Private subnets for Lambda (required to reach Aurora in VPC)."
+  description = "Private subnets for Lambda (required to reach RDS/Postgres in VPC)."
   type        = list(string)
   default     = []
 }

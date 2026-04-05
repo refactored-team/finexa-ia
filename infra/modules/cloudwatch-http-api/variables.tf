@@ -59,25 +59,6 @@ variable "api_gateway_5xx_threshold" {
   default     = 0
 }
 
-variable "enable_aurora_alarms" {
-  type        = bool
-  description = "Create Aurora CPU alarm (requires aurora_cluster_identifier)."
-  default     = false
-}
-
-variable "aurora_cluster_identifier" {
-  type        = string
-  description = "RDS DBClusterIdentifier for CloudWatch metrics."
-  default     = null
-  nullable    = true
-}
-
-variable "aurora_cpu_threshold_percent" {
-  type        = number
-  description = "Average CPUUtilization above this (0-100) triggers alarm."
-  default     = 85
-}
-
 variable "enable_rds_cpu_alarm" {
   type        = bool
   description = "Create RDS instance CPU alarm (requires rds_db_instance_identifier)."

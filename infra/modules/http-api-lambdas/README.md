@@ -28,6 +28,6 @@
 
 4. **Probar**: `GET https://<api-id>.execute-api.<region>.amazonaws.com/ms-plaid/health` (público). Rutas bajo el mismo prefijo con `Authorization: Bearer <id_token>`.
 
-## VPC y Aurora
+## VPC y RDS
 
-Activa `lambda_attach_to_vpc = true` y rellena `lambda_vpc_security_group_ids` con un SG cuyo egress permita PostgreSQL hacia el SG de Aurora; añade ese SG a `aurora_allowed_security_group_ids` en Aurora.
+Activa `lambda_attach_to_vpc = true` y rellena `lambda_vpc_security_group_ids` con un SG cuyo egress permita PostgreSQL hacia el SG de RDS; añade ese SG a `postgres_allowed_security_group_ids` en el root MVP (o deja vacío y usa el CIDR de la VPC por defecto).

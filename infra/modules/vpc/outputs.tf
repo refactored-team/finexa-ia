@@ -14,7 +14,7 @@ output "public_subnet_ids" {
 }
 
 output "private_subnet_ids" {
-  description = "Private subnet IDs (Aurora, ECS, Lambda in VPC)."
+  description = "Private subnet IDs (RDS, ECS, Lambda in VPC)."
   value       = aws_subnet.private[*].id
 }
 

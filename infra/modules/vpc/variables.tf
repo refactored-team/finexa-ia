@@ -15,7 +15,7 @@ variable "vpc_cidr" {
 }
 
 variable "az_count" {
-  description = "Number of availability zones (minimum 2 for Aurora subnet groups)."
+  description = "Number of availability zones (minimum 2 for multi-AZ subnet groups e.g. RDS)."
   type        = number
   default     = 2
 

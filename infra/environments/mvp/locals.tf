@@ -21,7 +21,7 @@ variable "lambda_http_services" {
 }
 
 variable "lambda_attach_to_vpc" {
-  description = "Place Lambdas in VPC private subnets (needed to reach RDS/Aurora). If true and lambda_vpc_security_group_ids is empty, a dedicated SG is created."
+  description = "Place Lambdas in VPC private subnets (needed to reach RDS). If true and lambda_vpc_security_group_ids is empty, a dedicated SG is created."
   type        = bool
   default     = true
 }
@@ -33,10 +33,10 @@ variable "lambda_vpc_security_group_ids" {
 }
 
 locals {
-  # When RDS or Aurora is enabled and no explicit ingress is set, allow the whole VPC CIDR to reach Postgres:5432 (MVP).
-  aurora_ingress_cidr_blocks = (
-    length(var.aurora_allowed_security_group_ids) > 0 || length(var.aurora_allowed_cidr_blocks) > 0
-    ? var.aurora_allowed_cidr_blocks
+  # When no explicit Postgres ingress is set, allow the whole VPC CIDR to reach :5432 (MVP; Lambda in VPC).
+  postgres_ingress_cidr_blocks = (
+    length(var.postgres_allowed_security_group_ids) > 0 || length(var.postgres_allowed_cidr_blocks) > 0
+    ? var.postgres_allowed_cidr_blocks
     : [var.vpc_cidr]
   )
 
@@ -65,11 +65,3 @@ check "lambda_ecr_keys" {
     error_message = "Every key in lambda_http_services must be listed in ecr_services."
   }
 }
-
-check "postgres_backend_mutex" {
-  assert {
-    condition     = !(var.enable_aurora_postgres && var.enable_rds_postgres)
-    error_message = "Enable only one of enable_aurora_postgres or enable_rds_postgres."
-  }
-}
-
