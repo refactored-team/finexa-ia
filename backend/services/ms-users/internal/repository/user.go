@@ -4,8 +4,8 @@ import (
 	"context"
 	"database/sql"
 
-	"finexa-ia/service-b/internal/models"
-	"finexa-ia/service-b/internal/repository/sqlcgen"
+	"finexa-ia/ms-users/internal/models"
+	"finexa-ia/ms-users/internal/repository/sqlcgen"
 )
 
 type UserRepository struct {
@@ -38,6 +38,22 @@ func (r *UserRepository) List(ctx context.Context) ([]models.User, error) {
 
 func (r *UserRepository) Create(ctx context.Context, name, email string) (models.User, error) {
 	u, err := r.q.CreateUser(ctx, sqlcgen.CreateUserParams{Name: name, Email: email})
+	if err != nil {
+		return models.User{}, err
+	}
+	return toModel(u), nil
+}
+
+func (r *UserRepository) Update(ctx context.Context, id int64, name, email string) (models.User, error) {
+	u, err := r.q.UpdateUser(ctx, sqlcgen.UpdateUserParams{ID: id, Name: name, Email: email})
+	if err != nil {
+		return models.User{}, err
+	}
+	return toModel(u), nil
+}
+
+func (r *UserRepository) Delete(ctx context.Context, id int64) (models.User, error) {
+	u, err := r.q.DeleteUser(ctx, id)
 	if err != nil {
 		return models.User{}, err
 	}

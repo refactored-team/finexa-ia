@@ -6,9 +6,9 @@
       "type": "go",
       "request": "launch",
       "mode": "auto",
-      "program": "${workspaceFolder}/services/ms-plaid/cmd/server",
-      "cwd": "${workspaceFolder}/services/ms-plaid",
-      "envFile": "${workspaceFolder}/.env.dev",
+      "program": "${workspaceFolder}/backend/services/ms-plaid/cmd/server",
+      "cwd": "${workspaceFolder}/backend/services/ms-plaid",
+      "envFile": "${workspaceFolder}/backend/services/ms-plaid/.env.dev",
       "env": {
         "HTTP_PORT": "8080"
       }
@@ -18,9 +18,9 @@
       "type": "go",
       "request": "launch",
       "mode": "auto",
-      "program": "${workspaceFolder}/services/ms-users/cmd/server",
-      "cwd": "${workspaceFolder}/services/ms-users",
-      "envFile": "${workspaceFolder}/.env.dev",
+      "program": "${workspaceFolder}/backend/services/ms-users/cmd/server",
+      "cwd": "${workspaceFolder}/backend/services/ms-users",
+      "envFile": "${workspaceFolder}/backend/services/ms-users/.env.dev",
       "env": {
         "HTTP_PORT": "8081"
       }
@@ -30,9 +30,9 @@
       "type": "go",
       "request": "launch",
       "mode": "auto",
-      "program": "${workspaceFolder}/services/service-c/cmd/server",
-      "cwd": "${workspaceFolder}/services/service-c",
-      "envFile": "${workspaceFolder}/.env.dev",
+      "program": "${workspaceFolder}/backend/services/service-c/cmd/server",
+      "cwd": "${workspaceFolder}/backend/services/service-c",
+      "envFile": "${workspaceFolder}/backend/services/service-c/.env.dev",
       "env": {
         "HTTP_PORT": "8082"
       }

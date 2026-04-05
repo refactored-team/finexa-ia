@@ -1,20 +1,33 @@
+// Microservicio de usuarios: CRUD sobre la tabla users.
+//
+//	@title			ms-users API
+//	@version		1.0.0
+//	@description	API REST de usuarios (Postgres). Documentación OpenAPI vía Swagger UI en /swagger.
+//	@BasePath		/
+//	@schemes		http https
 package main
 
 import (
 	"context"
 	"database/sql"
 	"fmt"
+	"log/slog"
+	"os"
 
 	"github.com/labstack/echo/v5"
 	"github.com/labstack/echo/v5/middleware"
+	httpSwagger "github.com/swaggo/http-swagger"
 	"go.uber.org/fx"
 
 	"finexa-ia/apiresult"
-	"finexa-ia/service-b/internal/config"
-	"finexa-ia/service-b/internal/handlers"
-	"finexa-ia/service-b/internal/repository"
-	"finexa-ia/service-b/internal/services"
-	pkgdb "finexa-ia/service-b/pkg/db"
+
+	_ "finexa-ia/ms-users/docs"
+
+	"finexa-ia/ms-users/internal/config"
+	"finexa-ia/ms-users/internal/handlers"
+	"finexa-ia/ms-users/internal/repository"
+	"finexa-ia/ms-users/internal/services"
+	pkgdb "finexa-ia/ms-users/pkg/db"
 )
 
 func main() {
@@ -34,7 +47,8 @@ func main() {
 }
 
 func newEcho() *echo.Echo {
-	e := echo.New()
+	log := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
+	e := echo.NewWithConfig(echo.Config{Logger: log})
 	e.Use(middleware.RequestLogger())
 	e.Use(middleware.Recover())
 	e.HTTPErrorHandler = apiresult.HTTPErrorHandler(apiresult.ExposeInternalError())
@@ -61,6 +75,12 @@ func registerRoutes(
 	health *handlers.HealthHandler,
 	user *handlers.UserHandler,
 ) {
+	// Swagger UI + swagger.json (generado con `make swag`; ver docs/docs.go).
+	e.GET("/swagger/*", echo.WrapHandler(httpSwagger.WrapHandler))
+	e.GET("/docs", func(c *echo.Context) error {
+		return c.Redirect(302, "/swagger/index.html")
+	})
+
 	if p := cfg.HTTPPathPrefix; p != "" {
 		e.Use(apiresult.HTTPPathPrefixMiddleware(p))
 	}
@@ -71,7 +91,7 @@ func registerRoutes(
 func startServer(lc fx.Lifecycle, e *echo.Echo, cfg *config.App) {
 	sc := echo.StartConfig{
 		Address:    fmt.Sprintf(":%s", cfg.HTTPPort),
-		HideBanner: true,
+		HideBanner: false,
 	}
 	var cancel context.CancelFunc
 	lc.Append(fx.Hook{
