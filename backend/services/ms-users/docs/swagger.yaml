@@ -1,0 +1,244 @@
+basePath: /
+definitions:
+  apiresult.ErrResult:
+    properties:
+      error:
+        $ref: '#/definitions/apiresult.ErrorPayload'
+      ok:
+        type: boolean
+    type: object
+  apiresult.ErrorPayload:
+    properties:
+      code:
+        type: string
+      details:
+        additionalProperties: {}
+        type: object
+      message:
+        type: string
+    type: object
+  finexa-ia_ms-users_internal_models.CreateUserRequest:
+    properties:
+      email:
+        example: jane@example.com
+        type: string
+      name:
+        example: Jane
+        type: string
+    type: object
+  finexa-ia_ms-users_internal_models.HealthResponse:
+    properties:
+      database:
+        description: '"ok" when Postgres Ping works'
+        example: ok
+        type: string
+      status:
+        example: ok
+        type: string
+    type: object
+  finexa-ia_ms-users_internal_models.UpdateUserRequest:
+    properties:
+      email:
+        example: jane@example.com
+        type: string
+      name:
+        example: Jane
+        type: string
+    type: object
+  finexa-ia_ms-users_internal_models.User:
+    properties:
+      created_at:
+        type: string
+      email:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+    type: object
+  finexa-ia_ms-users_internal_models.UserListOKResult:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/finexa-ia_ms-users_internal_models.User'
+        type: array
+      ok:
+        type: boolean
+    type: object
+  finexa-ia_ms-users_internal_models.UserOKResult:
+    properties:
+      data:
+        $ref: '#/definitions/finexa-ia_ms-users_internal_models.User'
+      ok:
+        type: boolean
+    type: object
+info:
+  contact: {}
+  description: API REST de usuarios (Postgres). Documentación OpenAPI vía Swagger
+    UI en /swagger.
+  title: ms-users API
+  version: 1.0.0
+paths:
+  /health:
+    get:
+      description: Comprueba que el proceso responde y que la base de datos acepta
+        conexión
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/finexa-ia_ms-users_internal_models.HealthResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/finexa-ia_ms-users_internal_models.HealthResponse'
+      summary: Health check
+      tags:
+      - health
+  /users:
+    get:
+      description: Lista registros de la tabla users
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/finexa-ia_ms-users_internal_models.UserListOKResult'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apiresult.ErrResult'
+      summary: Listar usuarios
+      tags:
+      - users
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Cuerpo
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/finexa-ia_ms-users_internal_models.CreateUserRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/finexa-ia_ms-users_internal_models.UserOKResult'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apiresult.ErrResult'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apiresult.ErrResult'
+      summary: Crear usuario
+      tags:
+      - users
+  /users/{id}:
+    delete:
+      parameters:
+      - description: ID de usuario
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/finexa-ia_ms-users_internal_models.UserOKResult'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apiresult.ErrResult'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/apiresult.ErrResult'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apiresult.ErrResult'
+      summary: Eliminar usuario
+      tags:
+      - users
+    get:
+      parameters:
+      - description: ID de usuario
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/finexa-ia_ms-users_internal_models.UserOKResult'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apiresult.ErrResult'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/apiresult.ErrResult'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apiresult.ErrResult'
+      summary: Obtener usuario
+      tags:
+      - users
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID de usuario
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Cuerpo
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/finexa-ia_ms-users_internal_models.UpdateUserRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/finexa-ia_ms-users_internal_models.UserOKResult'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apiresult.ErrResult'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/apiresult.ErrResult'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apiresult.ErrResult'
+      summary: Actualizar usuario
+      tags:
+      - users
+schemes:
+- http
+- https
+swagger: "2.0"

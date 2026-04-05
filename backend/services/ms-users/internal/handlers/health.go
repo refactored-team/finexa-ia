@@ -23,6 +23,15 @@ func (h *HealthHandler) Register(e *echo.Echo) {
 	e.GET("/health", h.check)
 }
 
+// check verifica conectividad con Postgres (Ping).
+//
+//	@Summary		Health check
+//	@Description	Comprueba que el proceso responde y que la base de datos acepta conexión
+//	@Tags			health
+//	@Produce		json
+//	@Success		200	{object}	models.HealthResponse
+//	@Failure		503	{object}	models.HealthResponse
+//	@Router			/health [get]
 func (h *HealthHandler) check(c *echo.Context) error {
 	ctx, cancel := context.WithTimeout(c.Request().Context(), 2*time.Second)
 	defer cancel()
