@@ -15,7 +15,7 @@ import (
 type App struct {
 	DatabaseURL string `json:"database_url"`
 	HTTPPort    string `json:"http_port"`
-	// HTTPPathPrefix strips this prefix from paths behind API Gateway (e.g. /service-b).
+	// HTTPPathPrefix strips this prefix from paths behind API Gateway (e.g. /ms-users).
 	HTTPPathPrefix string `json:"http_path_prefix,omitempty"`
 }
 
