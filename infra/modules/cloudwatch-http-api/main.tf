@@ -92,30 +92,6 @@ resource "aws_cloudwatch_metric_alarm" "lambda_throttles" {
   ok_actions        = local.ok_actions
 }
 
-resource "aws_cloudwatch_metric_alarm" "aurora_cpu" {
-  count = var.enable_aurora_alarms && var.aurora_cluster_identifier != null ? 1 : 0
-
-  alarm_name          = "${local.name}-aurora-cpu-high"
-  comparison_operator = "GreaterThanThreshold"
-  evaluation_periods  = var.evaluation_periods
-  datapoints_to_alarm = var.datapoints_to_alarm
-  threshold           = var.aurora_cpu_threshold_percent
-  treat_missing_data  = "notBreaching"
-
-  metric_name = "CPUUtilization"
-  namespace   = "AWS/RDS"
-  period      = var.alarm_period_seconds
-  statistic   = "Average"
-
-  dimensions = {
-    DBClusterIdentifier = var.aurora_cluster_identifier
-  }
-
-  alarm_description = "Aurora cluster average CPU above threshold."
-  alarm_actions     = local.alarm_actions
-  ok_actions        = local.ok_actions
-}
-
 resource "aws_cloudwatch_metric_alarm" "rds_cpu" {
   count = var.enable_rds_cpu_alarm && var.rds_db_instance_identifier != null ? 1 : 0
 

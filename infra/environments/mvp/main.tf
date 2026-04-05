@@ -42,28 +42,6 @@ module "app_secrets" {
   microservices_initial_json = var.app_secrets_microservices_initial_json
 }
 
-module "aurora_postgres" {
-  source = "../../modules/aurora-postgresql-serverless"
-  count  = var.enable_aurora_postgres ? 1 : 0
-
-  project     = var.project
-  environment = var.environment
-  vpc_id      = module.vpc.vpc_id
-  subnet_ids  = module.vpc.private_subnet_ids
-
-  allowed_security_group_ids = var.aurora_allowed_security_group_ids
-  allowed_cidr_blocks        = local.aurora_ingress_cidr_blocks
-
-  database_name           = var.aurora_database_name
-  master_username         = var.aurora_master_username
-  engine_version          = var.aurora_engine_version
-  serverless_min_capacity = var.aurora_serverless_min_capacity
-  serverless_max_capacity = var.aurora_serverless_max_capacity
-  backup_retention_period = var.aurora_backup_retention_period
-  skip_final_snapshot     = var.aurora_skip_final_snapshot
-  deletion_protection     = var.aurora_deletion_protection
-}
-
 module "rds_postgres" {
   source = "../../modules/rds-postgresql"
   count  = var.enable_rds_postgres ? 1 : 0
@@ -73,8 +51,8 @@ module "rds_postgres" {
   vpc_id      = module.vpc.vpc_id
   subnet_ids  = module.vpc.private_subnet_ids
 
-  allowed_security_group_ids = var.aurora_allowed_security_group_ids
-  allowed_cidr_blocks        = local.aurora_ingress_cidr_blocks
+  allowed_security_group_ids = var.postgres_allowed_security_group_ids
+  allowed_cidr_blocks        = local.postgres_ingress_cidr_blocks
 
   database_name           = var.rds_database_name
   master_username         = var.rds_master_username
@@ -158,9 +136,6 @@ module "cloudwatch_http_api" {
   lambda_function_names    = module.http_api[0].lambda_function_names
   alarm_notification_email = var.cloudwatch_alarm_email
   enable_dashboard         = var.enable_cloudwatch_dashboard
-
-  enable_aurora_alarms      = var.enable_aurora_cloudwatch_alarms && length(module.aurora_postgres) > 0
-  aurora_cluster_identifier = length(module.aurora_postgres) > 0 ? module.aurora_postgres[0].cluster_identifier : null
 
   enable_rds_cpu_alarm       = var.enable_rds_cloudwatch_alarms && length(module.rds_postgres) > 0
   rds_db_instance_identifier = length(module.rds_postgres) > 0 ? module.rds_postgres[0].db_instance_identifier : null

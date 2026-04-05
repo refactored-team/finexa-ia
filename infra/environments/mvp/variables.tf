@@ -16,7 +16,7 @@ variable "aws_region" {
   default     = "us-east-1"
 }
 
-# VPC — shared by Aurora, ECS/Fargate, Lambda in VPC, etc.
+# VPC — shared by RDS, ECS/Fargate, Lambda in VPC, etc.
 
 variable "vpc_cidr" {
   description = "CIDR for the VPC (subnets are derived from this block)."
@@ -25,13 +25,13 @@ variable "vpc_cidr" {
 }
 
 variable "vpc_az_count" {
-  description = "Number of AZs (≥2 for Aurora). Public and private subnets are created per AZ."
+  description = "Number of AZs (≥2 for RDS subnet groups). Public and private subnets are created per AZ."
   type        = number
   default     = 2
 }
 
 variable "vpc_enable_nat_gateway" {
-  description = "NAT Gateway for private subnet egress (needed for ECS/Lambda outbound; Aurora does not require it)."
+  description = "NAT Gateway for private subnet egress (needed for ECS/Lambda outbound to the internet)."
   type        = bool
   default     = true
 }
@@ -96,81 +96,25 @@ variable "cognito_sns_external_id" {
   default     = "5fb1777f-89c6-4bac-b831-eab731b35b25"
 }
 
-# Aurora PostgreSQL Serverless v2 — uses module.vpc private subnets.
-
-variable "enable_aurora_postgres" {
-  description = "Aurora PostgreSQL Serverless v2 in the VPC (full configuration). AWS Free Tier requires CreateDBCluster with WithExpressConfiguration; the Terraform AWS provider does not support that flag yet (see hashicorp/terraform-provider-aws#47117), and Express uses a different networking model (internet access gateway / IAM), not this VPC+SG module. Mutually exclusive with enable_rds_postgres."
-  type        = bool
-  default     = false
-}
-
 variable "enable_rds_postgres" {
-  description = "RDS PostgreSQL single instance in the VPC (Free Tier friendly: db.t4g.micro). Mutually exclusive with enable_aurora_postgres. Reuses aurora_allowed_* for ingress rules."
+  description = "RDS PostgreSQL single instance in the VPC (Free Tier friendly: db.t4g.micro). Uses postgres_allowed_* for SG/CIDR ingress on :5432."
   type        = bool
   default     = true
 }
 
-variable "aurora_allowed_security_group_ids" {
-  description = "Security groups allowed to reach PostgreSQL:5432 (e.g. ECS service SG)."
+variable "postgres_allowed_security_group_ids" {
+  description = "Security groups allowed to reach PostgreSQL:5432 on RDS (e.g. Lambda VPC SG, ECS service SG)."
   type        = list(string)
   default     = []
 }
 
-variable "aurora_allowed_cidr_blocks" {
-  description = "Optional CIDRs allowed on 5432 (e.g. office/VPN); prefer SGs in production."
+variable "postgres_allowed_cidr_blocks" {
+  description = "Optional CIDRs allowed on RDS :5432 (e.g. office/VPN); prefer SGs in production."
   type        = list(string)
   default     = []
 }
 
-variable "aurora_database_name" {
-  description = "Initial database name."
-  type        = string
-  default     = "finexa-ia-db"
-}
-
-variable "aurora_master_username" {
-  description = "Master user (password stored in Secrets Manager)."
-  type        = string
-  default     = "finexa"
-}
-
-variable "aurora_engine_version" {
-  description = "Aurora PostgreSQL engine version."
-  type        = string
-  default     = "15.8"
-}
-
-variable "aurora_serverless_min_capacity" {
-  description = "Serverless v2 min ACU (minimum 0.5)."
-  type        = number
-  default     = 0.5
-}
-
-variable "aurora_serverless_max_capacity" {
-  description = "Serverless v2 max ACU. AWS Free Tier allows at most 4 ACU; raise after upgrading the account."
-  type        = number
-  default     = 4
-}
-
-variable "aurora_backup_retention_period" {
-  description = "Automated backup retention in days. AWS Free Tier caps this (often 1 day); use 7+ on a paid account if needed."
-  type        = number
-  default     = 1
-}
-
-variable "aurora_skip_final_snapshot" {
-  description = "Skip final snapshot on destroy (MVP/dev)."
-  type        = bool
-  default     = true
-}
-
-variable "aurora_deletion_protection" {
-  description = "Protect cluster from accidental deletion."
-  type        = bool
-  default     = false
-}
-
-# RDS PostgreSQL (non-Aurora) — same VPC/subnets; reuses aurora_allowed_* ingress lists.
+# RDS PostgreSQL — module.vpc private subnets.
 
 variable "rds_instance_class" {
   description = "RDS instance class (db.t4g.micro or db.t3.micro for Free Tier)."
@@ -179,7 +123,7 @@ variable "rds_instance_class" {
 }
 
 variable "rds_engine_version" {
-  description = "RDS PostgreSQL engine_version (major.minor; region-specific, not Aurora version strings)."
+  description = "RDS PostgreSQL engine_version (major.minor; region-specific)."
   type        = string
   default     = "16.4"
 }
@@ -220,7 +164,7 @@ variable "rds_deletion_protection" {
   default     = false
 }
 
-# CloudWatch — API Gateway + Lambda (+ optional Aurora); SNS email alerts.
+# CloudWatch — API Gateway + Lambda (+ optional RDS CPU); SNS email alerts.
 
 variable "enable_cloudwatch_alarms" {
   description = "Create CloudWatch alarms and SNS topic when HTTP API exists."
@@ -239,12 +183,6 @@ variable "enable_cloudwatch_dashboard" {
   description = "Create CloudWatch dashboard for HTTP API and Lambda metrics."
   type        = bool
   default     = true
-}
-
-variable "enable_aurora_cloudwatch_alarms" {
-  description = "Add Aurora CPU alarm when Aurora cluster exists (requires enable_aurora_postgres)."
-  type        = bool
-  default     = false
 }
 
 variable "enable_rds_cloudwatch_alarms" {
