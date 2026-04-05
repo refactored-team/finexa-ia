@@ -292,7 +292,7 @@ export default function LinkBankScreen() {
 
   const [isLinking, setIsLinking] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
-  const userId = '2';
+  const userId = '3';
 
   const clientIsExpoGo = useMemo(() => isExpoGo(), []);
 
