@@ -37,6 +37,7 @@ jobs:
           cache-dependency-path: |
             backend/go.work.sum
             backend/services/ms-plaid/go.sum
+            backend/services/ms-transactions/go.sum
             backend/services/ms-users/go.sum
             backend/services/service-c/go.sum
             backend/pkg/apiresult/go.sum
@@ -57,6 +58,8 @@ jobs:
             dockerfile: services/ms-plaid/Dockerfile.lambda
           - service: ms-users
             dockerfile: services/ms-users/Dockerfile.lambda
+          - service: ms-transactions
+            dockerfile: services/ms-transactions/Dockerfile.lambda
     defaults:
       run:
         working-directory: backend
@@ -86,6 +89,8 @@ jobs:
             dockerfile: services/ms-plaid/Dockerfile.lambda
           - service: ms-users
             dockerfile: services/ms-users/Dockerfile.lambda
+          - service: ms-transactions
+            dockerfile: services/ms-transactions/Dockerfile.lambda
     defaults:
       run:
         working-directory: backend

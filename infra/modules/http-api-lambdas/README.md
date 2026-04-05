@@ -7,10 +7,11 @@
    ```bash
    cd backend
    docker build --platform linux/amd64 -f services/ms-plaid/Dockerfile.lambda -t ms-plaid:lambda .
+   docker build --platform linux/amd64 -f services/ms-transactions/Dockerfile.lambda -t ms-transactions:lambda .
    docker build --platform linux/amd64 -f services/ms-users/Dockerfile.lambda -t ms-users:lambda .
    ```
 
-   La tabla `users` (Cognito) la posee **ms-users**; ms-plaid comparte la misma `DATABASE_URL` y mantiene FKs (`plaid_items.user_id`, etc.). En una BD nueva, aplicá migraciones **ms-users** antes que las de ms-plaid que referencian `users`.
+   La tabla `users` (Cognito) la posee **ms-users**; **ms-transactions** y ms-plaid comparten la misma `DATABASE_URL`. Orden de migraciones en BD nueva: **ms-users** → **ms-transactions** (tabla `transactions` referencia `users`) → ms-plaid u otros que referencien `users`.
 
 2. **Login** a ECR y **push** (sustituye cuenta, región y repo; el nombre del repo lo da `terraform output ecr_repository_names` o la convención `{project}-{environment}-ms-plaid`):
 

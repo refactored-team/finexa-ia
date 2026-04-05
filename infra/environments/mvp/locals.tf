@@ -17,6 +17,9 @@ variable "lambda_http_services" {
     "ms-plaid" = {
       route_path_prefix = "/ms-plaid"
     }
+    "ms-transactions" = {
+      route_path_prefix = "/ms-transactions"
+    }
     "ms-users" = {
       route_path_prefix = "/ms-users"
     }

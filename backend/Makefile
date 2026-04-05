@@ -1,6 +1,6 @@
 .PHONY: compose-up compose-down sqlc-all build-all tidy-all test-all
 
-SERVICES := ms-plaid ms-users service-c
+SERVICES := ms-plaid ms-transactions ms-users service-c
 
 # ── Docker Compose ─────────────────────────────────────────────────────────────
 compose-up:
