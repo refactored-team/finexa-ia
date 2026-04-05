@@ -41,12 +41,6 @@ import {
 
 import { AuthBackground } from '@/components/auth';
 import {
-  getExpoGoDevBuildInstructions,
-  isAmplifyAuthConfigured,
-  isExpoGo,
-} from '@/lib/amplify/configure';
-import { signOutUser } from '@/lib/auth/cognito';
-import {
   ChevronRight,
   Landmark,
   Lock,
@@ -57,6 +51,12 @@ import {
 } from '@/constants/lucideIcons';
 import { PrismColors } from '@/constants/theme';
 import { BorderColors, Layout, Radius, Shadow, Spacing, TextStyles } from '@/constants/uiStyles';
+import {
+  getExpoGoDevBuildInstructions,
+  isAmplifyAuthConfigured,
+  isExpoGo,
+} from '@/lib/amplify/configure';
+import { signOutUser } from '@/lib/auth/cognito';
 
 const RING_SIZE = 168;
 const RING_R = 58;
@@ -229,7 +229,7 @@ function AnimatedProgressRing({ ringSize, ringCx, ringCy, ringR, ringCirc }: Rin
           animatedProps={animatedProps}
         />
       </G>
-    </Svg> 
+    </Svg>
   );
 }
 
@@ -297,7 +297,7 @@ export default function LinkBankScreen() {
 
   const [isLinking, setIsLinking] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
-  const userId = '3';
+  const userId = '1';
 
   const clientIsExpoGo = useMemo(() => isExpoGo(), []);
 
