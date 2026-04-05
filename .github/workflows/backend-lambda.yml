@@ -1,4 +1,5 @@
-# Tests (Go), validación Docker en PR, y en push a main: push a ECR + update-function-code.
+# Tests (Go), validación Docker en PR. En push a main: tests primero; build/push/Lambda solo tras
+# aprobación manual (entorno aws-lambda-deploy → Settings → Environments → Required reviewers).
 # Añadí filas al matrix cuando des un servicio de alta en Terraform (ecr_services + lambda_http_services).
 name: Backend Lambda
 
@@ -72,6 +73,7 @@ jobs:
     needs: test
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
+    environment: aws-lambda-deploy
     permissions:
       contents: read
     strategy:
