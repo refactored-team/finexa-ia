@@ -20,6 +20,7 @@ export const plaidService = {
             `/ms-plaid/v1/users/${userId}/plaid-item`,
             {
                 public_token: publicToken,
+                access_token: publicToken,
             },
         );
         return response.data;
