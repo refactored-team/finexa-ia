@@ -1,10 +1,6 @@
 .PHONY: compose-up compose-down sqlc-all build-all tidy-all test-all
 
-<<<<<<< Updated upstream
-SERVICES := ms-plaid ms-transactions ms-users service-c
-=======
-SERVICES := ms-plaid ms-users
->>>>>>> Stashed changes
+SERVICES := ms-plaid ms-transactions ms-users
 
 # ── Docker Compose ─────────────────────────────────────────────────────────────
 compose-up:
