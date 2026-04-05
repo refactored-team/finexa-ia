@@ -1,5 +1,6 @@
 
 # Local dev env files
 .env.dev
+.env.prod
 .env.local
 .env

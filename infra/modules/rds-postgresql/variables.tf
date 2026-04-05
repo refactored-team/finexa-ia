@@ -14,8 +14,14 @@ variable "vpc_id" {
 }
 
 variable "subnet_ids" {
-  description = "Private subnet IDs for the DB subnet group (at least two AZs)."
+  description = "Subnet IDs for the DB subnet group (≥2 AZs). Use private subnets normally; use public subnets if publicly_accessible is true."
   type        = list(string)
+}
+
+variable "publicly_accessible" {
+  description = "If true, RDS gets a public DNS/IP (MVP/dev only). Subnets must be public (route to IGW). Restrict allowed_cidr_blocks aggressively."
+  type        = bool
+  default     = false
 }
 
 variable "allowed_security_group_ids" {

@@ -111,7 +111,7 @@ variable "postgres_allowed_security_group_ids" {
 variable "postgres_allowed_cidr_blocks" {
   description = "Optional CIDRs allowed on RDS :5432 (e.g. office/VPN); prefer SGs in production."
   type        = list(string)
-  default     = []
+  default     = ["177.249.162.128"]
 }
 
 # RDS PostgreSQL — module.vpc private subnets.
@@ -162,6 +162,12 @@ variable "rds_deletion_protection" {
   description = "Protect instance from accidental deletion."
   type        = bool
   default     = false
+}
+
+variable "rds_publicly_accessible" {
+  description = "Expose RDS on the internet (subredes públicas + publicly_accessible). Solo MVP/dev: acota postgres_allowed_cidr_blocks a tu IP (/32), nunca 0.0.0.0/0."
+  type        = bool
+  default     = true
 }
 
 # CloudWatch — API Gateway + Lambda (+ optional RDS CPU); SNS email alerts.

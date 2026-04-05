@@ -49,7 +49,9 @@ module "rds_postgres" {
   project     = var.project
   environment = var.environment
   vpc_id      = module.vpc.vpc_id
-  subnet_ids  = module.vpc.private_subnet_ids
+  subnet_ids  = var.rds_publicly_accessible ? module.vpc.public_subnet_ids : module.vpc.private_subnet_ids
+
+  publicly_accessible = var.rds_publicly_accessible
 
   allowed_security_group_ids = var.postgres_allowed_security_group_ids
   allowed_cidr_blocks        = local.postgres_ingress_cidr_blocks
