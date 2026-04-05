@@ -57,8 +57,7 @@ import {
   isExpoGo,
 } from '@/lib/amplify/configure';
 import { signOutUser } from '@/lib/auth/cognito';
-import { fetchAuthSession } from 'aws-amplify/auth';
-import { upsertCurrentUser } from '@/src/services/api/users/usersService';
+import { getInternalUserIdFromSession } from '@/src/services/api/users/usersService';
 
 const RING_SIZE = 168;
 const RING_R = 58;
@@ -366,24 +365,17 @@ export default function LinkBankScreen() {
       let internalUserId: string;
       try {
         if (isAmplifyAuthConfigured()) {
-          const session = await fetchAuthSession();
-          const payload = session.tokens?.idToken?.payload;
-          const sub = payload?.sub;
-          if (typeof sub !== 'string' || sub.length === 0) {
-            Alert.alert('Sesión', 'No se pudo obtener tu identidad. Iniciá sesión de nuevo.');
-            setIsLinking(false);
-            return;
-          }
-          const email =
-            typeof payload?.email === 'string' ? payload.email : undefined;
-          const id = await upsertCurrentUser(sub, email);
+          const id = await getInternalUserIdFromSession();
           internalUserId = String(id);
         } else {
           internalUserId = '1';
         }
       } catch (e) {
-        console.error('Error al registrar usuario interno:', e);
-        Alert.alert('Error', 'No se pudo sincronizar tu usuario con el servidor.');
+        console.error('Error al obtener usuario interno:', e);
+        Alert.alert(
+          'Usuario no encontrado',
+          'No encontramos tu perfil en el servidor. Cerrá sesión e iniciá de nuevo para sincronizar.',
+        );
         setIsLinking(false);
         return;
       }
