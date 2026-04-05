@@ -42,6 +42,8 @@ module "app_secrets" {
   microservices_initial_json = var.app_secrets_microservices_initial_json
 }
 
+# RDS: si cambias rds_publicly_accessible o subredes con instancia ya existente, AWS a menudo rechaza el cambio.
+# Entonces: snapshot en consola → destroy selectivo (ver comentario al final de este archivo) → terraform apply.
 module "rds_postgres" {
   source = "../../modules/rds-postgresql"
   count  = var.enable_rds_postgres ? 1 : 0
@@ -142,3 +144,10 @@ module "cloudwatch_http_api" {
   enable_rds_cpu_alarm       = var.enable_rds_cloudwatch_alarms && length(module.rds_postgres) > 0
   rds_db_instance_identifier = length(module.rds_postgres) > 0 ? module.rds_postgres[0].db_instance_identifier : null
 }
+
+# ── RDS: recrear desde cero (p. ej. fallo al pasar a público) ─────────────────
+# 1) Snapshot manual en la consola RDS.
+# 2) terraform destroy -target='module.rds_postgres[0].aws_db_instance.this'
+# 3) terraform destroy -target='module.rds_postgres[0].aws_db_subnet_group.this'
+# 4) RDS → Subnet groups: borrar huérfanos finexa-*-rds-pg* si siguen ahí.
+# 5) terraform apply

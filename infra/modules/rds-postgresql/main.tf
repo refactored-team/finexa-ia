@@ -9,6 +9,8 @@ check "postgres_ingress" {
   }
 }
 
+# Cambiar subredes/público en una instancia ya creada suele fallar (ModifyDBSubnetGroup / Move).
+# Para pasar de privada→pública: snapshot manual, destroy de la instancia (+ subnet groups huérfanos en consola si quedan), apply de nuevo.
 resource "aws_db_subnet_group" "this" {
   name       = local.name
   subnet_ids = var.subnet_ids
