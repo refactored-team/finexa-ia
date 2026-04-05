@@ -32,7 +32,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle, Defs, G, Stop, LinearGradient as SvgLinearGradient } from 'react-native-svg';
 
 import { plaidService } from '@/src/services/api/plaid/plaidService';
-import type { LinkIOSPresentationStyle, LinkSuccess } from 'react-native-plaid-link-sdk';
+import {
+  create as plaidCreate,
+  open as plaidOpen,
+  type LinkIOSPresentationStyle,
+  type LinkSuccess,
+} from 'react-native-plaid-link-sdk';
 
 import { AuthBackground } from '@/components/auth';
 import {
@@ -374,14 +379,11 @@ export default function LinkBankScreen() {
         return;
       }
 
-      const plaidSdk = await import('react-native-plaid-link-sdk');
-      const { create, open } = plaidSdk;
-
-      create({
+      plaidCreate({
         token: linkToken,
       });
 
-      open({
+      plaidOpen({
         iOSPresentationStyle: 'MODAL' as unknown as LinkIOSPresentationStyle,
         onSuccess: async (success: LinkSuccess) => {
           try {

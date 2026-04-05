@@ -33,12 +33,8 @@ variable "lambda_vpc_security_group_ids" {
 }
 
 locals {
-  # When no explicit Postgres ingress is set, allow the whole VPC CIDR to reach :5432 (MVP; Lambda in VPC).
-  postgres_ingress_cidr_blocks = (
-    length(var.postgres_allowed_security_group_ids) > 0 || length(var.postgres_allowed_cidr_blocks) > 0
-    ? var.postgres_allowed_cidr_blocks
-    : [var.vpc_cidr]
-  )
+  # Siempre vpc_cidr (Lambda y recursos en VPC) + CIDR extra en postgres_allowed_cidr_blocks (p. ej. tu IP /32).
+  postgres_ingress_cidr_blocks = distinct(concat([var.vpc_cidr], var.postgres_allowed_cidr_blocks))
 
   # HTTP API + Lambda: merge ECR URLs with per-service route/memory; keys must exist in ecr_services.
   http_lambda_services = {

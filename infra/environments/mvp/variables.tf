@@ -109,7 +109,7 @@ variable "postgres_allowed_security_group_ids" {
 }
 
 variable "postgres_allowed_cidr_blocks" {
-  description = "Optional CIDRs allowed on RDS :5432 (e.g. office/VPN); prefer SGs in production."
+  description = "CIDRs extra en RDS :5432 además de vpc_cidr (MVP: tu IP para psql/migraciones desde fuera). La VPC siempre puede conectar."
   type        = list(string)
   default     = ["177.249.162.128/32"]
 }
