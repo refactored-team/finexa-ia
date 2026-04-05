@@ -1,15 +1,11 @@
-.PHONY: run build tidy test sqlc swag migrate-up migrate-up-remote migrate-up-remote-file migrate-down-remote migrate-help
+.PHONY: run build tidy test swag migrate-up migrate-up-remote migrate-up-remote-file migrate-down-remote migrate-help
 
 ENV_FILE ?= .env.dev
 ENV_FILE_REMOTE ?= .env.prod
 
-# ── Swagger (swag) ─────────────────────────────────────────────────────────────
-# Regenera docs/docs.go, swagger.json y swagger.yaml desde comentarios en main/handlers.
-# Tras cambiar rutas o comentarios `// @...`, ejecuta `make swag` y commitea `docs/`.
 swag:
 	go run github.com/swaggo/swag/cmd/swag@v1.16.6 init -g cmd/server/main.go -o docs --parseInternal --parseDependency
 
-# ── Local dev ──────────────────────────────────────────────────────────────────
 run:
 	@set -a && . ./$(ENV_FILE) && set +a && go run ./cmd/server
 
@@ -23,13 +19,7 @@ tidy:
 test:
 	go test ./...
 
-# ── sqlc ───────────────────────────────────────────────────────────────────────
-# Requires sqlc: go install github.com/sqlc-dev/sqlc/cmd/sqlc@latest
-sqlc:
-	sqlc generate
-
-# ── Postgres (local docker-compose from backend/) ────────────────────────────────
-# En BD vacía: ejecutar ms-users antes que ms-plaid (tabla users para FK).
+# Orden en BD nueva: ms-users → ms-transactions (FK users) → ms-plaid (si aplica).
 migrate-up:
 	@for f in $$(ls migrations/*.sql | sort); do \
 		echo "Applying $$f"; \
@@ -53,7 +43,7 @@ migrate-up-remote:
 migrate-up-remote-file:
 	@command -v psql >/dev/null 2>&1 || { echo "Falta psql."; exit 1; }
 	@test -f "$(ENV_FILE_REMOTE)" || { echo "No existe $(ENV_FILE_REMOTE)"; exit 1; }
-	@test -n "$(FILE)" || { echo "Uso: make migrate-up-remote-file FILE=migrations/0001_users.sql"; exit 1; }
+	@test -n "$(FILE)" || { echo "Uso: make migrate-up-remote-file FILE=migrations/0001_transactions.sql"; exit 1; }
 	@test -f "$(FILE)" || { echo "No existe $(FILE)"; exit 1; }
 	@set -a && . ./$(ENV_FILE_REMOTE) && set +a && \
 	if [ -z "$$DATABASE_URL" ]; then echo "DATABASE_URL vacío"; exit 1; fi && \
@@ -73,4 +63,4 @@ migrate-down-remote:
 
 migrate-help:
 	@echo "Local:   make migrate-up"
-	@echo "Remoto:  make migrate-up-remote | make migrate-up-remote-file FILE=migrations/0001_users.sql"
+	@echo "Remoto:  make migrate-up-remote | make migrate-up-remote-file FILE=migrations/0001_transactions.sql"

@@ -4,6 +4,7 @@ import type { Router } from 'expo-router';
 
 import { requestPasswordReset, type SignInResult } from '@/lib/auth/cognito';
 import { getLastSignInEmail } from '@/lib/auth/lastSignInContext';
+import { syncInternalUserFromSession } from '@/src/services/api/users/usersService';
 
 type Ctx = {
   email: string;
@@ -44,9 +45,21 @@ export async function followSignInResult(
   const { data } = result;
 
   switch (data.kind) {
-    case 'signed_in':
+    case 'signed_in': {
+      try {
+        await syncInternalUserFromSession();
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : 'Error al sincronizar el usuario';
+        Alert.alert(
+          'No se pudo guardar tu perfil',
+          `${msg}\n\nReintentá o comprobá tu conexión.`,
+          [{ text: 'OK' }],
+        );
+        return;
+      }
       router.replace('/(onboarding)/link-bank');
       return;
+    }
     case 'needs_confirm_sign_up':
       router.push({
         pathname: '/confirm-signup',

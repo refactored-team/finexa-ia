@@ -8,7 +8,7 @@ import (
 
 	"github.com/labstack/echo/v5"
 
-	"finexa-ia/ms-users/internal/models"
+	"finexa-ia/ms-transactions/internal/models"
 )
 
 type HealthHandler struct {
@@ -32,7 +32,7 @@ func (h *HealthHandler) ready(c *echo.Context) error {
 	})
 }
 
-// check verifica conectividad con Postgres (Ping).
+// check verifies Postgres connectivity (Ping).
 //
 //	@Summary		Health check
 //	@Description	Comprueba que el proceso responde y que la base de datos acepta conexión

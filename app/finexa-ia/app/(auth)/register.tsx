@@ -41,6 +41,7 @@ import {
   isValidPhoneE164,
   signUpWithProfile,
 } from "@/lib/auth/cognito";
+import { syncInternalUserFromSession } from "@/src/services/api/users/usersService";
 import {
   passwordMeetsCognitoLikePolicy,
   passwordMissingPartsSpanish,
@@ -181,6 +182,17 @@ export default function RegisterScreen() {
       return;
     }
     if (result.data.nextStep === "COMPLETE_AUTO_SIGN_IN") {
+      try {
+        await syncInternalUserFromSession();
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : "Error al sincronizar";
+        Alert.alert(
+          "No se pudo guardar tu perfil",
+          `${msg}\n\nReintentá desde iniciar sesión.`,
+          [{ text: "OK" }],
+        );
+        return;
+      }
       router.replace("/(onboarding)/link-bank");
       return;
     }
@@ -188,7 +200,28 @@ export default function RegisterScreen() {
       Alert.alert("Listo", "Tu cuenta fue creada.", [
         {
           text: "OK",
-          onPress: () => router.replace("/(onboarding)/link-bank"),
+          onPress: async () => {
+            try {
+              await syncInternalUserFromSession();
+              router.replace("/(onboarding)/link-bank");
+            } catch (e) {
+              const msg = e instanceof Error ? e.message : "Error al sincronizar";
+              Alert.alert(
+                "Perfil no sincronizado",
+                `${msg}\n\nPodés continuar e iniciar sesión cuando quieras.`,
+                [
+                  {
+                    text: "Ir a login",
+                    onPress: () => router.replace("/login"),
+                  },
+                  {
+                    text: "Continuar",
+                    onPress: () => router.replace("/(onboarding)/link-bank"),
+                  },
+                ],
+              );
+            }
+          },
         },
       ]);
     }

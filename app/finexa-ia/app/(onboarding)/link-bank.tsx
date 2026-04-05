@@ -57,6 +57,7 @@ import {
   isExpoGo,
 } from '@/lib/amplify/configure';
 import { signOutUser } from '@/lib/auth/cognito';
+import { getInternalUserIdFromSession } from '@/src/services/api/users/usersService';
 
 const RING_SIZE = 168;
 const RING_R = 58;
@@ -297,7 +298,6 @@ export default function LinkBankScreen() {
 
   const [isLinking, setIsLinking] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
-  const userId = '1';
 
   const clientIsExpoGo = useMemo(() => isExpoGo(), []);
 
@@ -362,9 +362,27 @@ export default function LinkBankScreen() {
     setIsLinking(true);
 
     try {
+      let internalUserId: string;
+      try {
+        if (isAmplifyAuthConfigured()) {
+          const id = await getInternalUserIdFromSession();
+          internalUserId = String(id);
+        } else {
+          internalUserId = '1';
+        }
+      } catch (e) {
+        console.error('Error al obtener usuario interno:', e);
+        Alert.alert(
+          'Usuario no encontrado',
+          'No encontramos tu perfil en el servidor. Cerrá sesión e iniciá de nuevo para sincronizar.',
+        );
+        setIsLinking(false);
+        return;
+      }
+
       let linkToken: string | null = null;
       try {
-        const data = await plaidService.createLinkToken(userId);
+        const data = await plaidService.createLinkToken(internalUserId);
         linkToken = data.data?.link_token ?? null;
       } catch (error) {
         console.error('Error al obtener el link_token:', error);
@@ -387,7 +405,7 @@ export default function LinkBankScreen() {
         iOSPresentationStyle: 'MODAL' as unknown as LinkIOSPresentationStyle,
         onSuccess: async (success: LinkSuccess) => {
           try {
-            await plaidService.exchangePublicToken(userId, success.publicToken);
+            await plaidService.exchangePublicToken(internalUserId, success.publicToken);
             router.replace('/(tabs)/explore');
           } catch (error) {
             console.error('Error al guardar conexión bancaria:', error);

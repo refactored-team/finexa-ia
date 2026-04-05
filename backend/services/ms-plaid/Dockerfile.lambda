@@ -7,9 +7,9 @@
 # El binario /lambda-adapter se copia a /opt/extensions/ y corre como extensión Lambda.
 # Intercepta los eventos de Lambda y los proxea como HTTP a localhost:8080.
 # El CMD /server es nuestro servidor Echo (HTTP, no Lambda handler).
-FROM --platform=linux/amd64 public.ecr.aws/awsguru/aws-lambda-adapter:0.8.4 AS adapter
+FROM public.ecr.aws/awsguru/aws-lambda-adapter:0.8.4 AS adapter
 
-FROM --platform=linux/amd64 golang:1.25-alpine3.21 AS builder
+FROM golang:1.25-alpine3.21 AS builder
 WORKDIR /src
 COPY pkg/apiresult ./pkg/apiresult
 COPY services/ms-plaid ./services/ms-plaid
@@ -18,7 +18,7 @@ ENV GOWORK=off
 RUN go mod download
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o /server ./cmd/server
 
-FROM --platform=linux/amd64 alpine:3.21
+FROM alpine:3.21
 # CA bundle para TLS (Secrets Manager, RDS via SSL).
 RUN apk add --no-cache ca-certificates
 # LWA extension: Lambda arranca /opt/extensions/lambda-adapter antes del servidor.

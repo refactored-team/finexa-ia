@@ -1,0 +1,82 @@
+basePath: /
+definitions:
+  finexa-ia_ms-transactions_internal_models.HealthResponse:
+    properties:
+      database:
+        example: ok
+        type: string
+      status:
+        example: ok
+        type: string
+    type: object
+  finexa-ia_ms-transactions_internal_models.TransactionListItem:
+    properties:
+      amount_cents:
+        type: integer
+      currency:
+        type: string
+      description:
+        type: string
+      id:
+        type: integer
+      posted_at:
+        type: string
+      user_id:
+        type: integer
+    type: object
+info:
+  contact: {}
+  description: Movimientos financieros por usuario interno
+  title: ms-transactions API
+  version: 1.0.0
+paths:
+  /health:
+    get:
+      description: Comprueba que el proceso responde y que la base de datos acepta
+        conexión
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/finexa-ia_ms-transactions_internal_models.HealthResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/finexa-ia_ms-transactions_internal_models.HealthResponse'
+      summary: Health check
+      tags:
+      - health
+  /v1/transactions:
+    get:
+      description: Lista transacciones (MVP); query user_id opcional
+      parameters:
+      - description: Filtrar por usuario interno
+        in: query
+        name: user_id
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/finexa-ia_ms-transactions_internal_models.TransactionListItem'
+            type: array
+        "400":
+          description: user_id inválido
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Listar transacciones
+      tags:
+      - transactions
+schemes:
+- http
+- https
+swagger: "2.0"

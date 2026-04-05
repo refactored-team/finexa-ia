@@ -1,8 +1,8 @@
-// Microservicio de usuarios: tabla users (Cognito) compartida con ms-plaid; API /v1/users.
+// Microservicio de transacciones; API /v1/transactions. Misma BD que ms-users/ms-plaid (FK a users).
 //
-//	@title			ms-users API
+//	@title			ms-transactions API
 //	@version		1.0.0
-//	@description	Usuarios internos (Cognito sub) en Postgres; misma BD que ms-plaid para FK.
+//	@description	Movimientos financieros por usuario interno
 //	@BasePath		/
 //	@schemes		http https
 package main
@@ -23,13 +23,11 @@ import (
 
 	"finexa-ia/apiresult"
 
-	_ "finexa-ia/ms-users/docs"
+	_ "finexa-ia/ms-transactions/docs"
 
-	"finexa-ia/ms-users/internal/config"
-	"finexa-ia/ms-users/internal/handlers"
-	"finexa-ia/ms-users/internal/repository"
-	"finexa-ia/ms-users/internal/services"
-	pkgdb "finexa-ia/ms-users/pkg/db"
+	"finexa-ia/ms-transactions/internal/config"
+	"finexa-ia/ms-transactions/internal/handlers"
+	pkgdb "finexa-ia/ms-transactions/pkg/db"
 )
 
 func main() {
@@ -37,10 +35,8 @@ func main() {
 		fx.Provide(
 			config.Load,
 			provideDB,
-			repository.NewUserRepository,
-			services.NewUserService,
 			handlers.NewHealthHandler,
-			handlers.NewUserHandler,
+			handlers.NewTransactionsHandler,
 			newEcho,
 		),
 		fx.Invoke(registerRoutes),
@@ -57,7 +53,6 @@ func newEcho() *echo.Echo {
 	return e
 }
 
-// provideDB opens the DB pool and registers a shutdown hook to close it cleanly.
 func provideDB(lc fx.Lifecycle, cfg *config.App) (*sql.DB, error) {
 	db, err := pkgdb.New(cfg)
 	if err != nil {
@@ -75,7 +70,7 @@ func registerRoutes(
 	e *echo.Echo,
 	cfg *config.App,
 	health *handlers.HealthHandler,
-	user *handlers.UserHandler,
+	tx *handlers.TransactionsHandler,
 ) {
 	if p := cfg.HTTPPathPrefix; p != "" {
 		e.Use(apiresult.HTTPPathPrefixMiddleware(p))
@@ -85,7 +80,7 @@ func registerRoutes(
 		return c.Redirect(302, "/swagger/index.html")
 	})
 	health.Register(e)
-	user.Register(e)
+	tx.Register(e)
 }
 
 func waitForTCPListen(ctx context.Context, addr string) error {

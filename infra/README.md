@@ -117,4 +117,4 @@ Definidas principalmente en [`environments/mvp/variables.tf`](environments/mvp/v
 
 ## CI/CD
 
-El repo incluye GitHub Actions para backend: tests Go, build Docker en PR y, en **push a `main`**, deploy a ECR + Lambda **tras aprobación manual** (entorno `aws-lambda-deploy`). Detalle, secrets y permisos IAM: [`modules/http-api-lambdas/README.md`](modules/http-api-lambdas/README.md) (sección CI/CD). Workflow: [`.github/workflows/backend-lambda.yml`](../.github/workflows/backend-lambda.yml).
+El repo incluye GitHub Actions para backend: tests Go, build Docker en PR y, en **push a `main`**, deploy a ECR + Lambda **tras aprobación manual** (entorno `aws-lambda-deploy`) para **ms-plaid**, **ms-transactions** y **ms-users**. Detalle, secrets y permisos IAM: [`modules/http-api-lambdas/README.md`](modules/http-api-lambdas/README.md) (sección CI/CD). Workflow: [`.github/workflows/backend-lambda.yml`](../.github/workflows/backend-lambda.yml). Tras dar de alta un servicio en Terraform, hacé `terraform apply` y subí la imagen a ECR antes del primer deploy.

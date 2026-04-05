@@ -2,12 +2,16 @@
 
 ## Despliegue (MVP)
 
-1. **Build** de la imagen Lambda (contexto `backend/`; el Dockerfile no usa `go.work` del monorepo, solo `ms-plaid` + `pkg/apiresult`):
+1. **Build** de la imagen Lambda (contexto `backend/`; `GOWORK=off` en el Dockerfile; cada servicio copia `pkg/apiresult` + su carpeta bajo `services/`):
 
    ```bash
    cd backend
    docker build --platform linux/amd64 -f services/ms-plaid/Dockerfile.lambda -t ms-plaid:lambda .
+   docker build --platform linux/amd64 -f services/ms-transactions/Dockerfile.lambda -t ms-transactions:lambda .
+   docker build --platform linux/amd64 -f services/ms-users/Dockerfile.lambda -t ms-users:lambda .
    ```
+
+   La tabla `users` (Cognito) la posee **ms-users**; **ms-transactions** y ms-plaid comparten la misma `DATABASE_URL`. Orden de migraciones en BD nueva: **ms-users** → **ms-transactions** (tabla `transactions` referencia `users`) → ms-plaid u otros que referencien `users`.
 
 2. **Login** a ECR y **push** (sustituye cuenta, región y repo; el nombre del repo lo da `terraform output ecr_repository_names` o la convención `{project}-{environment}-ms-plaid`):
 
