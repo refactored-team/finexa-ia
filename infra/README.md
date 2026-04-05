@@ -117,4 +117,4 @@ Definidas principalmente en [`environments/mvp/variables.tf`](environments/mvp/v
 
 ## CI/CD
 
-No está modelado en este README; en la práctica el **push de imágenes a ECR** suele ejecutarse en pipeline o localmente antes de actualizar el tag en Terraform o de forzar un nuevo despliegue de Lambda.
+El repo incluye GitHub Actions para backend: tests Go, build Docker en PR y, en **push a `main`**, push a ECR + `update-function-code` (autenticación con secrets `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY`, u OIDC si lo configurás). Detalle, alternativas y permisos IAM: [`modules/http-api-lambdas/README.md`](modules/http-api-lambdas/README.md) (sección CI/CD). Workflow: [`.github/workflows/backend-lambda.yml`](../.github/workflows/backend-lambda.yml).

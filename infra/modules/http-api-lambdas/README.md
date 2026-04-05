@@ -31,3 +31,30 @@
 ## VPC y RDS
 
 Activa `lambda_attach_to_vpc = true` y rellena `lambda_vpc_security_group_ids` con un SG cuyo egress permita PostgreSQL hacia el SG de RDS; añade ese SG a `postgres_allowed_security_group_ids` en el root MVP (o deja vacío y usa el CIDR de la VPC por defecto).
+
+## CI/CD (GitHub Actions)
+
+El workflow [`.github/workflows/backend-lambda.yml`](../../../.github/workflows/backend-lambda.yml) en la raíz del repo:
+
+- En **PR** y **push** (solo cambios bajo `backend/` o ese workflow): ejecuta `make test-all` y, en PR, un `docker build` de validación por fila del matrix.
+- En **push a `main`**: autentica en AWS, hace push de la imagen a ECR con tags `${{ github.sha }}` y `latest`, y llama a `lambda update-function-code` con la URI `:$GITHUB_SHA`.
+
+**Repositorio GitHub**
+
+- **Secrets (usuario IAM, configuración actual del workflow)**: `AWS_ACCESS_KEY_ID` y `AWS_SECRET_ACCESS_KEY` del usuario o de un usuario de deploy dedicado. Opcional: `AWS_SESSION_TOKEN` si las credenciales son temporales. **No** guardes la secret access key en *Variables* del repo (no son confidenciales por defecto para quien tenga acceso de lectura).
+- **Alternativa recomendada a largo plazo**: OIDC con secret `AWS_DEPLOY_ROLE_ARN` y `role-to-assume` en `configure-aws-credentials` (sin claves de larga duración en GitHub).
+- **Variables de entorno del workflow** (en el YAML; o podés moverlas a *Variables* del repo si querés cambiarlas sin editar el archivo): `AWS_REGION` (`us-east-1`), `LAMBDA_PROJECT` (`finexa-infra`), `LAMBDA_ENV` (`mvp`). Deben coincidir con `project`, `environment` y región de Terraform para que el nombre del repo ECR sea `{LAMBDA_PROJECT}-{LAMBDA_ENV}-{service}` y la Lambda `{LAMBDA_PROJECT}-{LAMBDA_ENV}-{service}`.
+
+**IAM (usuario o rol que use el workflow)**
+
+- **OIDC**: proveedor `token.actions.githubusercontent.com`, trust del rol acotado al repo y rama; adjuntá la política de permisos siguiente.
+- **Usuario IAM**: misma política en el usuario (o en un grupo al que pertenezca). Mejor un usuario solo para CI/CD, no tu usuario personal.
+
+Permisos mínimos (acotá ARNs cuando puedas):
+
+- **ECR**: `ecr:GetAuthorizationToken` en `*`; en el repo `arn:aws:ecr:REGION:ACCOUNT:repository/PROJECT-ENV-*` permisos de push (`BatchCheckLayerAvailability`, `CompleteLayerUpload`, `InitiateLayerUpload`, `PutImage`, `UploadLayerPart`, `BatchGetImage`, `GetDownloadUrlForLayer`) — o una política administrada tipo power user restringida al recurso.
+- **Lambda**: `lambda:UpdateFunctionCode` y `lambda:GetFunction` en `arn:aws:lambda:REGION:ACCOUNT:function:PROJECT-ENV-*`.
+
+**Añadir un microservicio**
+
+Cuando des de alta el servicio en `ecr_services` y `lambda_http_services`, añade una fila al `matrix.include` del workflow (`service` + `dockerfile` relativo a `backend/`), igual que `ms-plaid`.
