@@ -37,13 +37,9 @@ jobs:
           cache-dependency-path: |
             backend/go.work.sum
             backend/services/ms-plaid/go.sum
-<<<<<<< Updated upstream
             backend/services/ms-transactions/go.sum
             backend/services/ms-users/go.sum
             backend/services/service-c/go.sum
-=======
-            backend/services/ms-users/go.sum
->>>>>>> Stashed changes
             backend/pkg/apiresult/go.sum
 
       - name: make test-all
