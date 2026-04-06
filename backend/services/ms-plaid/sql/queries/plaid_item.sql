@@ -10,6 +10,11 @@ ON CONFLICT (user_id) WHERE (deleted_at IS NULL) DO UPDATE SET
     updated_at = now()
 RETURNING id, user_id, public_token, item_id, institution_id, institution_name, created_at, updated_at, deleted_at;
 
+-- name: HasActivePlaidItemForUser :one
+SELECT EXISTS(
+    SELECT 1 FROM plaid_items WHERE user_id = $1 AND deleted_at IS NULL
+) AS linked;
+
 -- name: GetPlaidItemByUserID :one
 SELECT id, user_id, public_token, item_id, institution_id, institution_name, created_at, updated_at, deleted_at
 FROM plaid_items

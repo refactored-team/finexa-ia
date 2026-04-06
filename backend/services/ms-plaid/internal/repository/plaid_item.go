@@ -31,6 +31,10 @@ func (r *PlaidItemRepository) UpsertForUser(ctx context.Context, userID int64, i
 	return rowToResponseUpsert(row), nil
 }
 
+func (r *PlaidItemRepository) HasActiveForUser(ctx context.Context, userID int64) (bool, error) {
+	return r.q.HasActivePlaidItemForUser(ctx, userID)
+}
+
 func (r *PlaidItemRepository) GetByUserID(ctx context.Context, userID int64) (models.PlaidItemResponse, error) {
 	row, err := r.q.GetPlaidItemByUserID(ctx, userID)
 	if err != nil {

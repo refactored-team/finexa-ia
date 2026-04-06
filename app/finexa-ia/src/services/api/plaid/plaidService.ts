@@ -22,4 +22,12 @@ export const plaidService = {
         );
         return response.data;
     },
+
+    getPlaidLinkStatus: async (userId: string): Promise<{ linked: boolean }> => {
+        const response = await apiClient.get<{
+            ok: boolean;
+            data: { linked: boolean };
+        }>(`/ms-plaid/v1/users/${userId}/plaid-item/status`);
+        return { linked: Boolean(response.data?.data?.linked) };
+    },
 };

@@ -122,6 +122,18 @@ definitions:
       user_id:
         type: integer
     type: object
+  finexa-ia_ms-plaid_internal_models.PlaidLinkStatusData:
+    properties:
+      linked:
+        type: boolean
+    type: object
+  finexa-ia_ms-plaid_internal_models.PlaidLinkStatusOKResult:
+    properties:
+      data:
+        $ref: '#/definitions/finexa-ia_ms-plaid_internal_models.PlaidLinkStatusData'
+      ok:
+        type: boolean
+    type: object
 info:
   contact: {}
   description: 'Microservicio Plaid: una conexión activa por usuario. La identidad
@@ -301,6 +313,34 @@ paths:
           schema:
             $ref: '#/definitions/apiresult.ErrResult'
       summary: Intercambiar public_token por Item
+      tags:
+      - plaid-item
+  /v1/users/{userId}/plaid-item/status:
+    get:
+      description: Indica si existe un plaid_item activo (deleted_at IS NULL). Siempre
+        200 con linked true/false.
+      parameters:
+      - description: ID interno de usuario (FK)
+        in: path
+        name: userId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/finexa-ia_ms-plaid_internal_models.PlaidLinkStatusOKResult'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apiresult.ErrResult'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apiresult.ErrResult'
+      summary: Estado de vinculación Plaid
       tags:
       - plaid-item
   /v1/users/{userId}/plaid/link-token:
