@@ -88,7 +88,7 @@ const docTemplate = `{
                 }
             },
             "post": {
-                "description": "Si envías solo public_token, el servidor intercambia en Plaid y persiste access_token. Con public_token y access_token, upsert directo (legacy).",
+                "description": "Solo public_token: intercambia en Plaid y persiste; 200 = mismo shape que POST .../exchange (data.request_id + data.item). Con public_token y access_token: upsert legacy; 200 = PlaidItemOKResult (data es el item sin request_id).",
                 "consumes": [
                     "application/json"
                 ],
@@ -119,9 +119,9 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "OK",
+                        "description": "Flujo Link (solo public_token); legacy ver descripción",
                         "schema": {
-                            "$ref": "#/definitions/finexa-ia_ms-plaid_internal_models.PlaidItemOKResult"
+                            "$ref": "#/definitions/finexa-ia_ms-plaid_internal_models.ExchangePublicTokenOKResult"
                         }
                     },
                     "400": {
@@ -424,6 +424,9 @@ const docTemplate = `{
         },
         "finexa-ia_ms-plaid_internal_models.CreatePlaidItemRequest": {
             "type": "object",
+            "required": [
+                "public_token"
+            ],
             "properties": {
                 "access_token": {
                     "type": "string"
@@ -445,6 +448,9 @@ const docTemplate = `{
         },
         "finexa-ia_ms-plaid_internal_models.ExchangePublicTokenBody": {
             "type": "object",
+            "required": [
+                "public_token"
+            ],
             "properties": {
                 "public_token": {
                     "type": "string"

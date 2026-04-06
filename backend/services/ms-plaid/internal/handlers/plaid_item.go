@@ -146,6 +146,7 @@ func (h *PlaidItemHandler) mapExchangeError(c *echo.Context, err error) error {
 				},
 			})
 		}
+		c.Logger().Error("plaid-item exchange: unmapped error", "error", err)
 		return apiresult.RespondError(c, http.StatusInternalServerError, apiresult.CodeInternalError, "internal error", nil)
 	}
 }
@@ -154,13 +155,13 @@ func (h *PlaidItemHandler) mapExchangeError(c *echo.Context, err error) error {
 // If access_token is omitted or empty, the server calls Plaid item/public_token/exchange (same as POST .../exchange).
 //
 //	@Summary		Registrar o actualizar conexión Plaid
-//	@Description	Si envías solo public_token, el servidor intercambia en Plaid y persiste access_token. Con public_token y access_token, upsert directo (legacy).
+//	@Description	Solo public_token: intercambia en Plaid y persiste; 200 = mismo shape que POST .../exchange (data.request_id + data.item). Con public_token y access_token: upsert legacy; 200 = PlaidItemOKResult (data es el item sin request_id).
 //	@Tags			plaid-item
 //	@Accept			json
 //	@Produce		json
 //	@Param			userId	path		int								true	"ID interno de usuario (FK)"
 //	@Param			body	body		models.CreatePlaidItemRequest	true	"Cuerpo"
-//	@Success		200	{object}	models.PlaidItemOKResult
+//	@Success		200	{object}	models.ExchangePublicTokenOKResult	"Flujo Link (solo public_token); legacy ver descripción"
 //	@Failure		400	{object}	apiresult.ErrResult
 //	@Failure		404	{object}	apiresult.ErrResult
 //	@Failure		503	{object}	apiresult.ErrResult
@@ -181,13 +182,14 @@ func (h *PlaidItemHandler) upsert(c *echo.Context) error {
 		if errEx != nil {
 			return h.mapExchangeError(c, errEx)
 		}
-		return apiresult.RespondOK(c, http.StatusOK, out.Item)
+		return apiresult.RespondOK(c, http.StatusOK, out)
 	}
 	item, err := h.svc.UpsertForUser(c.Request().Context(), userID, in)
 	if err != nil {
 		if errors.Is(err, services.ErrInvalidPlaidItemPayload) || errors.Is(err, services.ErrInvalidUserID) {
 			return apiresult.RespondError(c, http.StatusBadRequest, apiresult.CodeValidationError, err.Error(), nil)
 		}
+		c.Logger().Error("plaid-item upsert failed", "error", err, "user_id", userID)
 		return apiresult.RespondError(c, http.StatusInternalServerError, apiresult.CodeInternalError, http.StatusText(http.StatusInternalServerError), nil)
 	}
 	return apiresult.RespondOK(c, http.StatusOK, item)
