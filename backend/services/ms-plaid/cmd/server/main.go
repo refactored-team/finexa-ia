@@ -39,6 +39,7 @@ func main() {
 			provideDB,
 			repository.NewPlaidItemRepository,
 			services.NewPlaidItemService,
+			services.NewPlaidExchangeService,
 			services.NewPlaidLinkService,
 			handlers.NewHealthHandler,
 			handlers.NewPlaidItemHandler,

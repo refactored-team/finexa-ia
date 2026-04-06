@@ -14,14 +14,11 @@ export const plaidService = {
         return response.data;
     },
 
-    // Paso 3 de Plaid: Guardar la conexión
+    // Paso 3: el backend intercambia public_token en Plaid y persiste access_token (POST /plaid-item sin access_token).
     exchangePublicToken: async (userId: string, publicToken: string) => {
         const response = await apiClient.post(
             `/ms-plaid/v1/users/${userId}/plaid-item`,
-            {
-                public_token: publicToken,
-                access_token: publicToken,
-            },
+            { public_token: publicToken },
         );
         return response.data;
     },

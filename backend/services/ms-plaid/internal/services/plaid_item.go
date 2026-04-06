@@ -11,8 +11,9 @@ import (
 )
 
 var (
-	ErrInvalidUserID           = errors.New("invalid user id")
-	ErrInvalidPlaidItemPayload = errors.New("public_token and access_token are required")
+	ErrInvalidUserID = errors.New("invalid user id")
+	// ErrInvalidPlaidItemPayload is returned by legacy upsert when both tokens are required (POST /plaid-item with access_token path).
+	ErrInvalidPlaidItemPayload = errors.New("public_token and access_token are required for direct upsert")
 )
 
 type PlaidItemService struct {
@@ -39,6 +40,7 @@ func (s *PlaidItemService) GetForUser(ctx context.Context, userID int64) (models
 }
 
 // UpsertForUser creates or replaces the user’s only Plaid connection (at most one active row).
+// Requires both public_token and access_token. For public_token only, the HTTP handler delegates to PlaidExchangeService.
 func (s *PlaidItemService) UpsertForUser(ctx context.Context, userID int64, in models.CreatePlaidItemRequest) (models.PlaidItemResponse, error) {
 	if userID <= 0 {
 		return models.PlaidItemResponse{}, ErrInvalidUserID

@@ -32,7 +32,29 @@ definitions:
         type: string
       institution_name:
         type: string
+      item_id:
+        description: Plaid item_id (optional on legacy upsert)
+        type: string
       public_token:
+        type: string
+    type: object
+  finexa-ia_ms-plaid_internal_models.ExchangePublicTokenBody:
+    properties:
+      public_token:
+        type: string
+    type: object
+  finexa-ia_ms-plaid_internal_models.ExchangePublicTokenOKResult:
+    properties:
+      data:
+        $ref: '#/definitions/finexa-ia_ms-plaid_internal_models.ExchangePublicTokenResult'
+      ok:
+        type: boolean
+    type: object
+  finexa-ia_ms-plaid_internal_models.ExchangePublicTokenResult:
+    properties:
+      item:
+        $ref: '#/definitions/finexa-ia_ms-plaid_internal_models.PlaidItemResponse'
+      request_id:
         type: string
     type: object
   finexa-ia_ms-plaid_internal_models.HealthResponse:
@@ -89,6 +111,9 @@ definitions:
       institution_id:
         type: string
       institution_name:
+        type: string
+      item_id:
+        description: Plaid Item.item_id (webhooks)
         type: string
       public_token:
         type: string
@@ -186,6 +211,8 @@ paths:
     post:
       consumes:
       - application/json
+      description: Si envías solo public_token, el servidor intercambia en Plaid y
+        persiste access_token. Con public_token y access_token, upsert directo (legacy).
       parameters:
       - description: ID interno de usuario (FK)
         in: path
@@ -209,11 +236,71 @@ paths:
           description: Bad Request
           schema:
             $ref: '#/definitions/apiresult.ErrResult'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/apiresult.ErrResult'
         "500":
           description: Internal Server Error
           schema:
             $ref: '#/definitions/apiresult.ErrResult'
+        "502":
+          description: Bad Gateway
+          schema:
+            $ref: '#/definitions/apiresult.ErrResult'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/apiresult.ErrResult'
       summary: Registrar o actualizar conexión Plaid
+      tags:
+      - plaid-item
+  /v1/users/{userId}/plaid-item/exchange:
+    post:
+      consumes:
+      - application/json
+      description: Envía el public_token de Link a Plaid, guarda access_token e item_id
+        en BD; no devuelve access_token.
+      parameters:
+      - description: ID interno de usuario (FK)
+        in: path
+        name: userId
+        required: true
+        type: integer
+      - description: public_token de Link onSuccess
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/finexa-ia_ms-plaid_internal_models.ExchangePublicTokenBody'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/finexa-ia_ms-plaid_internal_models.ExchangePublicTokenOKResult'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apiresult.ErrResult'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/apiresult.ErrResult'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apiresult.ErrResult'
+        "502":
+          description: Bad Gateway
+          schema:
+            $ref: '#/definitions/apiresult.ErrResult'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/apiresult.ErrResult'
+      summary: Intercambiar public_token por Item
       tags:
       - plaid-item
   /v1/users/{userId}/plaid/link-token:

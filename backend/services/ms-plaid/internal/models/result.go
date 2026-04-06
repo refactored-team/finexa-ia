@@ -22,3 +22,15 @@ type PlaidItemDeleteOKResult struct {
 	OK   bool                `json:"ok"`
 	Data PlaidItemDeleteData `json:"data"`
 }
+
+// ExchangePublicTokenResult is the payload for POST .../plaid-item/exchange (no access_token).
+type ExchangePublicTokenResult struct {
+	RequestID string            `json:"request_id"`
+	Item      PlaidItemResponse `json:"item"`
+}
+
+// ExchangePublicTokenOKResult is the success envelope for POST .../plaid-item/exchange.
+type ExchangePublicTokenOKResult struct {
+	OK   bool                      `json:"ok"`
+	Data ExchangePublicTokenResult `json:"data"`
+}

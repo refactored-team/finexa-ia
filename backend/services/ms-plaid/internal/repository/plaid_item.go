@@ -21,6 +21,7 @@ func (r *PlaidItemRepository) UpsertForUser(ctx context.Context, userID int64, i
 		UserID:          userID,
 		PublicToken:     in.PublicToken,
 		AccessToken:     in.AccessToken,
+		ItemID:          stringToNull(in.ItemID),
 		InstitutionID:   stringToNull(in.InstitutionID),
 		InstitutionName: stringToNull(in.InstitutionName),
 	})
@@ -62,6 +63,7 @@ func rowToResponseUpsert(row sqlcgen.UpsertPlaidItemForUserRow) models.PlaidItem
 		ID:              row.ID,
 		UserID:          row.UserID,
 		PublicToken:     row.PublicToken,
+		PlaidItemID:     nullStringPtr(row.ItemID),
 		InstitutionID:   nullStringPtr(row.InstitutionID),
 		InstitutionName: nullStringPtr(row.InstitutionName),
 		CreatedAt:       row.CreatedAt,
@@ -74,6 +76,7 @@ func rowToResponseGet(row sqlcgen.GetPlaidItemByUserIDRow) models.PlaidItemRespo
 		ID:              row.ID,
 		UserID:          row.UserID,
 		PublicToken:     row.PublicToken,
+		PlaidItemID:     nullStringPtr(row.ItemID),
 		InstitutionID:   nullStringPtr(row.InstitutionID),
 		InstitutionName: nullStringPtr(row.InstitutionName),
 		CreatedAt:       row.CreatedAt,

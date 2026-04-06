@@ -12,6 +12,7 @@ CREATE TABLE plaid_items (
     user_id           bigint NOT NULL REFERENCES users (id),
     public_token      text NOT NULL,
     access_token      text NOT NULL,
+    item_id           text,
     institution_id    text,
     institution_name  text,
     created_at        timestamptz NOT NULL DEFAULT now(),

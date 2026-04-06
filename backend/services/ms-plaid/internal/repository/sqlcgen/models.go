@@ -14,6 +14,7 @@ type PlaidItem struct {
 	UserID          int64          `json:"user_id"`
 	PublicToken     string         `json:"public_token"`
 	AccessToken     string         `json:"access_token"`
+	ItemID          sql.NullString `json:"item_id"`
 	InstitutionID   sql.NullString `json:"institution_id"`
 	InstitutionName sql.NullString `json:"institution_name"`
 	CreatedAt       time.Time      `json:"created_at"`

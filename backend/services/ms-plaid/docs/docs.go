@@ -88,6 +88,7 @@ const docTemplate = `{
                 }
             },
             "post": {
+                "description": "Si envías solo public_token, el servidor intercambia en Plaid y persiste access_token. Con public_token y access_token, upsert directo (legacy).",
                 "consumes": [
                     "application/json"
                 ],
@@ -129,8 +130,26 @@ const docTemplate = `{
                             "$ref": "#/definitions/apiresult.ErrResult"
                         }
                     },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/apiresult.ErrResult"
+                        }
+                    },
                     "500": {
                         "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apiresult.ErrResult"
+                        }
+                    },
+                    "502": {
+                        "description": "Bad Gateway",
+                        "schema": {
+                            "$ref": "#/definitions/apiresult.ErrResult"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
                         "schema": {
                             "$ref": "#/definitions/apiresult.ErrResult"
                         }
@@ -175,6 +194,77 @@ const docTemplate = `{
                     },
                     "500": {
                         "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apiresult.ErrResult"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/users/{userId}/plaid-item/exchange": {
+            "post": {
+                "description": "Envía el public_token de Link a Plaid, guarda access_token e item_id en BD; no devuelve access_token.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "plaid-item"
+                ],
+                "summary": "Intercambiar public_token por Item",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID interno de usuario (FK)",
+                        "name": "userId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "public_token de Link onSuccess",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/finexa-ia_ms-plaid_internal_models.ExchangePublicTokenBody"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/finexa-ia_ms-plaid_internal_models.ExchangePublicTokenOKResult"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apiresult.ErrResult"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/apiresult.ErrResult"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apiresult.ErrResult"
+                        }
+                    },
+                    "502": {
+                        "description": "Bad Gateway",
+                        "schema": {
+                            "$ref": "#/definitions/apiresult.ErrResult"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
                         "schema": {
                             "$ref": "#/definitions/apiresult.ErrResult"
                         }
@@ -303,7 +393,41 @@ const docTemplate = `{
                 "institution_name": {
                     "type": "string"
                 },
+                "item_id": {
+                    "description": "Plaid item_id (optional on legacy upsert)",
+                    "type": "string"
+                },
                 "public_token": {
+                    "type": "string"
+                }
+            }
+        },
+        "finexa-ia_ms-plaid_internal_models.ExchangePublicTokenBody": {
+            "type": "object",
+            "properties": {
+                "public_token": {
+                    "type": "string"
+                }
+            }
+        },
+        "finexa-ia_ms-plaid_internal_models.ExchangePublicTokenOKResult": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/finexa-ia_ms-plaid_internal_models.ExchangePublicTokenResult"
+                },
+                "ok": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "finexa-ia_ms-plaid_internal_models.ExchangePublicTokenResult": {
+            "type": "object",
+            "properties": {
+                "item": {
+                    "$ref": "#/definitions/finexa-ia_ms-plaid_internal_models.PlaidItemResponse"
+                },
+                "request_id": {
                     "type": "string"
                 }
             }
@@ -390,6 +514,10 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "institution_name": {
+                    "type": "string"
+                },
+                "item_id": {
+                    "description": "Plaid Item.item_id (webhooks)",
                     "type": "string"
                 },
                 "public_token": {

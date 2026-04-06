@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/labstack/echo/v5"
 
@@ -16,16 +17,18 @@ import (
 // PlaidItemHandler exposes the single Plaid connection per user (path userId).
 // Caller identity should be enforced at the API gateway; this service trusts userId in the URL.
 type PlaidItemHandler struct {
-	svc *services.PlaidItemService
+	svc      *services.PlaidItemService
+	exchange *services.PlaidExchangeService
 }
 
-func NewPlaidItemHandler(svc *services.PlaidItemService) *PlaidItemHandler {
-	return &PlaidItemHandler{svc: svc}
+func NewPlaidItemHandler(svc *services.PlaidItemService, exchange *services.PlaidExchangeService) *PlaidItemHandler {
+	return &PlaidItemHandler{svc: svc, exchange: exchange}
 }
 
 func (h *PlaidItemHandler) Register(e *echo.Echo) {
 	g := e.Group("/v1/users/:userId/plaid-item")
 	g.GET("", h.get)
+	g.POST("/exchange", h.exchangePublicToken)
 	g.POST("", h.upsert)
 	g.DELETE("", h.delete)
 }
@@ -64,9 +67,67 @@ func (h *PlaidItemHandler) get(c *echo.Context) error {
 	return apiresult.RespondOK(c, http.StatusOK, item)
 }
 
+// exchangePublicToken calls Plaid /item/public_token/exchange and persists access_token server-side.
+//
+//	@Summary		Intercambiar public_token por Item
+//	@Description	Envía el public_token de Link a Plaid, guarda access_token e item_id en BD; no devuelve access_token.
+//	@Tags			plaid-item
+//	@Accept			json
+//	@Produce		json
+//	@Param			userId	path		int								true	"ID interno de usuario (FK)"
+//	@Param			body	body		models.ExchangePublicTokenBody	true	"public_token de Link onSuccess"
+//	@Success		200	{object}	models.ExchangePublicTokenOKResult
+//	@Failure		400	{object}	apiresult.ErrResult
+//	@Failure		404	{object}	apiresult.ErrResult
+//	@Failure		503	{object}	apiresult.ErrResult
+//	@Failure		502	{object}	apiresult.ErrResult
+//	@Failure		500	{object}	apiresult.ErrResult
+//	@Router			/v1/users/{userId}/plaid-item/exchange [post]
+func (h *PlaidItemHandler) exchangePublicToken(c *echo.Context) error {
+	userID, err := h.parseUserID(c)
+	if err != nil || userID <= 0 {
+		return apiresult.RespondError(c, http.StatusBadRequest, apiresult.CodeValidationError, "invalid user id", nil)
+	}
+	var body models.ExchangePublicTokenBody
+	if err := c.Bind(&body); err != nil {
+		return apiresult.RespondError(c, http.StatusBadRequest, apiresult.CodeValidationError, "invalid request body", nil)
+	}
+	out, err := h.exchange.ExchangeForUser(c.Request().Context(), userID, body.PublicToken)
+	if err != nil {
+		return h.mapExchangeError(c, err)
+	}
+	return apiresult.RespondOK(c, http.StatusOK, out)
+}
+
+func (h *PlaidItemHandler) mapExchangeError(c *echo.Context, err error) error {
+	switch {
+	case errors.Is(err, services.ErrInvalidUserID):
+		return apiresult.RespondError(c, http.StatusBadRequest, apiresult.CodeValidationError, err.Error(), nil)
+	case errors.Is(err, services.ErrEmptyPublicToken):
+		return apiresult.RespondError(c, http.StatusBadRequest, apiresult.CodeValidationError, err.Error(), nil)
+	case errors.Is(err, services.ErrPlaidNotConfigured):
+		return apiresult.RespondError(c, http.StatusServiceUnavailable, apiresult.CodePlaidNotConfigured, "plaid is not configured", nil)
+	case errors.Is(err, services.ErrUserNotFound):
+		return apiresult.RespondError(c, http.StatusNotFound, apiresult.CodeNotFound, err.Error(), nil)
+	default:
+		if info, ok := services.MapPlaidError(err); ok {
+			return apiresult.RespondError(c, http.StatusBadGateway, apiresult.CodePlaidUpstreamError, "plaid API error", map[string]any{
+				"plaid": map[string]any{
+					"error_type":    info.ErrorType,
+					"error_code":    info.ErrorCode,
+					"error_message": info.ErrorMessage,
+				},
+			})
+		}
+		return apiresult.RespondError(c, http.StatusInternalServerError, apiresult.CodeInternalError, "internal error", nil)
+	}
+}
+
 // upsert registers or replaces the user’s Plaid connection (one active row per user).
+// If access_token is omitted or empty, the server calls Plaid item/public_token/exchange (same as POST .../exchange).
 //
 //	@Summary		Registrar o actualizar conexión Plaid
+//	@Description	Si envías solo public_token, el servidor intercambia en Plaid y persiste access_token. Con public_token y access_token, upsert directo (legacy).
 //	@Tags			plaid-item
 //	@Accept			json
 //	@Produce		json
@@ -74,6 +135,9 @@ func (h *PlaidItemHandler) get(c *echo.Context) error {
 //	@Param			body	body		models.CreatePlaidItemRequest	true	"Cuerpo"
 //	@Success		200	{object}	models.PlaidItemOKResult
 //	@Failure		400	{object}	apiresult.ErrResult
+//	@Failure		404	{object}	apiresult.ErrResult
+//	@Failure		503	{object}	apiresult.ErrResult
+//	@Failure		502	{object}	apiresult.ErrResult
 //	@Failure		500	{object}	apiresult.ErrResult
 //	@Router			/v1/users/{userId}/plaid-item [post]
 func (h *PlaidItemHandler) upsert(c *echo.Context) error {
@@ -84,6 +148,13 @@ func (h *PlaidItemHandler) upsert(c *echo.Context) error {
 	var in models.CreatePlaidItemRequest
 	if err := c.Bind(&in); err != nil {
 		return apiresult.RespondError(c, http.StatusBadRequest, apiresult.CodeValidationError, "invalid request body", nil)
+	}
+	if strings.TrimSpace(in.AccessToken) == "" && strings.TrimSpace(in.PublicToken) != "" {
+		out, errEx := h.exchange.ExchangeForUser(c.Request().Context(), userID, in.PublicToken)
+		if errEx != nil {
+			return h.mapExchangeError(c, errEx)
+		}
+		return apiresult.RespondOK(c, http.StatusOK, out.Item)
 	}
 	item, err := h.svc.UpsertForUser(c.Request().Context(), userID, in)
 	if err != nil {
