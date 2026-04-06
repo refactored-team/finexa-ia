@@ -2,38 +2,135 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "ms-plaid: debug (dev)",
+      "name": "ms-plaid: local",
       "type": "go",
       "request": "launch",
       "mode": "auto",
       "program": "${workspaceFolder}/backend/services/ms-plaid/cmd/server",
       "cwd": "${workspaceFolder}/backend/services/ms-plaid",
       "envFile": "${workspaceFolder}/backend/services/ms-plaid/.env.dev",
-      "env": {
-        "HTTP_PORT": "8080"
-      }
+      "env": { "HTTP_PORT": "8080" },
+      "presentation": { "group": "ms-plaid", "order": 1 }
     },
     {
-      "name": "ms-users: debug (dev)",
+      "name": "ms-plaid: VPC",
+      "type": "go",
+      "request": "launch",
+      "mode": "auto",
+      "program": "${workspaceFolder}/backend/services/ms-plaid/cmd/server",
+      "cwd": "${workspaceFolder}/backend/services/ms-plaid",
+      "envFile": "${workspaceFolder}/backend/services/ms-plaid/.env.vpc",
+      "env": { "HTTP_PORT": "8080" },
+      "presentation": { "group": "ms-plaid", "order": 2 }
+    },
+    {
+      "name": "ms-plaid: MVP",
+      "type": "go",
+      "request": "launch",
+      "mode": "auto",
+      "program": "${workspaceFolder}/backend/services/ms-plaid/cmd/server",
+      "cwd": "${workspaceFolder}/backend/services/ms-plaid",
+      "envFile": "${workspaceFolder}/backend/services/ms-plaid/.env.mvp",
+      "env": { "HTTP_PORT": "8080" },
+      "presentation": { "group": "ms-plaid", "order": 3 }
+    },
+    {
+      "name": "ms-users: local",
       "type": "go",
       "request": "launch",
       "mode": "auto",
       "program": "${workspaceFolder}/backend/services/ms-users/cmd/server",
       "cwd": "${workspaceFolder}/backend/services/ms-users",
       "envFile": "${workspaceFolder}/backend/services/ms-users/.env.dev",
-      "env": {
-        "HTTP_PORT": "8081"
-      }
+      "env": { "HTTP_PORT": "8081" },
+      "presentation": { "group": "ms-users", "order": 1 }
+    },
+    {
+      "name": "ms-users: VPC",
+      "type": "go",
+      "request": "launch",
+      "mode": "auto",
+      "program": "${workspaceFolder}/backend/services/ms-users/cmd/server",
+      "cwd": "${workspaceFolder}/backend/services/ms-users",
+      "envFile": "${workspaceFolder}/backend/services/ms-users/.env.vpc",
+      "env": { "HTTP_PORT": "8081" },
+      "presentation": { "group": "ms-users", "order": 2 }
+    },
+    {
+      "name": "ms-users: MVP",
+      "type": "go",
+      "request": "launch",
+      "mode": "auto",
+      "program": "${workspaceFolder}/backend/services/ms-users/cmd/server",
+      "cwd": "${workspaceFolder}/backend/services/ms-users",
+      "envFile": "${workspaceFolder}/backend/services/ms-users/.env.mvp",
+      "env": { "HTTP_PORT": "8081" },
+      "presentation": { "group": "ms-users", "order": 3 }
+    },
+    {
+      "name": "ms-transactions: local",
+      "type": "go",
+      "request": "launch",
+      "mode": "auto",
+      "program": "${workspaceFolder}/backend/services/ms-transactions/cmd/server",
+      "cwd": "${workspaceFolder}/backend/services/ms-transactions",
+      "envFile": "${workspaceFolder}/backend/services/ms-transactions/.env.dev",
+      "env": { "HTTP_PORT": "8082" },
+      "presentation": { "group": "ms-transactions", "order": 1 }
+    },
+    {
+      "name": "ms-transactions: VPC",
+      "type": "go",
+      "request": "launch",
+      "mode": "auto",
+      "program": "${workspaceFolder}/backend/services/ms-transactions/cmd/server",
+      "cwd": "${workspaceFolder}/backend/services/ms-transactions",
+      "envFile": "${workspaceFolder}/backend/services/ms-transactions/.env.vpc",
+      "env": { "HTTP_PORT": "8082" },
+      "presentation": { "group": "ms-transactions", "order": 2 }
+    },
+    {
+      "name": "ms-transactions: MVP",
+      "type": "go",
+      "request": "launch",
+      "mode": "auto",
+      "program": "${workspaceFolder}/backend/services/ms-transactions/cmd/server",
+      "cwd": "${workspaceFolder}/backend/services/ms-transactions",
+      "envFile": "${workspaceFolder}/backend/services/ms-transactions/.env.mvp",
+      "env": { "HTTP_PORT": "8082" },
+      "presentation": { "group": "ms-transactions", "order": 3 }
     }
   ],
   "compounds": [
     {
-      "name": "todos los microservicios (dev)",
+      "name": "todos: local (8080–8082)",
       "configurations": [
-        "ms-plaid: debug (dev)",
-        "ms-users: debug (dev)"
+        "ms-plaid: local",
+        "ms-users: local",
+        "ms-transactions: local"
       ],
-      "stopAll": true
+      "stopAll": true,
+      "presentation": { "group": "compounds", "order": 1 }
+    },
+    {
+      "name": "todos: VPC (8080–8082)",
+      "configurations": [
+        "ms-plaid: VPC",
+        "ms-users: VPC",
+        "ms-transactions: VPC"
+      ],
+      "stopAll": true,
+      "presentation": { "group": "compounds", "order": 2 }
+    },
+    {
+      "name": "todos: MVP (8080–8082)",
+      "configurations": [
+        "ms-plaid: MVP",
+        "ms-users: MVP",
+        "ms-transactions: MVP"
+      ],
+      "stopAll": true,
+      "presentation": { "group": "compounds", "order": 3 }
     }
   ]
 }

@@ -109,9 +109,9 @@ variable "postgres_allowed_security_group_ids" {
 }
 
 variable "postgres_allowed_cidr_blocks" {
-  description = "CIDRs extra en RDS :5432 además de vpc_cidr (MVP: tu IP para psql/migraciones desde fuera). La VPC siempre puede conectar."
+  description = "CIDRs extra en RDS :5432 además de vpc_cidr. Default 0.0.0.0/0 = Internet completo (solo dev/MVP; alto riesgo). Para restringir, usa p.ej. tu IP /32 y quitá 0.0.0.0/0."
   type        = list(string)
-  default     = ["177.249.162.128/32"]
+  default     = ["0.0.0.0/0"]
 }
 
 # RDS PostgreSQL — module.vpc private subnets.
@@ -165,7 +165,7 @@ variable "rds_deletion_protection" {
 }
 
 variable "rds_publicly_accessible" {
-  description = "Expose RDS on the internet (subredes públicas + publicly_accessible). Solo MVP/dev: acota postgres_allowed_cidr_blocks a tu IP (/32), nunca 0.0.0.0/0."
+  description = "Expose RDS on the internet (subredes públicas + publicly_accessible). Solo MVP/dev. Si es true y postgres_allowed_cidr_blocks incluye 0.0.0.0/0, PostgreSQL queda expuesto mundialmente en :5432."
   type        = bool
   default     = true
 }

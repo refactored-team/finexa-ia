@@ -39,7 +39,7 @@ variable "lambda_vpc_security_group_ids" {
 }
 
 locals {
-  # Siempre vpc_cidr (Lambda y recursos en VPC) + CIDR extra en postgres_allowed_cidr_blocks (p. ej. tu IP /32).
+  # vpc_cidr (Lambda/recursos en VPC) + postgres_allowed_cidr_blocks (p. ej. 0.0.0.0/0 para acceso Internet en dev).
   postgres_ingress_cidr_blocks = distinct(concat([var.vpc_cidr], var.postgres_allowed_cidr_blocks))
 
   # HTTP API + Lambda: merge ECR URLs with per-service route/memory; keys must exist in ecr_services.
