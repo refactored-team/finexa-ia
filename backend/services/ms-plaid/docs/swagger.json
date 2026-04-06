@@ -269,6 +269,47 @@
                 }
             }
         },
+        "/v1/users/{userId}/plaid-item/status": {
+            "get": {
+                "description": "Indica si existe un plaid_item activo (deleted_at IS NULL). Siempre 200 con linked true/false.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "plaid-item"
+                ],
+                "summary": "Estado de vinculación Plaid",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID interno de usuario (FK)",
+                        "name": "userId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/finexa-ia_ms-plaid_internal_models.PlaidLinkStatusOKResult"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apiresult.ErrResult"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apiresult.ErrResult"
+                        }
+                    }
+                }
+            }
+        },
         "/v1/users/{userId}/plaid/link-token": {
             "post": {
                 "description": "Inicializa una sesión Link: llama a Plaid y persiste metadatos (sin guardar el link_token).",
@@ -525,6 +566,25 @@
                 },
                 "user_id": {
                     "type": "integer"
+                }
+            }
+        },
+        "finexa-ia_ms-plaid_internal_models.PlaidLinkStatusData": {
+            "type": "object",
+            "properties": {
+                "linked": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "finexa-ia_ms-plaid_internal_models.PlaidLinkStatusOKResult": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/finexa-ia_ms-plaid_internal_models.PlaidLinkStatusData"
+                },
+                "ok": {
+                    "type": "boolean"
                 }
             }
         }

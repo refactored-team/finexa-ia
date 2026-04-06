@@ -41,6 +41,7 @@ import {
   isValidPhoneE164,
   signUpWithProfile,
 } from "@/lib/auth/cognito";
+import { getPostAuthDestination } from "@/lib/auth/postAuthDestination";
 import { syncInternalUserFromSession } from "@/src/services/api/users/usersService";
 import {
   passwordMeetsCognitoLikePolicy,
@@ -193,7 +194,12 @@ export default function RegisterScreen() {
         );
         return;
       }
-      router.replace("/(onboarding)/link-bank");
+      try {
+        const href = await getPostAuthDestination({ skipSync: true });
+        router.replace(href);
+      } catch {
+        router.replace("/(onboarding)/link-bank");
+      }
       return;
     }
     if (result.data.nextStep === "DONE") {
@@ -203,7 +209,12 @@ export default function RegisterScreen() {
           onPress: async () => {
             try {
               await syncInternalUserFromSession();
-              router.replace("/(onboarding)/link-bank");
+              try {
+                const href = await getPostAuthDestination({ skipSync: true });
+                router.replace(href);
+              } catch {
+                router.replace("/(onboarding)/link-bank");
+              }
             } catch (e) {
               const msg = e instanceof Error ? e.message : "Error al sincronizar";
               Alert.alert(

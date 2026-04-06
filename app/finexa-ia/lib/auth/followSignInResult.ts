@@ -4,6 +4,7 @@ import type { Router } from 'expo-router';
 
 import { requestPasswordReset, type SignInResult } from '@/lib/auth/cognito';
 import { getLastSignInEmail } from '@/lib/auth/lastSignInContext';
+import { getPostAuthDestination } from '@/lib/auth/postAuthDestination';
 import { syncInternalUserFromSession } from '@/src/services/api/users/usersService';
 
 type Ctx = {
@@ -57,7 +58,17 @@ export async function followSignInResult(
         );
         return;
       }
-      router.replace('/(onboarding)/link-bank');
+      try {
+        const href = await getPostAuthDestination({ skipSync: true });
+        router.replace(href);
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : 'Error al resolver el destino';
+        Alert.alert(
+          'No se pudo continuar',
+          `${msg}\n\nReintentá o comprobá tu conexión.`,
+          [{ text: 'OK' }],
+        );
+      }
       return;
     }
     case 'needs_confirm_sign_up':

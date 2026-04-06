@@ -301,6 +301,27 @@ export default function LinkBankScreen() {
 
   const clientIsExpoGo = useMemo(() => isExpoGo(), []);
 
+  useEffect(() => {
+    if (!isAmplifyAuthConfigured()) {
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const id = await getInternalUserIdFromSession();
+        const { linked } = await plaidService.getPlaidLinkStatus(String(id));
+        if (!cancelled && linked) {
+          router.replace('/(tabs)/explore');
+        }
+      } catch {
+        /* permanece en link-bank */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [router]);
+
   const tightLayout = windowH < 700;
   const ringSize = tightLayout ? 148 : RING_SIZE;
   const ringR = tightLayout ? 52 : RING_R;

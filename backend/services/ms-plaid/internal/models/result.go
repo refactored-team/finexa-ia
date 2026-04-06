@@ -34,3 +34,14 @@ type ExchangePublicTokenOKResult struct {
 	OK   bool                      `json:"ok"`
 	Data ExchangePublicTokenResult `json:"data"`
 }
+
+// PlaidLinkStatusData is the payload for GET .../plaid-item/status.
+type PlaidLinkStatusData struct {
+	Linked bool `json:"linked"`
+}
+
+// PlaidLinkStatusOKResult is the success envelope for GET .../plaid-item/status.
+type PlaidLinkStatusOKResult struct {
+	OK   bool                `json:"ok"`
+	Data PlaidLinkStatusData `json:"data"`
+}

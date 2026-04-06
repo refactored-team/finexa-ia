@@ -39,6 +39,14 @@ func (s *PlaidItemService) GetForUser(ctx context.Context, userID int64) (models
 	return item, nil
 }
 
+// LinkStatusForUser reports whether the user has an active Plaid item row (not soft-deleted).
+func (s *PlaidItemService) LinkStatusForUser(ctx context.Context, userID int64) (bool, error) {
+	if userID <= 0 {
+		return false, ErrInvalidUserID
+	}
+	return s.repo.HasActiveForUser(ctx, userID)
+}
+
 // UpsertForUser creates or replaces the user’s only Plaid connection (at most one active row).
 // Requires both public_token and access_token. For public_token only, the HTTP handler delegates to PlaidExchangeService.
 func (s *PlaidItemService) UpsertForUser(ctx context.Context, userID int64, in models.CreatePlaidItemRequest) (models.PlaidItemResponse, error) {

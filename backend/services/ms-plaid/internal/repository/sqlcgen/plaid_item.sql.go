@@ -47,6 +47,19 @@ func (q *Queries) GetPlaidItemByUserID(ctx context.Context, userID int64) (GetPl
 	return i, err
 }
 
+const hasActivePlaidItemForUser = `-- name: HasActivePlaidItemForUser :one
+SELECT EXISTS(
+    SELECT 1 FROM plaid_items WHERE user_id = $1 AND deleted_at IS NULL
+) AS linked
+`
+
+func (q *Queries) HasActivePlaidItemForUser(ctx context.Context, userID int64) (bool, error) {
+	row := q.db.QueryRowContext(ctx, hasActivePlaidItemForUser, userID)
+	var linked bool
+	err := row.Scan(&linked)
+	return linked, err
+}
+
 const softDeletePlaidItemForUser = `-- name: SoftDeletePlaidItemForUser :execrows
 UPDATE plaid_items
 SET deleted_at = now()

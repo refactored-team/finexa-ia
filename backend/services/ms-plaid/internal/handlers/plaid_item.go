@@ -27,6 +27,7 @@ func NewPlaidItemHandler(svc *services.PlaidItemService, exchange *services.Plai
 
 func (h *PlaidItemHandler) Register(e *echo.Echo) {
 	g := e.Group("/v1/users/:userId/plaid-item")
+	g.GET("/status", h.linkStatus)
 	g.GET("", h.get)
 	g.POST("/exchange", h.exchangePublicToken)
 	g.POST("", h.upsert)
@@ -35,6 +36,32 @@ func (h *PlaidItemHandler) Register(e *echo.Echo) {
 
 func (h *PlaidItemHandler) parseUserID(c *echo.Context) (int64, error) {
 	return strconv.ParseInt(c.Param("userId"), 10, 64)
+}
+
+// linkStatus returns whether the user has an active Plaid connection (for onboarding / gating UI).
+//
+//	@Summary		Estado de vinculación Plaid
+//	@Description	Indica si existe un plaid_item activo (deleted_at IS NULL). Siempre 200 con linked true/false.
+//	@Tags			plaid-item
+//	@Param			userId	path	int	true	"ID interno de usuario (FK)"
+//	@Produce		json
+//	@Success		200	{object}	models.PlaidLinkStatusOKResult
+//	@Failure		400	{object}	apiresult.ErrResult
+//	@Failure		500	{object}	apiresult.ErrResult
+//	@Router			/v1/users/{userId}/plaid-item/status [get]
+func (h *PlaidItemHandler) linkStatus(c *echo.Context) error {
+	userID, err := h.parseUserID(c)
+	if err != nil || userID <= 0 {
+		return apiresult.RespondError(c, http.StatusBadRequest, apiresult.CodeValidationError, "invalid user id", nil)
+	}
+	linked, err := h.svc.LinkStatusForUser(c.Request().Context(), userID)
+	if err != nil {
+		if errors.Is(err, services.ErrInvalidUserID) {
+			return apiresult.RespondError(c, http.StatusBadRequest, apiresult.CodeValidationError, err.Error(), nil)
+		}
+		return apiresult.RespondError(c, http.StatusInternalServerError, apiresult.CodeInternalError, http.StatusText(http.StatusInternalServerError), nil)
+	}
+	return apiresult.RespondOK(c, http.StatusOK, models.PlaidLinkStatusData{Linked: linked})
 }
 
 // get returns the user’s active Plaid connection, if any.
