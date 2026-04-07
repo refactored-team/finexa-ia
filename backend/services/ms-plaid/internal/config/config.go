@@ -20,8 +20,9 @@ var (
 	mvpPlaidEnv                    = "sandbox"
 	mvpPlaidClientName             = "Finexa IA"
 	mvpPlaidLanguage               = "en" // debe coincidir con el idioma de la Link customization en Plaid (p. ej. production_component en English)
-	// Debe coincidir con los países de la customization en el dashboard (p. ej. US + Spain → US,ES).
-	mvpPlaidCountryCodes = "US,ES"
+	// Debe coincidir con la Link customization. Solo incluir ES (u otros) si Plaid te dio acceso a ese país
+	// para tus productos; si no, INVALID_FIELD. Default US; override: PLAID_COUNTRY_CODES o plaid_country_codes.
+	mvpPlaidCountryCodes = "US"
 	mvpPlaidProducts               = "transactions"
 	mvpPlaidTransactionsDays int32 = 90
 	// mvpPlaidLinkCustomizationName: nombre en Dashboard → Link → Link customization (Data Transparency en esa customization).
