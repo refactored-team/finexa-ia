@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"log"
 	"strings"
 
 	"github.com/plaid/plaid-go/v41/plaid"
@@ -89,8 +90,32 @@ func (s *PlaidLinkService) CreateLinkToken(ctx context.Context, userID int64, bo
 		return models.LinkTokenResponse{}, fmt.Errorf("%w: %v", ErrPlaidRequest, err)
 	}
 
+	// Diagnostic log to confirm effective Link token parameters in runtime.
+	log.Printf(
+		"[PlaidLink] create_link_token user_id=%d env=%q link_customization_name=%q language=%q country_codes=%v products=%v webhook_set=%t redirect_set=%t",
+		userID,
+		strings.TrimSpace(s.cfg.PlaidEnv),
+		req.GetLinkCustomizationName(),
+		req.GetLanguage(),
+		req.GetCountryCodes(),
+		req.GetProducts(),
+		req.HasWebhook(),
+		req.HasRedirectUri(),
+	)
+
 	resp, err := s.link.CreateLinkToken(ctx, *req)
 	if err != nil {
+		if info, ok := MapPlaidError(err); ok {
+			log.Printf(
+				"[PlaidLink] create_link_token plaid_error user_id=%d env=%q link_customization_name=%q error_type=%q error_code=%q error_message=%q",
+				userID,
+				strings.TrimSpace(s.cfg.PlaidEnv),
+				req.GetLinkCustomizationName(),
+				info.ErrorType,
+				info.ErrorCode,
+				info.ErrorMessage,
+			)
+		}
 		return models.LinkTokenResponse{}, err
 	}
 
