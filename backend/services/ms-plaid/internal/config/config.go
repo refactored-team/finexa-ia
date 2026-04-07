@@ -19,10 +19,13 @@ import (
 var (
 	mvpPlaidEnv                    = "sandbox"
 	mvpPlaidClientName             = "Finexa IA"
-	mvpPlaidLanguage               = "es"
-	mvpPlaidCountryCodes           = "US"
+	mvpPlaidLanguage               = "en" // debe coincidir con el idioma de la Link customization en Plaid (p. ej. production_component en English)
+	// Debe coincidir con los países de la customization en el dashboard (p. ej. US + Spain → US,ES).
+	mvpPlaidCountryCodes = "US,ES"
 	mvpPlaidProducts               = "transactions"
 	mvpPlaidTransactionsDays int32 = 90
+	// mvpPlaidLinkCustomizationName: nombre en Dashboard → Link → Link customization (Data Transparency en esa customization).
+	mvpPlaidLinkCustomizationName = "production_component"
 )
 
 type App struct {
@@ -43,8 +46,8 @@ type App struct {
 	PlaidWebhook                   string `json:"plaid_webhook_url,omitempty"`
 	PlaidRedirect                  string `json:"plaid_redirect_uri,omitempty"`
 	PlaidTransactionsDaysRequested *int32 `json:"plaid_transactions_days_requested,omitempty"`
-	// PlaidLinkCustomizationName: nombre exacto de la Link customization en el Dashboard (API: link_customization_name).
-	// Si está vacío, Plaid usa la customization "default".
+	// PlaidLinkCustomizationName: nombre exacto en el Dashboard (API: link_customization_name).
+	// Si está vacío tras cargar config, applyPlaidMVPDefaults usa production_component.
 	PlaidLinkCustomizationName string `json:"link_customization_name,omitempty"`
 }
 
@@ -52,8 +55,8 @@ type App struct {
 //
 //	Desarrollo local (.env.dev + make run): CONFIG_SOURCE=env → solo variables de
 //	entorno (DATABASE_URL, HTTP_PORT, PLAID_CLIENT_ID, SANDBOX_SECRET o PLAID_SECRET,
-//	PLAID_ENV, PLAID_LANGUAGE y PLAID_LINK_CUSTOMIZATION_NAME opcionales). Debe coincidir
-//	PLAID_LANGUAGE con el idioma de la Link customization en el dashboard de Plaid.
+//	PLAID_ENV, PLAID_LANGUAGE, PLAID_COUNTRY_CODES y PLAID_LINK_CUSTOMIZATION_NAME opcionales).
+//	PLAID_LANGUAGE y PLAID_COUNTRY_CODES deben coincidir con la Link customization (idioma y países).
 //	Se ignora AWS_SECRET_ID aunque exista en el shell (evita mezclar credenciales AWS con .env).
 //
 //	AWS / producción: sin CONFIG_SOURCE=env (o sin definir CONFIG_SOURCE) y con
@@ -105,6 +108,9 @@ func fromEnv() (*App, error) {
 	if v := strings.TrimSpace(os.Getenv("PLAID_LANGUAGE")); v != "" {
 		app.PlaidLanguage = v
 	}
+	if v := strings.TrimSpace(os.Getenv("PLAID_COUNTRY_CODES")); v != "" {
+		app.PlaidCountryCodes = v
+	}
 	applyPlaidMVPDefaults(app)
 	return app, nil
 }
@@ -153,6 +159,9 @@ func fromSecretsManager(secretID string) (*App, error) {
 	if v := strings.TrimSpace(os.Getenv("PLAID_LANGUAGE")); v != "" {
 		app.PlaidLanguage = v
 	}
+	if v := strings.TrimSpace(os.Getenv("PLAID_COUNTRY_CODES")); v != "" {
+		app.PlaidCountryCodes = v
+	}
 	applyPlaidMVPDefaults(&app)
 	return &app, nil
 }
@@ -177,6 +186,9 @@ func applyPlaidMVPDefaults(a *App) {
 	}
 	if strings.TrimSpace(a.PlaidProducts) == "" {
 		a.PlaidProducts = mvpPlaidProducts
+	}
+	if strings.TrimSpace(a.PlaidLinkCustomizationName) == "" {
+		a.PlaidLinkCustomizationName = mvpPlaidLinkCustomizationName
 	}
 	a.PlaidWebhook = ""
 	a.PlaidRedirect = ""
