@@ -52,7 +52,9 @@ type App struct {
 //
 //	Desarrollo local (.env.dev + make run): CONFIG_SOURCE=env → solo variables de
 //	entorno (DATABASE_URL, HTTP_PORT, PLAID_CLIENT_ID, SANDBOX_SECRET o PLAID_SECRET,
-//	PLAID_ENV y PLAID_LINK_CUSTOMIZATION_NAME opcionales). Se ignora AWS_SECRET_ID aunque exista en el shell (evita mezclar credenciales AWS con .env).
+//	PLAID_ENV, PLAID_LANGUAGE y PLAID_LINK_CUSTOMIZATION_NAME opcionales). Debe coincidir
+//	PLAID_LANGUAGE con el idioma de la Link customization en el dashboard de Plaid.
+//	Se ignora AWS_SECRET_ID aunque exista en el shell (evita mezclar credenciales AWS con .env).
 //
 //	AWS / producción: sin CONFIG_SOURCE=env (o sin definir CONFIG_SOURCE) y con
 //	AWS_SECRET_ID → JSON desde Secrets Manager (database_url, http_port,
@@ -100,6 +102,9 @@ func fromEnv() (*App, error) {
 	if v := strings.TrimSpace(os.Getenv("PLAID_LINK_CUSTOMIZATION_NAME")); v != "" {
 		app.PlaidLinkCustomizationName = v
 	}
+	if v := strings.TrimSpace(os.Getenv("PLAID_LANGUAGE")); v != "" {
+		app.PlaidLanguage = v
+	}
 	applyPlaidMVPDefaults(app)
 	return app, nil
 }
@@ -145,6 +150,9 @@ func fromSecretsManager(secretID string) (*App, error) {
 	if v := strings.TrimSpace(os.Getenv("PLAID_LINK_CUSTOMIZATION_NAME")); v != "" {
 		app.PlaidLinkCustomizationName = v
 	}
+	if v := strings.TrimSpace(os.Getenv("PLAID_LANGUAGE")); v != "" {
+		app.PlaidLanguage = v
+	}
 	applyPlaidMVPDefaults(&app)
 	return &app, nil
 }
@@ -158,14 +166,24 @@ func applyPlaidMVPDefaults(a *App) {
 	if strings.TrimSpace(a.PlaidEnv) == "" {
 		a.PlaidEnv = mvpPlaidEnv
 	}
-	a.PlaidClientName = mvpPlaidClientName
-	a.PlaidLanguage = mvpPlaidLanguage
-	a.PlaidCountryCodes = mvpPlaidCountryCodes
-	a.PlaidProducts = mvpPlaidProducts
+	if strings.TrimSpace(a.PlaidClientName) == "" {
+		a.PlaidClientName = mvpPlaidClientName
+	}
+	if strings.TrimSpace(a.PlaidLanguage) == "" {
+		a.PlaidLanguage = mvpPlaidLanguage
+	}
+	if strings.TrimSpace(a.PlaidCountryCodes) == "" {
+		a.PlaidCountryCodes = mvpPlaidCountryCodes
+	}
+	if strings.TrimSpace(a.PlaidProducts) == "" {
+		a.PlaidProducts = mvpPlaidProducts
+	}
 	a.PlaidWebhook = ""
 	a.PlaidRedirect = ""
-	d := mvpPlaidTransactionsDays
-	a.PlaidTransactionsDaysRequested = &d
+	if a.PlaidTransactionsDaysRequested == nil {
+		d := mvpPlaidTransactionsDays
+		a.PlaidTransactionsDaysRequested = &d
+	}
 }
 
 // PlaidConfigured is true when credentials are present for Link token creation.
