@@ -29,13 +29,14 @@ description: Microservicio ms-plaid — Link token, variables PLAID_*, flujo hac
 
 ## Origen de configuración
 
-- **Local**: en `.env.dev` define `CONFIG_SOURCE=env`, `DATABASE_URL`, `PLAID_CLIENT_ID` y `SANDBOX_SECRET` (el “Sandbox secret” del dashboard; opcionalmente `PLAID_SECRET` si prefieres ese nombre). `make run` carga el archivo.
-- **AWS**: quita `CONFIG_SOURCE=env` en el task/container y define `AWS_SECRET_ID` con el JSON (`database_url`, `http_port`, `plaid_client_id`, `plaid_secret` o `sandbox_secret`, …).
+- **Local**: en `.env.dev` define `CONFIG_SOURCE=env`, `DATABASE_URL`, `PLAID_CLIENT_ID` y `SANDBOX_SECRET` (el “Sandbox secret” del dashboard; opcionalmente `PLAID_SECRET` si prefieres ese nombre). Opcional: `PLAID_ENV` (`sandbox`, `production`, …). `make run` carga el archivo.
+- **AWS**: quita `CONFIG_SOURCE=env` en el task/container y define `AWS_SECRET_ID` con el JSON (`database_url`, `http_port`, `plaid_client_id`, `plaid_secret` o `sandbox_secret`, `plaid_env` opcional). Si la Lambda define `PLAID_ENV`, sobrescribe `plaid_env` del JSON (útil para alternar sin editar el secreto; también se puede fijar vía `environment_variables` de `lambda_http_services` en Terraform).
 
 ## Configuración Plaid (MVP)
 
 - **Credenciales**: env local `PLAID_CLIENT_ID` + `SANDBOX_SECRET` (o `PLAID_SECRET`). En Secrets Manager: `plaid_client_id` y `plaid_secret` o `sandbox_secret`.
-- **Resto del Link** (entorno sandbox, idioma, países, productos, días de transacciones, sin webhook/redirect por defecto): constantes en `internal/config/config.go` → `applyPlaidMVPDefaults`. Para cambiar el MVP, edita ahí las variables `mvpPlaid*`.
+- **Entorno API Plaid** (`sandbox` vs `production`): variable `PLAID_ENV` o clave `plaid_env` en el JSON. Si ambos faltan, el default es `sandbox` (`applyPlaidMVPDefaults` en `internal/config/config.go`). En production el secret del dashboard debe ser el de **production**, no el de sandbox.
+- **Resto del Link** (idioma, países, productos, días de transacciones, sin webhook/redirect por defecto): constantes `mvpPlaid*` en `internal/config/config.go` → `applyPlaidMVPDefaults`.
 
 Sin client id y secret (vía `SANDBOX_SECRET` o `PLAID_SECRET`), el link-token responde **503**.
 
