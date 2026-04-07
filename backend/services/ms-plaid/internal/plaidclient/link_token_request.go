@@ -32,7 +32,7 @@ func BuildLinkTokenCreateRequest(cfg *config.App, userID int64, overrides LinkTo
 
 	language := strings.TrimSpace(cfg.PlaidLanguage)
 	if language == "" {
-		language = "es"
+		language = "en"
 	}
 
 	countryCSV := strings.TrimSpace(cfg.PlaidCountryCodes)
