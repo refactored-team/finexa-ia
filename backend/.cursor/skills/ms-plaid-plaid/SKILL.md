@@ -36,6 +36,7 @@ description: Microservicio ms-plaid — Link token, variables PLAID_*, flujo hac
 
 - **Credenciales**: env local `PLAID_CLIENT_ID` + `SANDBOX_SECRET` (o `PLAID_SECRET`). En Secrets Manager: `plaid_client_id` y `plaid_secret` o `sandbox_secret`.
 - **Entorno API Plaid** (`sandbox` vs `production`): variable `PLAID_ENV` o clave `plaid_env` en el JSON. Si ambos faltan, el default es `sandbox` (`applyPlaidMVPDefaults` en `internal/config/config.go`). En production el secret del dashboard debe ser el de **production**, no el de sandbox.
+- **Link customization**: el nombre exacto (como en el Dashboard → **Link** → **Link customization**) se envía vía `PLAID_LINK_CUSTOMIZATION_NAME` o `link_customization_name` en el JSON. Si está vacío, la API de Plaid usa la customization `default`.
 - **Resto del Link** (idioma, países, productos, días de transacciones, sin webhook/redirect por defecto): constantes `mvpPlaid*` en `internal/config/config.go` → `applyPlaidMVPDefaults`.
 
 Sin client id y secret (vía `SANDBOX_SECRET` o `PLAID_SECRET`), el link-token responde **503**.

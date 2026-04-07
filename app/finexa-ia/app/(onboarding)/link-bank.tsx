@@ -35,9 +35,30 @@ import { plaidService } from '@/src/services/api/plaid/plaidService';
 import {
   create as plaidCreate,
   open as plaidOpen,
+  type LinkExit,
   type LinkIOSPresentationStyle,
   type LinkSuccess,
 } from 'react-native-plaid-link-sdk';
+
+/** Plaid RN: onExit recibe un solo objeto { error?, metadata } (no el par (error, metadata) del SDK web). */
+function logPlaidLinkExit(linkExit: LinkExit) {
+  const { error, metadata } = linkExit;
+  if (error) {
+    console.warn('[Plaid] Link onExit — error', {
+      errorCode: error.errorCode,
+      errorMessage: error.errorMessage,
+      errorType: error.errorType,
+      displayMessage: error.displayMessage ?? error.errorDisplayMessage,
+    });
+  } else {
+    console.log('[Plaid] Link onExit — sin error (cierre o cancelación)', {
+      status: metadata.status,
+      linkSessionId: metadata.linkSessionId,
+      requestId: metadata.requestId,
+      institution: metadata.institution?.name,
+    });
+  }
+}
 
 import { AuthBackground } from '@/components/auth';
 import {
@@ -435,7 +456,8 @@ export default function LinkBankScreen() {
             setIsLinking(false);
           }
         },
-        onExit: () => {
+        onExit: (linkExit: LinkExit) => {
+          logPlaidLinkExit(linkExit);
           setIsLinking(false);
         },
       });
