@@ -61,6 +61,10 @@ func BuildLinkTokenCreateRequest(cfg *config.App, userID int64, overrides LinkTo
 	req.SetUser(user)
 	req.SetProducts(products)
 
+	if name := strings.TrimSpace(cfg.PlaidLinkCustomizationName); name != "" {
+		req.SetLinkCustomizationName(name)
+	}
+
 	webhook := strings.TrimSpace(cfg.PlaidWebhook)
 	if overrides.WebhookURL != nil && strings.TrimSpace(*overrides.WebhookURL) != "" {
 		webhook = strings.TrimSpace(*overrides.WebhookURL)

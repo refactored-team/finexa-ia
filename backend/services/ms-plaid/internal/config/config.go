@@ -43,17 +43,21 @@ type App struct {
 	PlaidWebhook                   string `json:"plaid_webhook_url,omitempty"`
 	PlaidRedirect                  string `json:"plaid_redirect_uri,omitempty"`
 	PlaidTransactionsDaysRequested *int32 `json:"plaid_transactions_days_requested,omitempty"`
+	// PlaidLinkCustomizationName: nombre exacto de la Link customization en el Dashboard (API: link_customization_name).
+	// Si está vacío, Plaid usa la customization "default".
+	PlaidLinkCustomizationName string `json:"link_customization_name,omitempty"`
 }
 
 // Load elige el origen de la configuración:
 //
 //	Desarrollo local (.env.dev + make run): CONFIG_SOURCE=env → solo variables de
 //	entorno (DATABASE_URL, HTTP_PORT, PLAID_CLIENT_ID, SANDBOX_SECRET o PLAID_SECRET,
-//	PLAID_ENV opcional). Se ignora AWS_SECRET_ID aunque exista en el shell (evita mezclar credenciales AWS con .env).
+//	PLAID_ENV y PLAID_LINK_CUSTOMIZATION_NAME opcionales). Se ignora AWS_SECRET_ID aunque exista en el shell (evita mezclar credenciales AWS con .env).
 //
 //	AWS / producción: sin CONFIG_SOURCE=env (o sin definir CONFIG_SOURCE) y con
 //	AWS_SECRET_ID → JSON desde Secrets Manager (database_url, http_port,
-//	plaid_client_id, plaid_secret, plaid_env, …). PLAID_ENV en la Lambda sobrescribe plaid_env del JSON si está definida.
+//	plaid_client_id, plaid_secret, plaid_env, link_customization_name, …). PLAID_ENV y
+//	PLAID_LINK_CUSTOMIZATION_NAME en la Lambda sobrescriben el JSON si están definidos.
 //
 //	Sin AWS_SECRET_ID y sin forzar env: mismo comportamiento que env (útil en CI).
 func Load() (*App, error) {
@@ -92,6 +96,9 @@ func fromEnv() (*App, error) {
 	}
 	if v := strings.TrimSpace(os.Getenv("PLAID_ENV")); v != "" {
 		app.PlaidEnv = v
+	}
+	if v := strings.TrimSpace(os.Getenv("PLAID_LINK_CUSTOMIZATION_NAME")); v != "" {
+		app.PlaidLinkCustomizationName = v
 	}
 	applyPlaidMVPDefaults(app)
 	return app, nil
@@ -134,6 +141,9 @@ func fromSecretsManager(secretID string) (*App, error) {
 	}
 	if v := strings.TrimSpace(os.Getenv("PLAID_ENV")); v != "" {
 		app.PlaidEnv = v
+	}
+	if v := strings.TrimSpace(os.Getenv("PLAID_LINK_CUSTOMIZATION_NAME")); v != "" {
+		app.PlaidLinkCustomizationName = v
 	}
 	applyPlaidMVPDefaults(&app)
 	return &app, nil

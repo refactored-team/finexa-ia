@@ -43,3 +43,18 @@ func TestBuildLinkTokenCreateRequest_invalidProduct(t *testing.T) {
 		t.Fatal("expected error")
 	}
 }
+
+func TestBuildLinkTokenCreateRequest_linkCustomizationName(t *testing.T) {
+	cfg := &config.App{
+		PlaidClientID:              "id",
+		PlaidSecret:                "sec",
+		PlaidLinkCustomizationName: "my_finexa_link",
+	}
+	req, err := plaidclient.BuildLinkTokenCreateRequest(cfg, 1, plaidclient.LinkTokenOverrides{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if req.GetLinkCustomizationName() != "my_finexa_link" {
+		t.Fatalf("link_customization_name: got %q", req.GetLinkCustomizationName())
+	}
+}
