@@ -10,6 +10,30 @@ import (
 	"database/sql"
 )
 
+const deleteUserByID = `-- name: DeleteUserByID :one
+UPDATE users
+SET
+    deleted_at = now(),
+    updated_at = now()
+WHERE id = $1
+  AND deleted_at IS NULL
+RETURNING id, cognito_sub, email, created_at, updated_at, deleted_at
+`
+
+func (q *Queries) DeleteUserByID(ctx context.Context, id int64) (User, error) {
+	row := q.db.QueryRowContext(ctx, deleteUserByID, id)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.CognitoSub,
+		&i.Email,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+	)
+	return i, err
+}
+
 const getUserByCognitoSub = `-- name: GetUserByCognitoSub :one
 SELECT id, cognito_sub, email, created_at, updated_at, deleted_at
 FROM users
@@ -50,6 +74,37 @@ func (q *Queries) GetUserByID(ctx context.Context, id int64) (User, error) {
 	return i, err
 }
 
+const listUsers = `-- name: ListUsers :many
+SELECT id, cognito_sub, email, created_at, updated_at, deleted_at
+FROM users
+WHERE deleted_at IS NULL
+ORDER BY id
+`
+
+func (q *Queries) ListUsers(ctx context.Context) ([]User, error) {
+	rows, err := q.db.QueryContext(ctx, listUsers)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []User
+	for rows.Next() {
+		var i User
+		if err := rows.Scan(
+			&i.ID,
+			&i.CognitoSub,
+			&i.Email,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.DeletedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	return items, rows.Err()
+}
+
 const upsertUserByCognitoSub = `-- name: UpsertUserByCognitoSub :one
 INSERT INTO users (cognito_sub, email)
 VALUES ($1, $2)
@@ -67,6 +122,37 @@ type UpsertUserByCognitoSubParams struct {
 
 func (q *Queries) UpsertUserByCognitoSub(ctx context.Context, arg UpsertUserByCognitoSubParams) (User, error) {
 	row := q.db.QueryRowContext(ctx, upsertUserByCognitoSub, arg.CognitoSub, arg.Email)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.CognitoSub,
+		&i.Email,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+	)
+	return i, err
+}
+
+const updateUserByID = `-- name: UpdateUserByID :one
+UPDATE users
+SET
+    cognito_sub = $1,
+    email = $2,
+    updated_at = now()
+WHERE id = $3
+  AND deleted_at IS NULL
+RETURNING id, cognito_sub, email, created_at, updated_at, deleted_at
+`
+
+type UpdateUserByIDParams struct {
+	CognitoSub string         `json:"cognito_sub"`
+	Email      sql.NullString `json:"email"`
+	ID         int64          `json:"id"`
+}
+
+func (q *Queries) UpdateUserByID(ctx context.Context, arg UpdateUserByIDParams) (User, error) {
+	row := q.db.QueryRowContext(ctx, updateUserByID, arg.CognitoSub, arg.Email, arg.ID)
 	var i User
 	err := row.Scan(
 		&i.ID,

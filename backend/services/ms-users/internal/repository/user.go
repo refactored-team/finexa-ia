@@ -44,6 +44,38 @@ func (r *UserRepository) GetByCognitoSub(ctx context.Context, cognitoSub string)
 	return toModel(u), nil
 }
 
+func (r *UserRepository) List(ctx context.Context) ([]models.User, error) {
+	rows, err := r.q.ListUsers(ctx)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]models.User, len(rows))
+	for i, u := range rows {
+		out[i] = toModel(u)
+	}
+	return out, nil
+}
+
+func (r *UserRepository) UpdateByID(ctx context.Context, id int64, cognitoSub string, email *string) (models.User, error) {
+	u, err := r.q.UpdateUserByID(ctx, sqlcgen.UpdateUserByIDParams{
+		CognitoSub: strings.TrimSpace(cognitoSub),
+		Email:      stringPtrToNull(email),
+		ID:         id,
+	})
+	if err != nil {
+		return models.User{}, err
+	}
+	return toModel(u), nil
+}
+
+func (r *UserRepository) DeleteByID(ctx context.Context, id int64) (models.User, error) {
+	u, err := r.q.DeleteUserByID(ctx, id)
+	if err != nil {
+		return models.User{}, err
+	}
+	return toModel(u), nil
+}
+
 func stringPtrToNull(p *string) sql.NullString {
 	if p == nil {
 		return sql.NullString{}

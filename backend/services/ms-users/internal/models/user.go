@@ -17,8 +17,20 @@ type UpsertUserRequest struct {
 	Email      *string `json:"email,omitempty" example:"jane@example.com"`
 }
 
+// UpdateUserRequest is the JSON body for PUT /v1/users/{id}.
+type UpdateUserRequest struct {
+	CognitoSub string  `json:"cognito_sub" example:"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"`
+	Email      *string `json:"email,omitempty" example:"jane@example.com"`
+}
+
 // UserOKResult is the success envelope for a single user.
 type UserOKResult struct {
 	OK   bool `json:"ok"`
 	Data User `json:"data"`
+}
+
+// UserListOKResult is the success envelope for listing users.
+type UserListOKResult struct {
+	OK   bool   `json:"ok"`
+	Data []User `json:"data"`
 }

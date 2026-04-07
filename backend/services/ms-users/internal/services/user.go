@@ -59,3 +59,38 @@ func (s *UserService) GetByCognitoSub(ctx context.Context, cognitoSub string) (m
 	}
 	return out, nil
 }
+
+func (s *UserService) List(ctx context.Context) ([]models.User, error) {
+	return s.repo.List(ctx)
+}
+
+func (s *UserService) UpdateByID(ctx context.Context, id int64, in models.UpdateUserRequest) (models.User, error) {
+	if id <= 0 {
+		return models.User{}, ErrInvalidUserID
+	}
+	if strings.TrimSpace(in.CognitoSub) == "" {
+		return models.User{}, ErrInvalidUserInput
+	}
+	out, err := s.repo.UpdateByID(ctx, id, in.CognitoSub, in.Email)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return models.User{}, ErrUserNotFound
+		}
+		return models.User{}, err
+	}
+	return out, nil
+}
+
+func (s *UserService) DeleteByID(ctx context.Context, id int64) (models.User, error) {
+	if id <= 0 {
+		return models.User{}, ErrInvalidUserID
+	}
+	out, err := s.repo.DeleteByID(ctx, id)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return models.User{}, ErrUserNotFound
+		}
+		return models.User{}, err
+	}
+	return out, nil
+}
