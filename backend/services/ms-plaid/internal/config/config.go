@@ -12,8 +12,10 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
 )
 
-// MVP: Link en sandbox. Credenciales: PLAID_CLIENT_ID + SANDBOX_SECRET (env) o
+// MVP: credenciales vía PLAID_CLIENT_ID + SANDBOX_SECRET o PLAID_SECRET (env) o
 // plaid_client_id + (plaid_secret o sandbox_secret) en JSON de Secrets Manager.
+// Entorno Plaid: PLAID_ENV (p. ej. sandbox, production) o plaid_env en el JSON; si ambos
+// faltan, el default es sandbox. En production usa el secret de production del dashboard, no el de sandbox.
 var (
 	mvpPlaidEnv                    = "sandbox"
 	mvpPlaidClientName             = "Finexa IA"
@@ -46,12 +48,12 @@ type App struct {
 // Load elige el origen de la configuración:
 //
 //	Desarrollo local (.env.dev + make run): CONFIG_SOURCE=env → solo variables de
-//	entorno (DATABASE_URL, HTTP_PORT, PLAID_CLIENT_ID, SANDBOX_SECRET o PLAID_SECRET). Se ignora
-//	AWS_SECRET_ID aunque exista en el shell (evita mezclar credenciales AWS con .env).
+//	entorno (DATABASE_URL, HTTP_PORT, PLAID_CLIENT_ID, SANDBOX_SECRET o PLAID_SECRET,
+//	PLAID_ENV opcional). Se ignora AWS_SECRET_ID aunque exista en el shell (evita mezclar credenciales AWS con .env).
 //
 //	AWS / producción: sin CONFIG_SOURCE=env (o sin definir CONFIG_SOURCE) y con
 //	AWS_SECRET_ID → JSON desde Secrets Manager (database_url, http_port,
-//	plaid_client_id, plaid_secret, …).
+//	plaid_client_id, plaid_secret, plaid_env, …). PLAID_ENV en la Lambda sobrescribe plaid_env del JSON si está definida.
 //
 //	Sin AWS_SECRET_ID y sin forzar env: mismo comportamiento que env (útil en CI).
 func Load() (*App, error) {
@@ -87,6 +89,9 @@ func fromEnv() (*App, error) {
 		HTTPPathPrefix: strings.TrimSpace(os.Getenv("HTTP_PATH_PREFIX")),
 		PlaidClientID:  strings.TrimSpace(os.Getenv("PLAID_CLIENT_ID")),
 		PlaidSecret:    plaidSecretFromEnv(),
+	}
+	if v := strings.TrimSpace(os.Getenv("PLAID_ENV")); v != "" {
+		app.PlaidEnv = v
 	}
 	applyPlaidMVPDefaults(app)
 	return app, nil
@@ -127,16 +132,22 @@ func fromSecretsManager(secretID string) (*App, error) {
 	if p := strings.TrimSpace(os.Getenv("HTTP_PATH_PREFIX")); p != "" {
 		app.HTTPPathPrefix = p
 	}
+	if v := strings.TrimSpace(os.Getenv("PLAID_ENV")); v != "" {
+		app.PlaidEnv = v
+	}
 	applyPlaidMVPDefaults(&app)
 	return &app, nil
 }
 
-// applyPlaidMVPDefaults fija en código todo lo que no es secreto (Link sandbox).
+// applyPlaidMVPDefaults fija en código valores MVP cuando faltan (nombre del cliente, idioma, etc.).
+// PlaidEnv solo se rellena con sandbox si sigue vacío (tras JSON y/o PLAID_ENV).
 func applyPlaidMVPDefaults(a *App) {
 	if a == nil {
 		return
 	}
-	a.PlaidEnv = mvpPlaidEnv
+	if strings.TrimSpace(a.PlaidEnv) == "" {
+		a.PlaidEnv = mvpPlaidEnv
+	}
 	a.PlaidClientName = mvpPlaidClientName
 	a.PlaidLanguage = mvpPlaidLanguage
 	a.PlaidCountryCodes = mvpPlaidCountryCodes
