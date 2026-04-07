@@ -1,5 +1,6 @@
 # Tests (Go), validación Docker en PR. En push a main: tests primero; build/push/Lambda solo tras
 # aprobación manual (entorno aws-lambda-deploy → Settings → Environments → Required reviewers).
+# workflow_dispatch: reconstruir y subir imágenes a mano (misma rama main).
 # Añadí filas al matrix cuando des un servicio de alta en Terraform (ecr_services + lambda_http_services).
 name: Backend Lambda
 
@@ -14,12 +15,18 @@ on:
     paths:
       - "backend/**"
       - ".github/workflows/backend-lambda.yml"
+  workflow_dispatch:
 
 # Ajustá si tu Terraform usa otros project/environment (debe coincidir con ECR y nombre de Lambda).
 env:
   AWS_REGION: us-east-1
   LAMBDA_PROJECT: finexa-infra
   LAMBDA_ENV: mvp
+
+# Evita dos despliegues simultáneos al mismo ref.
+concurrency:
+  group: backend-lambda-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   test:
@@ -76,7 +83,7 @@ jobs:
   deploy:
     name: Push ECR + Lambda (${{ matrix.service }})
     needs: test
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
     environment: aws-lambda-deploy
     permissions:
@@ -116,8 +123,11 @@ jobs:
           REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           REPO: ${{ env.LAMBDA_PROJECT }}-${{ env.LAMBDA_ENV }}-${{ matrix.service }}
           TAG_SHA: ${{ github.sha }}
+          LAMBDA_NAME: ${{ env.LAMBDA_PROJECT }}-${{ env.LAMBDA_ENV }}-${{ matrix.service }}
         run: |
+          # BUILDKIT_CACHE bust: cada commit genera etiqueta distinta; sin caché persistente en GHA el árbol COPY invalida solo.
           docker build --platform linux/amd64 --provenance=false --sbom=false \
+            --build-arg "GIT_SHA=$TAG_SHA" \
             -f ${{ matrix.dockerfile }} \
             -t "$REGISTRY/$REPO:$TAG_SHA" \
             -t "$REGISTRY/$REPO:latest" \
@@ -125,5 +135,6 @@ jobs:
           docker push "$REGISTRY/$REPO:$TAG_SHA"
           docker push "$REGISTRY/$REPO:latest"
           aws lambda update-function-code \
-            --function-name "$LAMBDA_PROJECT-$LAMBDA_ENV-${{ matrix.service }}" \
+            --function-name "$LAMBDA_NAME" \
             --image-uri "$REGISTRY/$REPO:$TAG_SHA"
+          aws lambda wait function-updated-v2 --function-name "$LAMBDA_NAME"
