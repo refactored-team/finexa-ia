@@ -27,6 +27,15 @@ definitions:
         example: ok
         type: string
     type: object
+  finexa-ia_ms-users_internal_models.UpdateUserRequest:
+    properties:
+      cognito_sub:
+        example: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+        type: string
+      email:
+        example: jane@example.com
+        type: string
+    type: object
   finexa-ia_ms-users_internal_models.UpsertUserRequest:
     properties:
       cognito_sub:
@@ -48,6 +57,15 @@ definitions:
         type: integer
       updated_at:
         type: string
+    type: object
+  finexa-ia_ms-users_internal_models.UserListOKResult:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/finexa-ia_ms-users_internal_models.User'
+        type: array
+      ok:
+        type: boolean
     type: object
   finexa-ia_ms-users_internal_models.UserOKResult:
     properties:
@@ -82,6 +100,21 @@ paths:
       tags:
       - health
   /v1/users:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/finexa-ia_ms-users_internal_models.UserListOKResult'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apiresult.ErrResult'
+      summary: Listar usuarios
+      tags:
+      - users
     post:
       consumes:
       - application/json
@@ -112,6 +145,35 @@ paths:
       tags:
       - users
   /v1/users/{id}:
+    delete:
+      parameters:
+      - description: ID interno
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/finexa-ia_ms-users_internal_models.UserOKResult'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apiresult.ErrResult'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/apiresult.ErrResult'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apiresult.ErrResult'
+      summary: Eliminar usuario por id
+      tags:
+      - users
     get:
       parameters:
       - description: ID interno
@@ -139,6 +201,43 @@ paths:
           schema:
             $ref: '#/definitions/apiresult.ErrResult'
       summary: Obtener usuario por id
+      tags:
+      - users
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID interno
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Cuerpo
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/finexa-ia_ms-users_internal_models.UpdateUserRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/finexa-ia_ms-users_internal_models.UserOKResult'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apiresult.ErrResult'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/apiresult.ErrResult'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apiresult.ErrResult'
+      summary: Actualizar usuario por id
       tags:
       - users
   /v1/users/by-cognito:
