@@ -3,19 +3,19 @@ import { StyleSheet, View } from 'react-native';
 
 import { PrismColors } from '@/constants/theme';
 import { Layout } from '@/constants/uiStyles';
+import CustomBottomBar from '../navigation/CustomBottomBar';
 
 type AuthBackgroundProps = {
   children: ReactNode;
+  /** Muestra la barra de navegación inferior (solo para pantallas con usuario logueado). */
+  showBottomBar?: boolean;
 };
 
-export function AuthBackground({ children }: AuthBackgroundProps) {
-  const p = PrismColors.primary;
-  const s = PrismColors.secondary;
-  const t = PrismColors.tertiary;
-
+export function AuthBackground({ children, showBottomBar = false }: AuthBackgroundProps) {
   return (
     <View style={[Layout.flex1, { backgroundColor: PrismColors.neutral }]}>
       {children}
+      {showBottomBar && <CustomBottomBar />}
     </View>
   );
 }
