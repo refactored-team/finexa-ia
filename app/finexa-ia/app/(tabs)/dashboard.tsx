@@ -115,7 +115,7 @@ export default function DashboardScreen() {
           <View style={styles.wisdomIconWrap}>
             <BookOpen size={14} color="#FFFFFF" />
           </View>
-          <Text style={styles.wisdomTitle}>Finexa Wisdom</Text>
+          <Text style={styles.wisdomTitle}>Sabiduría Finexa</Text>
         </View>
         <Text style={styles.wisdomQuote}>
           "La resiliencia financiera no es cuánto ganas, sino qué tan rápido te recuperas."

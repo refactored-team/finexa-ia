@@ -321,16 +321,16 @@ export default function LinkBankScreen() {
         <View style={styles.footerInfo}>
           <View style={styles.footerRow}>
             <Lock size={12} color="#64748B" />
-            <Text style={styles.footerText}>AES-256 ENCRYPTION</Text>
+            <Text style={styles.footerText}>CIFRADO AES-256</Text>
           </View>
           <View style={styles.footerRow}>
             <ShieldCheck size={12} color="#64748B" />
-            <Text style={styles.footerText}>GDPR COMPLIANT</Text>
+            <Text style={styles.footerText}>CUMPLE GDPR</Text>
           </View>
         </View>
         <View style={[styles.footerRow, { justifyContent: 'center', marginTop: Spacing.sm }]}>
           <ShieldCheck size={12} color="#64748B" />
-          <Text style={styles.footerText}>PLAID CERTIFIED</Text>
+          <Text style={styles.footerText}>CERTIFICADO PLAID</Text>
         </View>
       </ScrollView>
     </AuthBackground>

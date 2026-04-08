@@ -10,25 +10,25 @@ export type NavigationModule = {
 export const NAVIGATION_MODULES: NavigationModule[] = [
   {
     id: 'dashboard',
-    name: 'Dashboard',
+    name: 'Panel',
     route: '/(tabs)/dashboard',
     icon: LayoutDashboard,
   },
   {
     id: 'simulation',
-    name: 'Simulation',
+    name: 'Simulación',
     route: '/(tabs)/simulation',
     icon: BarChart3,
   },
   {
     id: 'wisdom',
-    name: 'Wisdom',
+    name: 'Sabiduría',
     route: '/(tabs)/wisdom',
     icon: BookOpen,
   },
   {
     id: 'vault',
-    name: 'Vault',
+    name: 'Bóveda',
     route: '/(tabs)/vault',
     icon: Wallet,
   },

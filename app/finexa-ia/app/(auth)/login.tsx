@@ -91,7 +91,7 @@ export default function LoginScreen() {
             <AuthCard>
               <View style={styles.sectionHeader}>
                 <View style={styles.headerTextContainer}>
-                  <Text style={TextStyles.screenTitle}>Sign In</Text>
+                  <Text style={TextStyles.screenTitle}>Iniciar Sesión</Text>
                   <Text style={[TextStyles.caption, styles.subtitle]}>
                     Inicia sesión para continuar.
                   </Text>
