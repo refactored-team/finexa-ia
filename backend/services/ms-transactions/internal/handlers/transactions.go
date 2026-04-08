@@ -23,6 +23,7 @@ func NewTransactionsHandler(db *sql.DB) *TransactionsHandler {
 func (h *TransactionsHandler) Register(e *echo.Echo) {
 	g := e.Group("/v1/transactions")
 	g.GET("", h.list)
+	g.POST("/test-bedrock", h.testBedrock)
 }
 
 // list returns recent transactions, optionally filtered by user_id.
@@ -77,4 +78,40 @@ FROM transactions WHERE user_id = $1 ORDER BY posted_at DESC LIMIT 100`
 		out = []models.TransactionListItem{}
 	}
 	return c.JSON(http.StatusOK, out)
+}
+
+// testBedrock is a simple endpoint to test communication with the python ai-pipeline.
+//
+//	@Summary		Probar IA (Bedrock)
+//	@Description	Hace una llamada simple al ai-pipeline (FastAPI) para probar Bedrock
+//	@Tags			ai
+//	@Produce		json
+//	@Success		200	{object}	map[string]interface{}
+//	@Failure		500	{string}	string
+//	@Router			/v1/transactions/test-bedrock [post]
+func (h *TransactionsHandler) testBedrock(c *echo.Context) error {
+	ctx, cancel := context.WithTimeout(c.Request().Context(), 15*time.Second)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, "http://localhost:8000/test-bedrock", nil)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "failed to create request: " + err.Error()})
+	}
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "failed to call ai-pipeline: " + err.Error()})
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return c.JSON(http.StatusInternalServerError, map[string]interface{}{
+			"error":  "ai-pipeline returned non-200 status",
+			"status": resp.StatusCode,
+		})
+	}
+
+	// We use json decode manually
+	return c.Stream(http.StatusOK, "application/json", resp.Body)
 }
