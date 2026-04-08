@@ -1,4 +1,3 @@
-
 # Local dev env files
 .env.dev
 .env.prod
@@ -6,3 +5,19 @@
 .env.vpc
 .env.mvp
 .env
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.venv/
+
+# Go binarios y testing
+bin/
+*.exe
+
+# Logs y AI Pipeline
+ai-pipeline/logs/
+*.log
+backend/ai-log.txt
