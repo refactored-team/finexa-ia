@@ -1,9 +1,8 @@
-import { LinearGradient } from 'expo-linear-gradient';
 import type { ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 
-import { Layout } from '@/constants/uiStyles';
 import { PrismColors } from '@/constants/theme';
+import { Layout } from '@/constants/uiStyles';
 
 type AuthBackgroundProps = {
   children: ReactNode;
@@ -16,27 +15,6 @@ export function AuthBackground({ children }: AuthBackgroundProps) {
 
   return (
     <View style={[Layout.flex1, { backgroundColor: PrismColors.neutral }]}>
-      <LinearGradient
-        colors={[PrismColors.neutral, PrismColors.neutral]}
-        style={StyleSheet.absoluteFill}
-        pointerEvents="none"
-      />
-      <View
-        pointerEvents="none"
-        style={[styles.blob, styles.blobTopLeft, { backgroundColor: `${p}26` }]}
-      />
-      <View
-        pointerEvents="none"
-        style={[styles.blob, styles.blobTopRight, { backgroundColor: `${t}26` }]}
-      />
-      <View
-        pointerEvents="none"
-        style={[styles.blob, styles.blobBottomRight, { backgroundColor: `${s}1F` }]}
-      />
-      <View
-        pointerEvents="none"
-        style={[styles.blob, styles.blobBottomLeft, { backgroundColor: `${p}1A` }]}
-      />
       {children}
     </View>
   );
