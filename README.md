@@ -93,7 +93,9 @@ DB --> L
 
 Sustituir los siguientes archivos en `./docs/` por los diagramas definitivos de la documentación de arquitectura:
 
-![Componentes](./docs/comp.png)
+Diagrama de Componentes
+<img width="351" height="459" alt="compDiagr drawio" src="https://github.com/user-attachments/assets/38173ee5-d1c5-4e00-b44c-8ecaf7b5b154" />
+
 
 ![Despliegue](./docs/deploy.png)
 
