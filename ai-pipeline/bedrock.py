@@ -13,6 +13,7 @@ from __future__ import annotations
 import asyncio
 import functools
 import json
+import os
 import time
 from typing import Any
 
@@ -26,6 +27,8 @@ from pipeline.schemas import BehavioralAnalysisResult, ClassificationBatchResult
 
 logger = get_logger(__name__)
 
+MOCK_BEDROCK = os.getenv("MOCK_BEDROCK", "").lower() in ("1", "true", "yes")
+
 # ─────────────────────────────────────────────────────────────
 # Client singleton
 # ─────────────────────────────────────────────────────────────
@@ -35,6 +38,8 @@ _BEDROCK_CONFIG = BotoConfig(
     retries={"max_attempts": 0, "mode": "standard"},   # reintentos manuales
     read_timeout=60,
     connect_timeout=10,
+
+
 )
 
 _client: boto3.client | None = None
@@ -43,7 +48,12 @@ _client: boto3.client | None = None
 def get_bedrock_client() -> boto3.client:
     global _client
     if _client is None:
-        _client = boto3.client("bedrock-runtime", config=_BEDROCK_CONFIG)
+        # Forzamos la creación de una sesión que busque en el perfil default
+        session = boto3.Session(profile_name="default") # O el nombre de tu perfil
+        _client = session.client(
+            service_name="bedrock-runtime", 
+            config=_BEDROCK_CONFIG
+        )
     return _client
 
 
@@ -62,6 +72,55 @@ MAX_RETRIES = 4
 BASE_DELAY = 1.0   # segundos
 
 
+def _mock_response(body: dict) -> dict:
+    """Devuelve una respuesta falsa válida según el tipo de llamada. Solo en MOCK_BEDROCK=true."""
+    tools = body.get("tools", [])
+    tool_choice = body.get("tool_choice", {})
+    tool_name = tool_choice.get("name", "")
+
+    if tool_name == "submit_classifications":
+        messages = body.get("messages", [])
+        content = messages[0]["content"] if messages else ""
+        # Genera una clasificación heurística genérica para cada tx en el prompt
+        import re
+        ids = re.findall(r'"id"\s*:\s*"([^"]+)"', content)
+        if not ids:
+            ids = ["tx_mock"]
+        classifications = [
+            {
+                "transaction_id": tid,
+                "category": "variable",
+                "confidence": 0.75,
+                "is_ant_expense": False,
+                "reasoning": "Mock: clasificación genérica para pruebas locales",
+            }
+            for tid in ids
+        ]
+        return {"content": [{"type": "tool_use", "name": "submit_classifications",
+                              "input": {"classifications": classifications}}]}
+
+    if tool_name == "submit_behavioral_analysis":
+        return {"content": [{"type": "tool_use", "name": "submit_behavioral_analysis",
+                              "input": {
+                                  "ant_expense_total": 154.0,
+                                  "ant_expense_percentage": 5.2,
+                                  "risk_level": "medio",
+                                  "insights": [
+                                      {
+                                          "title": "Gastos hormiga frecuentes",
+                                          "description": "Se detectaron compras pequeñas y recurrentes en tiendas de conveniencia.",
+                                          "priority": "media",
+                                          "potential_monthly_saving": 450.0,
+                                          "affected_category": "hormiga",
+                                      }
+                                  ],
+                                  "summary": "[MOCK] Perfil de gasto moderado. Ingresos estables con oportunidad de reducir gastos variables.",
+                              }}]}
+
+    # test-bedrock / texto libre / whatif
+    return {"content": [{"type": "text", "text": "Bedrock OK (mock)"}]}
+
+
 async def _invoke_with_retry(body: dict, model_id: str) -> dict:
     """
     Invoca Bedrock con backoff exponencial manual.
@@ -70,14 +129,16 @@ async def _invoke_with_retry(body: dict, model_id: str) -> dict:
     asyncio.sleep() entre reintentos libera el event loop para que
     otras corrutinas puedan avanzar mientras se espera.
     """
-    import os
+    if MOCK_BEDROCK:
+        logger.info("bedrock_mock", extra={"model_id": model_id})
+        return _mock_response(body)
+
     from datetime import datetime
 
     client = get_bedrock_client()
     payload = json.dumps(body)
     loop = asyncio.get_running_loop()
-    
-    # Preparar el directorio de logs
+
     base_dir = os.path.dirname(__file__)
     logs_dir = os.path.join(base_dir, "logs")
     os.makedirs(logs_dir, exist_ok=True)
