@@ -1,40 +1,72 @@
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
-import sys
-import os
-import json
+"""
+Finexa AI Pipeline — Entry point
 
-# Asegurar que el modulo local pipeline este disponible (lo esta ya sea localmente o en Docker)
-from pipeline.bedrock import get_bedrock_client, _invoke_with_retry, MODEL_SONNET
+Swagger UI : /docs
+ReDoc      : /redoc
 
-app = FastAPI(title="Finexa AI Pipeline Test API")
+Todos los endpoints exitosos retornan:
+  { "ok": true, "data": { ... }, "meta": { "elapsed_ms": int, ... } }
 
-@app.get("/")
-def health_check():
-    return {"status": "ok", "service": "ai-pipeline"}
+Todos los errores retornan:
+  { "ok": false, "error": "codigo", "detail": "mensaje" }
+"""
 
-@app.post("/test-bedrock")
-async def test_bedrock():
-    """
-    Very simple test point to check if we can reach Bedrock.
-    "Hi Claude" -> Response
-    """
-    try:
-        body = {
-            "anthropic_version": "bedrock-2023-05-31",
-            "max_tokens": 10000,
-            "temperature": 0.5,
-            "messages": [{"role": "user", "content": "Hi Claude! Please answer with a short greeting message that confirms you are running inside AWS Bedrock."}]
-        }
-        
-        result = await _invoke_with_retry(body, MODEL_SONNET)
-        
-        text = ""
-        for block in result.get("content", []):
-            if block.get("type") == "text":
-                text += block["text"]
-                
-        return {"status": "success", "message": text}
-    except Exception as e:
-        print(f"Error calling Bedrock: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+from fastapi import FastAPI
+
+from pipeline.routes import router
+
+_TAGS: list[dict] = [
+    {
+        "name": "Clasificación",
+        "description": (
+            "**Step A** — Categoriza transacciones con caché → heurísticas → Bedrock. "
+            "Sin análisis conductual ni score de resiliencia."
+        ),
+    },
+    {
+        "name": "Análisis completo",
+        "description": (
+            "**Pipeline completo** (Steps A → B → C → D en paralelo): "
+            "clasificación + insights + resiliencia + cash flow + daily pulse."
+        ),
+    },
+    {
+        "name": "Cash Flow",
+        "description": (
+            "**Radar financiero** — Gastos recurrentes, proyección de liquidez 30 días, "
+            "alertas de Día de Riesgo y detección de gastos impulsivos. Más rápido que `/analyze`."
+        ),
+    },
+    {
+        "name": "Simulador",
+        "description": (
+            "**What-If** — Simula cómo cambia el Score de Resiliencia al modificar "
+            "hábitos de gasto o ingresos."
+        ),
+    },
+    {
+        "name": "Sistema",
+        "description": "Health check y prueba de conectividad con AWS Bedrock.",
+    },
+]
+
+app = FastAPI(
+    title="Finexa AI Pipeline",
+    description=(
+        "API de inteligencia artificial para análisis financiero personal.\n\n"
+        "Acepta transacciones en **formato Plaid** y produce:\n"
+        "- Clasificación por categoría Finexa\n"
+        "- Análisis conductual e insights accionables\n"
+        "- Score de Resiliencia Financiera (0–100) con explicación LLM\n"
+        "- Proyección de cash flow y alertas de liquidez\n"
+        "- Simulaciones hipotéticas (What-If)\n\n"
+        "**Formato de respuesta estándar:**\n"
+        "```json\n"
+        '{ "ok": true, "data": { ... }, "meta": { "elapsed_ms": 450 } }\n'
+        "```"
+    ),
+    version="1.0.0",
+    openapi_tags=_TAGS,
+)
+
+app.include_router(router)
