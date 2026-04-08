@@ -9,3 +9,6 @@ CREATE TABLE users (
 );
 
 CREATE INDEX idx_users_cognito_sub ON users USING btree (cognito_sub);
+
+CREATE INDEX idx_users_email_lower ON users (lower(btrim(email)))
+WHERE email IS NOT NULL AND btrim(email) <> '';
