@@ -94,11 +94,86 @@ DB --> L
 Sustituir los siguientes archivos en `./docs/` por los diagramas definitivos de la documentación de arquitectura:
 
 Diagrama de Componentes
-<img width="351" height="459" alt="compDiagr drawio" src="https://github.com/user-attachments/assets/38173ee5-d1c5-4e00-b44c-8ecaf7b5b154" />
+- <img width="351" height="459" alt="compDiagr drawio" src="https://github.com/user-attachments/assets/38173ee5-d1c5-4e00-b44c-8ecaf7b5b154" />
 
 
-![Despliegue](./docs/deploy.png)
+Diagramas de despliegue
+```mermaid
+flowchart TB
+  subgraph host [HostDevOrServer]
+    subgraph processLayer [ProcessLayer]
+      pUsers[Process ms-users :8081]
+      pPlaid[Process ms-plaid :8080]
+      pTx[Process ms-transactions :8082]
+    end
 
+    subgraph dataLayer [DataLayer]
+      db[(Docker postgres:16\nport 5432\nDB finexa)]
+      vol[(Volume postgres_data)]
+    end
+
+    pUsers -->|DATABASE_URL| db
+    pPlaid -->|DATABASE_URL| db
+    pTx -->|DATABASE_URL| db
+    db --- vol
+  end
+
+  extClient[MobileWebClientOrGateway] -->|HTTP| pUsers
+  extClient -->|HTTP| pPlaid
+  extClient -->|HTTP| pTx
+```
+
+Diagrama de despliegue (AWS + Cognito)
+rutas con prefijo tipo `/ms-users` detrás de API Gateway, configuración vía **Secrets Manager** cuando `AWS_SECRET_ID` está definido, y usuarios canónicos por **sub** de Cognito en Postgres.
+
+```mermaid
+flowchart TB
+  subgraph users [Usuarios]
+    app[App movil o web]
+  end
+
+  subgraph aws [AWS Cloud]
+    cognito[Amazon Cognito User Pool]
+    apig[API Gateway HTTP o REST]
+
+    subgraph compute [Microservicios ECS Fargate App Runner Lambda u otro]
+      svcUsers[ms-users]
+      svcPlaid[ms-plaid]
+      svcTx[ms-transactions]
+    end
+
+    sm[Secrets Manager]
+    rds[(RDS PostgreSQL BD compartida)]
+
+    subgraph iam [IAM]
+      taskRole[Roles ejecucion GetSecretValue RDS logs]
+    end
+  end
+
+  plaid[Plaid API]
+
+  app -->|Sign-in tokens| cognito
+  apig -.->|Authorizer JWT opcional| cognito
+
+  app -->|HTTPS Bearer JWT| apig
+  apig -->|HTTP_PATH_PREFIX| svcUsers
+  apig --> svcPlaid
+  apig --> svcTx
+
+  svcUsers -->|DATABASE_URL| rds
+  svcPlaid -->|DATABASE_URL| rds
+  svcTx -->|DATABASE_URL| rds
+
+  svcUsers -->|AWS_SECRET_ID| sm
+  svcPlaid --> sm
+  svcTx --> sm
+
+  taskRole -.-> svcUsers
+  taskRole -.-> svcPlaid
+  taskRole -.-> svcTx
+
+  svcPlaid -->|HTTPS| plaid
+```
 ---
 
 <p align="center">
