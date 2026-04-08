@@ -92,7 +92,7 @@ Reglas:
 - Los insights deben ser específicos y accionables — no consejos genéricos.
 - Usa lenguaje coloquial y empático. Sin jerga financiera.
 - Contexto latinoamericano: montos en MXN, servicios locales (OXXO, CFE, Telcel, etc.).
-- Máximo 5 insights, ordenados por impacto potencial.
+- Máximo 3 insights, ordenados por impacto potencial, de mayor prioridad a menor.
 - Todos los valores monetarios deben estar en MXN.
 - El campo `potential_monthly_saving` debe derivarse de los datos reales del usuario.
 """
