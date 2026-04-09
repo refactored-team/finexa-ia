@@ -27,7 +27,7 @@ from pipeline.schemas import BehavioralAnalysisResult, ClassificationBatchResult
 
 logger = get_logger(__name__)
 
-MOCK_BEDROCK = os.getenv("MOCK_BEDROCK", "").lower() in ("1", "true", "yes")
+MOCK_BEDROCK = False
 
 # ─────────────────────────────────────────────────────────────
 # Client singleton
@@ -48,12 +48,7 @@ _client: boto3.client | None = None
 def get_bedrock_client() -> boto3.client:
     global _client
     if _client is None:
-        # Forzamos la creación de una sesión que busque en el perfil default
-        session = boto3.Session(profile_name="default") # O el nombre de tu perfil
-        _client = session.client(
-            service_name="bedrock-runtime", 
-            config=_BEDROCK_CONFIG
-        )
+        _client = boto3.client('bedrock-runtime', region_name='us-east-1')
     return _client
 
 
