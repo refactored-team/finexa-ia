@@ -1,0 +1,24 @@
+FROM public.ecr.aws/awsguru/aws-lambda-adapter:0.8.4 AS adapter
+
+FROM python:3.11-slim
+
+WORKDIR /app
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY . /app/pipeline/
+COPY --from=adapter /lambda-adapter /opt/extensions/lambda-adapter
+
+ENV PORT=8080
+ENV AWS_LWA_PORT=8080
+ENV READINESS_CHECK_PATH=/health
+ENV AWS_LWA_READINESS_CHECK_PATH=/health
+ENV REMOVE_BASE_PATH=/ai-pipeline
+ENV AWS_LWA_REMOVE_BASE_PATH=/ai-pipeline
+ENV ASYNC_INIT=true
+ENV AWS_LWA_ASYNC_INIT=true
+
+EXPOSE 8080
+
+CMD ["uvicorn", "pipeline.main:app", "--host", "0.0.0.0", "--port", "8080"]

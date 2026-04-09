@@ -128,6 +128,37 @@ resource "aws_iam_role_policy" "lambda_microservices_secret_read" {
   policy = data.aws_iam_policy_document.lambda_microservices_secret[0].json
 }
 
+# IAM for ai-pipeline model calls (Bedrock + SageMaker runtime endpoint).
+data "aws_iam_policy_document" "lambda_ai_model_invoke" {
+  count = length(module.http_api) > 0 ? 1 : 0
+
+  statement {
+    sid    = "InvokeBedrockModels"
+    effect = "Allow"
+    actions = [
+      "bedrock:InvokeModel",
+      "bedrock:InvokeModelWithResponseStream",
+    ]
+    resources = ["*"]
+  }
+
+  statement {
+    sid    = "InvokeSageMakerEndpoints"
+    effect = "Allow"
+    actions = [
+      "sagemaker:InvokeEndpoint",
+    ]
+    resources = ["*"]
+  }
+}
+
+resource "aws_iam_role_policy" "lambda_ai_model_invoke" {
+  count  = length(module.http_api) > 0 ? 1 : 0
+  name   = "ai-model-invoke"
+  role   = module.http_api[0].lambda_execution_role_name
+  policy = data.aws_iam_policy_document.lambda_ai_model_invoke[0].json
+}
+
 module "cloudwatch_http_api" {
   source = "../../modules/cloudwatch-http-api"
   count  = var.enable_cloudwatch_alarms && length(module.http_api) > 0 ? 1 : 0
