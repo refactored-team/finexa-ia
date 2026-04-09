@@ -22,22 +22,26 @@ Las variables **`enable_http_api`**, **`lambda_http_services`**, **`lambda_attac
 flowchart LR
   subgraph edge [Edge]
     APIGW[API_Gateway_HTTP]
+    JWT[JWT_authorizer]
   end
   subgraph compute [Compute]
     L[Lambda_containers]
   end
   subgraph data [Data_and_auth]
-    COG[Cognito]
+    COG[Cognito_issuer]
     ECR[ECR]
     SM[Secrets_Manager]
     RDS[RDS_Postgres_opcional]
   end
+  APIGW --> JWT
+  JWT -.->|issuer_audience| COG
   APIGW --> L
-  L --> ECR
-  COG --> APIGW
+  ECR -.->|image_uri| L
   SM --> L
   RDS -.->|si_Lambda_en_VPC| L
 ```
+
+_Rutas `GET {prefijo}/health` sin JWT; rutas bajo `ANY {prefijo}/{proxy+}` con JWT (Cognito)._
 
 ## Prerrequisitos
 

@@ -89,42 +89,84 @@ SM --> L
 DB --> L
 ```
 
-### Diagramas (assets)
+_En API Gateway (MVP): `GET {prefijo}/health` es público; las rutas `ANY {prefijo}/{proxy+}` usan **authorizer JWT** (issuer de Cognito, audience del app client)._
 
-Sustituir los siguientes archivos en `./docs/` por los diagramas definitivos de la documentación de arquitectura:
+### Diagrama de componentes (referencia)
 
-Diagrama de Componentes
-- <img width="351" height="459" alt="compDiagr drawio" src="https://github.com/user-attachments/assets/38173ee5-d1c5-4e00-b44c-8ecaf7b5b154" />
-
-
-Diagramas de despliegue
 ```mermaid
 flowchart TB
-  subgraph host [HostDevOrServer]
-    subgraph processLayer [ProcessLayer]
-      pUsers[Process ms-users :8081]
-      pPlaid[Process ms-plaid :8080]
-      pTx[Process ms-transactions :8082]
+  subgraph client [Cliente]
+    App[Expo + Amplify]
+  end
+  subgraph aws [AWS MVP]
+    COG[Cognito User Pool]
+    APIGW[API Gateway HTTP v2]
+    JWT[JWT authorizer]
+    subgraph lambdas [Lambda por servicio imagen ECR]
+      U[ms-users]
+      P[ms-plaid]
+      T[ms-transactions]
     end
+    SM[Secrets Manager]
+    RDS[(RDS PostgreSQL)]
+    ECR[ECR]
+  end
+  Plaid[Plaid API]
+  App -->|OIDC| COG
+  App -->|HTTPS Bearer| APIGW
+  APIGW --> JWT
+  JWT -.->|issuer audience| COG
+  APIGW --> U
+  APIGW --> P
+  APIGW --> T
+  ECR -.->|despliegue| U
+  ECR -.->|despliegue| P
+  ECR -.->|despliegue| T
+  U --> RDS
+  P --> RDS
+  T --> RDS
+  U --> SM
+  P --> SM
+  T --> SM
+  P -->|HTTPS| Plaid
+```
 
-    subgraph dataLayer [DataLayer]
-      db[(Docker postgres:16\nport 5432\nDB finexa)]
+_La capa **ai-pipeline** (FastAPI local, ver `backend/docker-compose.yml`) no está desplegada en el MVP Terraform; es desarrollo y experimentación._
+
+### Despliegue local (Docker + procesos Go)
+
+`docker compose` levanta Postgres y, opcionalmente, **ai-pipeline**; los microservicios Go se arrancan con `make run SVC=...` y leen `.env` por servicio ([`backend/docker-compose.yml`](backend/docker-compose.yml)).
+
+```mermaid
+flowchart TB
+  subgraph host [Desarrollo local]
+    subgraph compose [Docker Compose]
+      db[(postgres:16-alpine puerto 5432 DB finexa)]
       vol[(Volume postgres_data)]
+      ai[ai-pipeline FastAPI puerto 8000]
     end
-
+    subgraph processLayer [Procesos ms-users ms-plaid ms-transactions]
+      pUsers[ms-users]
+      pPlaid[ms-plaid]
+      pTx[ms-transactions]
+    end
+    db --- vol
     pUsers -->|DATABASE_URL| db
     pPlaid -->|DATABASE_URL| db
     pTx -->|DATABASE_URL| db
-    db --- vol
   end
 
-  extClient[MobileWebClientOrGateway] -->|HTTP| pUsers
+  extClient[Cliente Postman o app] -->|HTTP| pUsers
   extClient -->|HTTP| pPlaid
   extClient -->|HTTP| pTx
+  extClient -.->|opcional dev| ai
 ```
 
-Diagrama de despliegue (AWS + Cognito)
-rutas con prefijo tipo `/ms-users` detrás de API Gateway, configuración vía **Secrets Manager** cuando `AWS_SECRET_ID` está definido, y usuarios canónicos por **sub** de Cognito en Postgres.
+Por defecto cada servicio escucha en **8080**; para ejecutar **varios a la vez**, define **`HTTP_PORT`** distinto en el `.env` de cada uno (por ejemplo 8080, 8081, 8082). **ai-pipeline** no sustituye a los `ms-*` en el flujo móvil salvo que el cliente apunte explícitamente a ese host.
+
+### Despliegue AWS + Cognito (MVP)
+
+Rutas con prefijo `/ms-users`, `/ms-plaid`, `/ms-transactions` detrás de API Gateway; secretos vía **Secrets Manager** cuando `AWS_SECRET_ID` / `MICROSERVICES_SECRET_ARN` está definido; usuarios canónicos por **sub** de Cognito en Postgres.
 
 ```mermaid
 flowchart TB
@@ -134,9 +176,11 @@ flowchart TB
 
   subgraph aws [AWS Cloud]
     cognito[Amazon Cognito User Pool]
-    apig[API Gateway HTTP o REST]
+    apig[API Gateway HTTP v2]
+    jwt[JWT authorizer Cognito]
+    ecr[ECR]
 
-    subgraph compute [Microservicios ECS Fargate App Runner Lambda u otro]
+    subgraph lambdaFns [Lambda contenedor desde ECR]
       svcUsers[ms-users]
       svcPlaid[ms-plaid]
       svcTx[ms-transactions]
@@ -146,19 +190,24 @@ flowchart TB
     rds[(RDS PostgreSQL BD compartida)]
 
     subgraph iam [IAM]
-      taskRole[Roles ejecucion GetSecretValue RDS logs]
+      lambdaRole[Rol ejecucion Lambda VPC logs GetSecretValue]
     end
   end
 
   plaid[Plaid API]
 
-  app -->|Sign-in tokens| cognito
-  apig -.->|Authorizer JWT opcional| cognito
-
+  app -->|sign-in OIDC| cognito
   app -->|HTTPS Bearer JWT| apig
-  apig -->|HTTP_PATH_PREFIX| svcUsers
+  apig --> jwt
+  jwt -.->|issuer y audience| cognito
+
+  apig --> svcUsers
   apig --> svcPlaid
   apig --> svcTx
+
+  ecr -.->|image_uri| svcUsers
+  ecr -.->|image_uri| svcPlaid
+  ecr -.->|image_uri| svcTx
 
   svcUsers -->|DATABASE_URL| rds
   svcPlaid -->|DATABASE_URL| rds
@@ -168,9 +217,9 @@ flowchart TB
   svcPlaid --> sm
   svcTx --> sm
 
-  taskRole -.-> svcUsers
-  taskRole -.-> svcPlaid
-  taskRole -.-> svcTx
+  lambdaRole -.-> svcUsers
+  lambdaRole -.-> svcPlaid
+  lambdaRole -.-> svcTx
 
   svcPlaid -->|HTTPS| plaid
 ```
@@ -320,6 +369,7 @@ Variables típicas: `AWS_REGION`, `LAMBDA_PROJECT`, `LAMBDA_ENV`, `TAG_SHA` (ver
 ```
 finexa-ia/
 ├── app/finexa-ia/          # Cliente Expo / React Native
+├── ai-pipeline/            # FastAPI (dev / experimentación; ver docker-compose en backend)
 ├── backend/
 │   ├── pkg/apiresult/      # Utilidades HTTP compartidas
 │   ├── services/
@@ -330,7 +380,7 @@ finexa-ia/
 │   └── Makefile
 ├── infra/                  # Terraform (MVP)
 ├── models/                 # Scripts Python (datos / sandbox)
-└── docs/                   # Team Refactor, sdg-ods-logo.png, diagramas comp.png / deploy.png
+└── docs/                   # Logos, vista-logica.svg, assets de marca
 ```
 
 ---
