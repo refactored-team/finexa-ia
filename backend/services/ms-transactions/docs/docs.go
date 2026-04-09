@@ -41,17 +41,24 @@ const docTemplate = `{
                 }
             }
         },
-        "/v1/transactions": {
+        "/v1/users/{userId}/transactions": {
             "get": {
-                "description": "Listado paginado por usuario autenticado. Soporta filtros por rango de fecha y categoría. Excluye borradas lógicas por defecto.",
+                "description": "Listado paginado por userId en path. Soporta filtros por rango de fecha y categoría. Excluye borradas lógicas por defecto.",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
                     "transactions"
                 ],
-                "summary": "Listar transacciones del usuario autenticado",
+                "summary": "Listar transacciones por usuario",
                 "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID interno de usuario",
+                        "name": "userId",
+                        "in": "path",
+                        "required": true
+                    },
                     {
                         "type": "integer",
                         "description": "Tamaño de página (default 50, max 200)",
@@ -96,12 +103,6 @@ const docTemplate = `{
                             "$ref": "#/definitions/apiresult.ErrResult"
                         }
                     },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/apiresult.ErrResult"
-                        }
-                    },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
@@ -111,7 +112,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/v1/transactions/analysis/latest": {
+        "/v1/users/{userId}/transactions/analysis/latest": {
             "get": {
                 "produces": [
                     "application/json"
@@ -120,6 +121,15 @@ const docTemplate = `{
                     "analysis"
                 ],
                 "summary": "Último análisis agregado",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID interno de usuario",
+                        "name": "userId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -127,8 +137,8 @@ const docTemplate = `{
                             "$ref": "#/definitions/apiresult.okEnvelope-finexa-ia_ms-transactions_internal_models_TransactionAnalysis"
                         }
                     },
-                    "401": {
-                        "description": "Unauthorized",
+                    "400": {
+                        "description": "Bad Request",
                         "schema": {
                             "$ref": "#/definitions/apiresult.ErrResult"
                         }
@@ -148,7 +158,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/v1/transactions/by-transaction-id/{transaction_id}": {
+        "/v1/users/{userId}/transactions/by-transaction-id/{transaction_id}": {
             "get": {
                 "description": "Obtiene una transacción por transaction_id, aislada por usuario autenticado y excluyendo borradas lógicas.",
                 "produces": [
@@ -159,6 +169,13 @@ const docTemplate = `{
                 ],
                 "summary": "Detalle por transaction_id",
                 "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID interno de usuario",
+                        "name": "userId",
+                        "in": "path",
+                        "required": true
+                    },
                     {
                         "type": "string",
                         "description": "transaction_id externo",
@@ -180,12 +197,6 @@ const docTemplate = `{
                             "$ref": "#/definitions/apiresult.ErrResult"
                         }
                     },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/apiresult.ErrResult"
-                        }
-                    },
                     "404": {
                         "description": "Not Found",
                         "schema": {
@@ -201,7 +212,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/v1/transactions/cash-flow/latest": {
+        "/v1/users/{userId}/transactions/cash-flow/latest": {
             "get": {
                 "produces": [
                     "application/json"
@@ -210,6 +221,15 @@ const docTemplate = `{
                     "cashflow"
                 ],
                 "summary": "Último cash flow",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID interno de usuario",
+                        "name": "userId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -217,8 +237,8 @@ const docTemplate = `{
                             "$ref": "#/definitions/apiresult.okEnvelope-finexa-ia_ms-transactions_internal_models_CashFlow"
                         }
                     },
-                    "401": {
-                        "description": "Unauthorized",
+                    "400": {
+                        "description": "Bad Request",
                         "schema": {
                             "$ref": "#/definitions/apiresult.ErrResult"
                         }
@@ -238,7 +258,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/v1/transactions/insights": {
+        "/v1/users/{userId}/transactions/insights": {
             "get": {
                 "produces": [
                     "application/json"
@@ -248,6 +268,13 @@ const docTemplate = `{
                 ],
                 "summary": "Listar insights",
                 "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID interno de usuario",
+                        "name": "userId",
+                        "in": "path",
+                        "required": true
+                    },
                     {
                         "type": "integer",
                         "description": "Tamaño de página (default 50, max 200)",
@@ -274,12 +301,6 @@ const docTemplate = `{
                             "$ref": "#/definitions/apiresult.ErrResult"
                         }
                     },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/apiresult.ErrResult"
-                        }
-                    },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
@@ -289,7 +310,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/v1/transactions/pulse/latest": {
+        "/v1/users/{userId}/transactions/pulse/latest": {
             "get": {
                 "produces": [
                     "application/json"
@@ -298,6 +319,15 @@ const docTemplate = `{
                     "pulse"
                 ],
                 "summary": "Último pulse",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID interno de usuario",
+                        "name": "userId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -305,8 +335,8 @@ const docTemplate = `{
                             "$ref": "#/definitions/apiresult.okEnvelope-finexa-ia_ms-transactions_internal_models_Pulse"
                         }
                     },
-                    "401": {
-                        "description": "Unauthorized",
+                    "400": {
+                        "description": "Bad Request",
                         "schema": {
                             "$ref": "#/definitions/apiresult.ErrResult"
                         }
@@ -326,7 +356,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/v1/transactions/resilience-factors": {
+        "/v1/users/{userId}/transactions/resilience-factors": {
             "get": {
                 "produces": [
                     "application/json"
@@ -335,6 +365,15 @@ const docTemplate = `{
                     "resilience"
                 ],
                 "summary": "Listar factores de resiliencia",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID interno de usuario",
+                        "name": "userId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -342,8 +381,8 @@ const docTemplate = `{
                             "$ref": "#/definitions/apiresult.okEnvelope-array_finexa-ia_ms-transactions_internal_models_ResilienceFactor"
                         }
                     },
-                    "401": {
-                        "description": "Unauthorized",
+                    "400": {
+                        "description": "Bad Request",
                         "schema": {
                             "$ref": "#/definitions/apiresult.ErrResult"
                         }
@@ -357,7 +396,71 @@ const docTemplate = `{
                 }
             }
         },
-        "/v1/transactions/test-bedrock": {
+        "/v1/users/{userId}/transactions/sync-and-analyze": {
+            "post": {
+                "description": "Obtiene transacciones del usuario desde Plaid, llama ai-pipeline /analyze y persiste resultados core + meta.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "transactions"
+                ],
+                "summary": "Sincronizar Plaid + analizar + persistir",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID interno de usuario",
+                        "name": "userId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Opcionales para /analyze (user_profile, saldo_actual, liquidez_threshold)",
+                        "name": "body",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/finexa-ia_ms-transactions_internal_models.SyncAnalyzeRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/apiresult.okEnvelope-finexa-ia_ms-transactions_internal_models_SyncAnalyzeResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apiresult.ErrResult"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apiresult.ErrResult"
+                        }
+                    },
+                    "502": {
+                        "description": "Bad Gateway",
+                        "schema": {
+                            "$ref": "#/definitions/apiresult.ErrResult"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/apiresult.ErrResult"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/users/{userId}/transactions/test-bedrock": {
             "post": {
                 "description": "Hace una llamada simple al ai-pipeline (FastAPI) para probar Bedrock",
                 "produces": [
@@ -367,12 +470,27 @@ const docTemplate = `{
                     "ai"
                 ],
                 "summary": "Probar IA (Bedrock)",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID interno de usuario",
+                        "name": "userId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apiresult.ErrResult"
                         }
                     },
                     "500": {
@@ -384,7 +502,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/v1/transactions/{id}": {
+        "/v1/users/{userId}/transactions/{id}": {
             "get": {
                 "description": "Obtiene una transacción por id interno, aislada por usuario autenticado y excluyendo borradas lógicas.",
                 "produces": [
@@ -395,6 +513,13 @@ const docTemplate = `{
                 ],
                 "summary": "Detalle por id interno",
                 "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID interno de usuario",
+                        "name": "userId",
+                        "in": "path",
+                        "required": true
+                    },
                     {
                         "type": "integer",
                         "description": "ID interno",
@@ -412,12 +537,6 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/apiresult.ErrResult"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
                         "schema": {
                             "$ref": "#/definitions/apiresult.ErrResult"
                         }
@@ -529,6 +648,17 @@ const docTemplate = `{
                 }
             }
         },
+        "apiresult.okEnvelope-finexa-ia_ms-transactions_internal_models_SyncAnalyzeResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/finexa-ia_ms-transactions_internal_models.SyncAnalyzeResponse"
+                },
+                "ok": {
+                    "type": "boolean"
+                }
+            }
+        },
         "apiresult.okEnvelope-finexa-ia_ms-transactions_internal_models_TransactionAnalysis": {
             "type": "object",
             "properties": {
@@ -616,6 +746,32 @@ const docTemplate = `{
                 }
             }
         },
+        "finexa-ia_ms-transactions_internal_models.PersistCounts": {
+            "type": "object",
+            "properties": {
+                "analysis_snapshots": {
+                    "type": "integer"
+                },
+                "cash_flow_snapshots": {
+                    "type": "integer"
+                },
+                "insights": {
+                    "type": "integer"
+                },
+                "pulse_snapshots": {
+                    "type": "integer"
+                },
+                "resilience_factors": {
+                    "type": "integer"
+                },
+                "resilience_snapshot": {
+                    "type": "integer"
+                },
+                "transactions": {
+                    "type": "integer"
+                }
+            }
+        },
         "finexa-ia_ms-transactions_internal_models.Pulse": {
             "type": "object",
             "properties": {
@@ -675,6 +831,41 @@ const docTemplate = `{
                 },
                 "updated_at": {
                     "type": "string"
+                }
+            }
+        },
+        "finexa-ia_ms-transactions_internal_models.SyncAnalyzeRequest": {
+            "type": "object",
+            "properties": {
+                "liquidez_threshold": {
+                    "type": "number"
+                },
+                "saldo_actual": {
+                    "type": "number"
+                },
+                "user_profile": {
+                    "type": "object",
+                    "additionalProperties": {}
+                }
+            }
+        },
+        "finexa-ia_ms-transactions_internal_models.SyncAnalyzeResponse": {
+            "type": "object",
+            "properties": {
+                "classified_count": {
+                    "type": "integer"
+                },
+                "parse_errors": {
+                    "type": "integer"
+                },
+                "persisted_entities": {
+                    "$ref": "#/definitions/finexa-ia_ms-transactions_internal_models.PersistCounts"
+                },
+                "run_id": {
+                    "type": "integer"
+                },
+                "synced_count": {
+                    "type": "integer"
                 }
             }
         },

@@ -1,4 +1,4 @@
-// Microservicio de transacciones; API /v1/transactions. Misma BD que ms-users/ms-plaid (FK a users).
+// Microservicio de transacciones; API /v1/users/:userId/transactions. Misma BD que ms-users/ms-plaid (FK a users).
 //
 //	@title			ms-transactions API
 //	@version		1.0.0
