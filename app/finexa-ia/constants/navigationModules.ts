@@ -1,4 +1,4 @@
-import { BarChart3, BookOpen, Landmark, LayoutDashboard, LucideIcon } from './lucideIcons';
+import { BarChart3, BookOpen, Compass, Landmark, LayoutDashboard, LucideIcon } from './lucideIcons';
 
 export type NavigationModule = {
   id: string;
@@ -13,6 +13,12 @@ export const NAVIGATION_MODULES: NavigationModule[] = [
     name: 'Panel',
     route: '/(tabs)/dashboard',
     icon: LayoutDashboard,
+  },
+  {
+    id: 'horizon',
+    name: 'Horizonte',
+    route: '/(tabs)/horizon',
+    icon: Compass,
   },
   {
     id: 'link-bank',
