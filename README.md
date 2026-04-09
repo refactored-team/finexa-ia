@@ -106,6 +106,7 @@ flowchart TB
       U[ms-users]
       P[ms-plaid]
       T[ms-transactions]
+      A[ai-pipeline]
     end
     SM[Secrets Manager]
     RDS[(RDS PostgreSQL)]
@@ -119,19 +120,22 @@ flowchart TB
   APIGW --> U
   APIGW --> P
   APIGW --> T
+  APIGW --> A
   ECR -.->|despliegue| U
   ECR -.->|despliegue| P
   ECR -.->|despliegue| T
+  ECR -.->|despliegue| A
   U --> RDS
   P --> RDS
   T --> RDS
   U --> SM
   P --> SM
   T --> SM
+  A --> SM
   P -->|HTTPS| Plaid
 ```
 
-_La capa **ai-pipeline** (FastAPI local, ver `backend/docker-compose.yml`) no está desplegada en el MVP Terraform; es desarrollo y experimentación._
+_La capa **ai-pipeline** ya puede desplegarse como Lambda HTTP detrás de API Gateway (`/ai-pipeline`) y mantener ejecución local para desarrollo en Docker Compose._
 
 ### Despliegue local (Docker + procesos Go)
 
@@ -166,7 +170,7 @@ Por defecto cada servicio escucha en **8080**; para ejecutar **varios a la vez**
 
 ### Despliegue AWS + Cognito (MVP)
 
-Rutas con prefijo `/ms-users`, `/ms-plaid`, `/ms-transactions` detrás de API Gateway; secretos vía **Secrets Manager** cuando `AWS_SECRET_ID` / `MICROSERVICES_SECRET_ARN` está definido; usuarios canónicos por **sub** de Cognito en Postgres.
+Rutas con prefijo `/ms-users`, `/ms-plaid`, `/ms-transactions` y `/ai-pipeline` detrás de API Gateway; secretos vía **Secrets Manager** cuando `AWS_SECRET_ID` / `MICROSERVICES_SECRET_ARN` está definido; usuarios canónicos por **sub** de Cognito en Postgres.
 
 ```mermaid
 flowchart TB
@@ -184,6 +188,7 @@ flowchart TB
       svcUsers[ms-users]
       svcPlaid[ms-plaid]
       svcTx[ms-transactions]
+      svcAi[ai-pipeline]
     end
 
     sm[Secrets Manager]
@@ -204,10 +209,12 @@ flowchart TB
   apig --> svcUsers
   apig --> svcPlaid
   apig --> svcTx
+  apig --> svcAi
 
   ecr -.->|image_uri| svcUsers
   ecr -.->|image_uri| svcPlaid
   ecr -.->|image_uri| svcTx
+  ecr -.->|image_uri| svcAi
 
   svcUsers -->|DATABASE_URL| rds
   svcPlaid -->|DATABASE_URL| rds
@@ -216,13 +223,18 @@ flowchart TB
   svcUsers -->|AWS_SECRET_ID| sm
   svcPlaid --> sm
   svcTx --> sm
+  svcAi --> sm
 
   lambdaRole -.-> svcUsers
   lambdaRole -.-> svcPlaid
   lambdaRole -.-> svcTx
+  lambdaRole -.-> svcAi
 
   svcPlaid -->|HTTPS| plaid
 ```
+
+Healthcheck público recomendado para smoke test:
+- `GET /ai-pipeline/health`
 ---
 
 <p align="center">
@@ -294,7 +306,7 @@ Este diseño permite sincronizar y consultar datos financieros con latencia acot
 ### IA (visión vs. implementación actual)
 
 - **Visión de producto:** modelos y reglas que enriquecen transacciones crudas con **detección de gastos hormiga**, picos emocionales de gasto y recomendaciones contextualizadas — orientadas a **baja latencia percibida** en la app y a escalabilidad en la nube.
-- **Repositorio hoy:** la carpeta [`models/`](models/) contiene **scripts Python** para generación y limpieza de datos en sandbox (por ejemplo, poblar transacciones de prueba vía API Plaid). **No** hay en este repositorio un servicio de inferencia desplegado en **Amazon SageMaker** ni invocaciones a **Amazon Bedrock** en el código backend analizado; la arquitectura Lambda + API Gateway está **preparada** para integrar una capa de inferencia (HTTP interno, cola o función dedicada) sin rediseñar el cliente móvil.
+- **Repositorio hoy:** `ai-pipeline` expone API FastAPI para clasificación/análisis y puede correr tanto local como en Lambda HTTP (`/ai-pipeline`). Las invocaciones a **Amazon Bedrock** y **SageMaker Runtime** viven en esa capa Python y dependen de permisos IAM del rol de Lambda.
 
 ---
 
@@ -369,7 +381,7 @@ Variables típicas: `AWS_REGION`, `LAMBDA_PROJECT`, `LAMBDA_ENV`, `TAG_SHA` (ver
 ```
 finexa-ia/
 ├── app/finexa-ia/          # Cliente Expo / React Native
-├── ai-pipeline/            # FastAPI (dev / experimentación; ver docker-compose en backend)
+├── ai-pipeline/            # FastAPI (local + despliegue Lambda HTTP en AWS)
 ├── backend/
 │   ├── pkg/apiresult/      # Utilidades HTTP compartidas
 │   ├── services/
