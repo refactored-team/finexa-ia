@@ -3,24 +3,31 @@ package handlers
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"net/http"
 	"strconv"
 	"time"
 
 	"github.com/labstack/echo/v5"
 
+	"finexa-ia/ms-transactions/internal/auth"
+	"finexa-ia/ms-transactions/internal/config"
 	"finexa-ia/ms-transactions/internal/models"
 )
 
 type TransactionsHandler struct {
-	db *sql.DB
+	db   *sql.DB
+	cfg  *config.App
+	auth *auth.Deps
 }
 
-func NewTransactionsHandler(db *sql.DB) *TransactionsHandler {
-	return &TransactionsHandler{db: db}
+// NewTransactionsHandler recibe deps de auth (JWKS Cognito); el middleware se activará en una parte posterior.
+func NewTransactionsHandler(db *sql.DB, cfg *config.App, authDeps *auth.Deps) *TransactionsHandler {
+	return &TransactionsHandler{db: db, cfg: cfg, auth: authDeps}
 }
 
 func (h *TransactionsHandler) Register(e *echo.Echo) {
+	// Parte 2 (REQUIREMENTS): aplicar h.auth.Middleware(h.db) al grupo protegido.
 	g := e.Group("/v1/transactions")
 	g.GET("", h.list)
 	g.POST("/test-bedrock", h.testBedrock)
@@ -93,7 +100,8 @@ func (h *TransactionsHandler) testBedrock(c *echo.Context) error {
 	ctx, cancel := context.WithTimeout(c.Request().Context(), 15*time.Second)
 	defer cancel()
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, "http://localhost:8000/test-bedrock", nil)
+	base := h.cfg.ResolveAIPipelineBaseURL()
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, fmt.Sprintf("%s/test-bedrock", base), nil)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "failed to create request: " + err.Error()})
 	}
