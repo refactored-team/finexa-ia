@@ -1,13 +1,16 @@
 import {
   Image,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState } from 'react';
+import Svg, { Circle, Defs, LinearGradient as SvgLinearGradient, Stop } from 'react-native-svg';
 
 import { PrismColors } from '@/constants/theme';
 import { Spacing } from '@/constants/uiStyles';
@@ -131,63 +134,148 @@ const findings: Finding[] = [
 export default function SmartStackScreen() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const theme = HERO_THEME;
-  const pageBackground = '#F3F5F8';
+  const tabBarHeight = useBottomTabBarHeight();
+  const [oxygenDays] = useState(14);
+  const [foodOrders] = useState(34);
+  const [potentialSavings] = useState(608.82);
+
+  const gaugeProgress = (oxygenDays / 30) * 100;
+  const circumference = 2 * Math.PI * 100;
+  const strokeDashoffset = circumference - (gaugeProgress / 100) * circumference;
 
   return (
     <View style={[styles.root, { backgroundColor: '#E5E7EB' }]}>
       <SafeAreaView edges={['top']} style={{ backgroundColor: '#C3E9E9' }} />
       <SafeAreaView edges={['left', 'right', 'bottom']} style={[styles.safe, { backgroundColor: '#F1F4F9' }]}>
+        <ScrollView
+          contentContainerStyle={[styles.scroll, { paddingBottom: tabBarHeight + 24 }]}
+          contentInset={{ bottom: tabBarHeight + 220 }}
+          scrollIndicatorInsets={{ bottom: tabBarHeight + 220 }}
+          showsVerticalScrollIndicator={false}>
 
-        {/* Header */}
-        <LinearGradient
-          colors={['#C3E9E9', '#F6FBFB']}
-          start={{ x: 0.5, y: 1 }}
-          end={{ x: 0.5, y: 2 }}
-          style={styles.header}>
-          <View style={styles.topRow}>
-            <View style={styles.userAvatarWrap}>
-              <Image
-                source={require('@/assets/images/finexa-i.png')}
-                style={styles.userAvatar}
-                resizeMode="cover"
-              />
+          {/* Header */}
+          <LinearGradient
+            colors={['#C3E9E9', '#F6FBFB']}
+            start={{ x: 0.5, y: 1 }}
+            end={{ x: 0.5, y: 2 }}
+            style={styles.header}>
+            <View style={styles.topRow}>
+              <View style={styles.userAvatarWrap}>
+                <Image
+                  source={require('@/assets/images/finexa-i.png')}
+                  style={styles.userAvatar}
+                  resizeMode="cover"
+                />
+              </View>
+
+              <View style={styles.chatButton}>
+                <Text style={styles.chatButtonIcon}>💬</Text>
+              </View>
             </View>
 
-            <View style={styles.chatButton}>
-              <Text style={styles.chatButtonIcon}>💬</Text>
-            </View>
-          </View>
-
-          <Text
-            numberOfLines={1}
-            ellipsizeMode="tail"
-            allowFontScaling={false}
-            style={[styles.welcomeLine, { color: '#000' }]}>
-            Hola,{'\u00A0'}
-            <Text style={[styles.nameLine, { color: '#036666' }]}>
-              Ivano{'\u00A0'}Ermakov
+            <Text
+              numberOfLines={1}
+              ellipsizeMode="tail"
+              allowFontScaling={false}
+              style={[styles.welcomeLine, { color: '#000' }]}>
+              Hola,{'\u00A0'}
+              <Text style={[styles.nameLine, { color: '#036666' }]}>
+                Ivano{'\u00A0'}Ermakov
+              </Text>
             </Text>
-          </Text>
-          <Text style={[styles.welcomeLine, { color: "#000", fontSize: 20 }]}>
-            encontré esto por ti
-          </Text>
-          <View style={styles.chipsRow}>
-            <View style={styles.chip}>
-              <Text style={styles.chipText}>Nivel estable</Text>
+            <Text style={[styles.welcomeLine, { color: "#000", fontSize: 20 }]}>
+              encontré esto por ti
+            </Text>
+            <View style={styles.chipsRow}>
+              <View style={styles.chip}>
+                <Text style={styles.chipText}>Nivel estable</Text>
+              </View>
+              <View style={styles.chip}>
+                <Text style={styles.chipText}>Gastos hormiga altos</Text>
+              </View>
             </View>
-            <View style={styles.chip}>
-              <Text style={styles.chipText}>Gastos hormiga altos</Text>
-            </View>
-          </View>
-        </LinearGradient>
+          </LinearGradient>
 
-        {/* Smart Stack */}
-        <SmartStack
-          findings={findings}
-          theme={theme}
-          currentIndex={currentIndex}
-          onIndexChange={setCurrentIndex}
-        />
+          {/* Smart Stack */}
+          <SmartStack
+            findings={findings}
+            theme={theme}
+            currentIndex={currentIndex}
+            onIndexChange={setCurrentIndex}
+          />
+
+          <View style={styles.leftColumn}>
+            <View style={styles.glassCard}>
+              {/* <Text style={styles.microStatus}>[DATA_SYNC: OK]</Text> */}
+
+              <View style={styles.gaugeContainer}>
+                <Svg width={240} height={240} style={styles.gaugeSvg}>
+                  <Defs>
+                    <SvgLinearGradient id="gaugeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                      <Stop offset="0%" stopColor={PrismColors.primary} />
+                      <Stop offset="100%" stopColor={PrismColors.tertiary} />
+                    </SvgLinearGradient>
+                  </Defs>
+                  <Circle
+                    cx="120"
+                    cy="120"
+                    r="100"
+                    stroke={PrismColors.neutral}
+                    strokeWidth="6"
+                    fill="transparent"
+                  />
+                  <Circle
+                    cx="120"
+                    cy="120"
+                    r="100"
+                    stroke="url(#gaugeGradient)"
+                    strokeWidth="6"
+                    fill="transparent"
+                    strokeDasharray={circumference}
+                    strokeDashoffset={strokeDashoffset}
+                    strokeLinecap="round"
+                    rotation="0"
+                    origin="120, 120"
+                  />
+                </Svg>
+                <View style={styles.gaugeCenter}>
+                  <Text style={styles.gaugeNumber}>{oxygenDays}</Text>
+                  <Text style={styles.gaugeLabel}>Dias de Oxigeno</Text>
+                </View>
+              </View>
+
+              <View style={styles.gaugeDescription}>
+                <Text style={styles.cardTitle}>Tranquilidad Asegurada</Text>
+                <Text style={styles.cardBody}>
+                  Tu liquidez actual cubre tus necesidades esenciales hasta final de quincena sin ajustes.
+                </Text>
+              </View>
+            </View>
+
+            {/* <View style={[styles.glassCard, styles.habitCard]}>
+              <Text style={[styles.microStatus, styles.microStatusBottom]}>[AI_ANALYSIS_ACTIVE]</Text>
+
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>Habito Detectado</Text>
+              </View>
+
+              <Text style={styles.habitTitle}>
+                Detecte {foodOrders} pedidos de comida este mes.
+              </Text>
+
+              <Text style={styles.habitBody}>
+                Si reducimos los pedidos a domicilio un 25%, recuperamos{' '}
+                <Text style={styles.highlight}>${potentialSavings.toFixed(2)}</Text> y ganamos 4 dias adicionales.
+              </Text>
+
+              <Pressable style={styles.actionButton}>
+                <Text style={styles.actionButtonText}>Optimizar Habito</Text>
+              </Pressable>
+            </View> */}
+          </View>
+
+          {/* <View style={{ height: tabBarHeight + 220 }} /> */}
+        </ScrollView>
 
       </SafeAreaView>
     </View>
@@ -198,12 +286,16 @@ export default function SmartStackScreen() {
 // Styles
 // ---------------------------------------------------------------------------
 const styles = StyleSheet.create({
+  scroll: {
+    // paddingBottom: Spacing.lg,
+  },
   root: {
     flex: 1,
+    // height: 1000,
   },
-  safe: {
-    flex: 1,
-  },
+  // safe: {
+  //   flex: 1,
+  // },
   header: {
     paddingHorizontal: 22,
     paddingTop: 10,
@@ -270,5 +362,140 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     // letterSpacing: 0.2,
     color: '#000',
+  },
+  leftColumn: {
+    gap: Spacing.lg,
+    paddingHorizontal: Spacing.lg,
+    marginTop: Spacing.xl,
+    paddingBottom: Spacing.xl,
+  },
+  glassCard: {
+    backgroundColor: PrismColors.surface,
+    borderRadius: 24,
+    padding: Spacing.xl,
+    borderWidth: 1,
+    borderColor: PrismColors.primaryBorder,
+    shadowColor: PrismColors.primary,
+    shadowOffset: { width: 0, height: 20 },
+    shadowOpacity: 0.08,
+    shadowRadius: 40,
+    elevation: 8,
+    position: 'relative',
+  },
+  // microStatus: {
+  //   position: 'absolute',
+  //   top: 24,
+  //   right: 32,
+  //   fontSize: 8,
+  //   color: PrismColors.textSecondary,
+  //   opacity: 0.4,
+  // },
+  // microStatusBottom: {
+  //   top: 'auto',
+  //   bottom: 24,
+  // },
+  gaugeContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+    // marginVertical: Spacing.lg,
+  },
+  gaugeSvg: {
+    transform: [{ rotate: '-90deg' }],
+  },
+  gaugeCenter: {
+    position: 'absolute',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  gaugeNumber: {
+    fontSize: 56,
+    fontWeight: '800',
+    color: PrismColors.textPrimary,
+    letterSpacing: -2,
+  },
+  gaugeLabel: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: PrismColors.primary,
+    textTransform: 'uppercase',
+    letterSpacing: 1.2,
+    marginTop: 4,
+  },
+  gaugeDescription: {
+    alignItems: 'center',
+    marginTop: Spacing.lg,
+  },
+  cardTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: PrismColors.textPrimary,
+    marginBottom: Spacing.sm,
+  },
+  cardBody: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: PrismColors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 20,
+    opacity: 0.9,
+    maxWidth: 280,
+  },
+  habitCard: {
+    marginTop: Spacing.lg,
+  },
+  badge: {
+    backgroundColor: PrismColors.neutral,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+    alignSelf: 'flex-start',
+    borderWidth: 1,
+    borderColor: PrismColors.primaryBorder,
+    marginBottom: Spacing.lg,
+  },
+  badgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: PrismColors.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 1.2,
+  },
+  habitTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: PrismColors.textPrimary,
+    marginBottom: Spacing.md,
+    lineHeight: 28,
+  },
+  habitBody: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: PrismColors.textSecondary,
+    lineHeight: 22,
+    marginBottom: Spacing.xl,
+    opacity: 0.9,
+  },
+  highlight: {
+    color: PrismColors.primary,
+    fontWeight: '700',
+    backgroundColor: PrismColors.primaryBorder,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  actionButton: {
+    backgroundColor: PrismColors.surface,
+    borderWidth: 1,
+    borderColor: PrismColors.neutral,
+    paddingVertical: 16,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  actionButtonText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: PrismColors.textPrimary,
   },
 });

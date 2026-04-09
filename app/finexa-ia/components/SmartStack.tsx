@@ -290,11 +290,12 @@ export default function SmartStack({
 // ---------------------------------------------------------------------------
 const styles = StyleSheet.create({
   stackWrapper: {
-    flex: 1,
+    flex: 0,
     paddingHorizontal: Spacing.lg,
     paddingTop: Spacing.md,
     alignItems: 'center',
     marginTop: -85,
+    marginBottom: Spacing.md,
   },
   stackContainer: {
     width: '100%',
