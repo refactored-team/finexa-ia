@@ -21,7 +21,6 @@ import { PrismColors } from '@/constants/theme';
 import { Spacing } from '@/constants/uiStyles';
 import SmartStack, { Finding, Theme } from '@/components/SmartStack';
 import apiClient from '@/src/services/api/apiClient';
-import { getInternalUserIdFromSession } from '@/src/services/api/users/usersService';
 
 // ---------------------------------------------------------------------------
 // Themes
@@ -98,6 +97,7 @@ const CARD_WIDTH = ACCOUNT_CARD_WIDTH + ACCOUNT_CARD_GAP;
 const GAUGE_SIZE = 72;
 const GAUGE_STROKE = 6;
 const GAUGE_RADIUS = (GAUGE_SIZE - GAUGE_STROKE) / 2;
+const HARDCODED_USER_ID = 123;
 
 type ApiEnvelope<T> = {
   ok: boolean;
@@ -117,6 +117,10 @@ type ApiCashFlow = {
 type ApiInsight = {
   title?: string | null;
   affected_category?: string | null;
+};
+
+type ApiResilienceFactor = {
+  score_ponderado?: number | null;
 };
 
 type ApiTransaction = {
@@ -197,6 +201,7 @@ export default function SmartStackScreen() {
   const [apiAnalysis, setApiAnalysis] = useState<ApiAnalysis | null>(null);
   const [apiCashFlow, setApiCashFlow] = useState<ApiCashFlow | null>(null);
   const [apiInsights, setApiInsights] = useState<ApiInsight[]>([]);
+  const [apiResilienceFactors, setApiResilienceFactors] = useState<ApiResilienceFactor[]>([]);
   const [apiTransactions, setApiTransactions] = useState<UiTransaction[]>([]);
   const accounts = [
     {
@@ -238,14 +243,14 @@ export default function SmartStackScreen() {
     let cancelled = false;
     const loadSmartStackData = async () => {
       try {
-        const userId = await getInternalUserIdFromSession();
-        const [analysisRes, cashFlowRes, insightsRes, transactionsRes] = await Promise.all([
-          apiClient.get<ApiEnvelope<ApiAnalysis>>(`/mvp/v1/users/${userId}/transactions/analysis/latest`),
-          apiClient.get<ApiEnvelope<ApiCashFlow>>(`/mvp/v1/users/${userId}/transactions/cash-flow/latest`),
-          apiClient.get<ApiEnvelope<ApiInsight[]>>(`/mvp/v1/users/${userId}/transactions/insights`, {
+        const [analysisRes, cashFlowRes, insightsRes, resilienceRes, transactionsRes] = await Promise.all([
+          apiClient.get<ApiEnvelope<ApiAnalysis>>(`/ms-transactions/v1/users/${HARDCODED_USER_ID}/transactions/analysis/latest`),
+          apiClient.get<ApiEnvelope<ApiCashFlow>>(`/ms-transactions/v1/users/${HARDCODED_USER_ID}/transactions/cash-flow/latest`),
+          apiClient.get<ApiEnvelope<ApiInsight[]>>(`/ms-transactions/v1/users/${HARDCODED_USER_ID}/transactions/insights`, {
             params: { limit: 3, offset: 0 },
           }),
-          apiClient.get<ApiEnvelope<ApiTransaction[]>>(`/mvp/v1/users/${userId}/transactions`, {
+          apiClient.get<ApiEnvelope<ApiResilienceFactor[]>>(`/ms-transactions/v1/users/${HARDCODED_USER_ID}/transactions/resilience-factors`),
+          apiClient.get<ApiEnvelope<ApiTransaction[]>>(`/ms-transactions/v1/users/${HARDCODED_USER_ID}/transactions`, {
             params: { limit: 20, offset: 0 },
           }),
         ]);
@@ -254,6 +259,7 @@ export default function SmartStackScreen() {
         setApiAnalysis(analysisRes.data?.data ?? null);
         setApiCashFlow(cashFlowRes.data?.data ?? null);
         setApiInsights(insightsRes.data?.data ?? []);
+        setApiResilienceFactors(resilienceRes.data?.data ?? []);
         setApiTransactions(
           (transactionsRes.data?.data ?? []).map((tx) => ({
             id: String(tx.id),
@@ -268,6 +274,7 @@ export default function SmartStackScreen() {
           setApiAnalysis(null);
           setApiCashFlow(null);
           setApiInsights([]);
+          setApiResilienceFactors([]);
           setApiTransactions([]);
         }
       }
@@ -278,6 +285,10 @@ export default function SmartStackScreen() {
     };
   }, []);
 
+  const resilienceScoreTotal = Math.max(
+    0,
+    Math.round(apiResilienceFactors.reduce((acc, factor) => acc + (factor.score_ponderado ?? 0), 0))
+  );
   const antExpenseTotal = apiAnalysis?.ant_expense_total ?? fallbackAnalysis.ant_expense_total;
   const projectedLiquidity = apiCashFlow?.projected_liquidity ?? fallbackAnalysis.cash_flow.projected_liquidity;
   const dailySpend = Math.max(1, antExpenseTotal / 30);
@@ -286,7 +297,7 @@ export default function SmartStackScreen() {
     day: 'numeric',
     month: 'short',
   });
-  const gaugeProgress = Math.min(1, projectedDays / 30);
+  const gaugeProgress = resilienceScoreTotal > 0 ? Math.min(1, resilienceScoreTotal / 100) : Math.min(1, projectedDays / 30);
   const circumference = 2 * Math.PI * GAUGE_RADIUS;
   const strokeDashoffset = circumference - gaugeProgress * circumference;
   const topInsight = apiInsights[0]?.title ?? fallbackAnalysis.insights[0]?.title ?? '';

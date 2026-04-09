@@ -457,7 +457,7 @@ const styles = StyleSheet.create({
   },
   progressLabel: {
     marginTop: 8,
-    fontSize: 11,
+    fontSize: 13,
     color: '#374151',
     fontWeight: '600',
   },
@@ -494,11 +494,11 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 14,
     borderBottomRightRadius: 14,
     borderBottomLeftRadius: 14,
-    paddingVertical: 9,
+    paddingVertical: 11,
     paddingHorizontal: 11,
   },
   bubbleText: {
-    fontSize: 11,
+    fontSize: 16,
     lineHeight: 17,
     color: '#374151',
   },
@@ -507,7 +507,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   bubbleTextCompleted: {
-    fontSize: 11,
+    fontSize: 12,
     lineHeight: 17,
     color: '#15803D',
     fontWeight: '700',
@@ -571,7 +571,7 @@ const styles = StyleSheet.create({
     borderColor: '#E5E7EB',
   },
   stepRingText: {
-    fontSize: 11,
+    fontSize: 16,
     fontWeight: '800',
   },
   stepRingTextDone: {
@@ -606,24 +606,24 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   stepTitleDone: {
-    fontSize: 12,
+    fontSize: 16,
     fontWeight: '700',
     color: '#15803D',
   },
   stepDoneMeta: {
     marginTop: 4,
-    fontSize: 10,
+    fontSize: 16,
     color: '#15803D',
     fontWeight: '700',
   },
   stepTitleActive: {
-    fontSize: 12,
+    fontSize: 16,
     fontWeight: '700',
     color: '#1a1a1a',
   },
   stepDescription: {
     marginTop: 5,
-    fontSize: 10,
+    fontSize: 15,
     lineHeight: 15,
     color: '#6B7280',
   },
@@ -636,18 +636,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
   },
   actionButtonText: {
-    fontSize: 11,
+    fontSize: 15,
     fontWeight: '700',
     color: '#FFFFFF',
   },
   stepTitleLocked: {
-    fontSize: 12,
+    fontSize: 15,
     fontWeight: '700',
     color: '#9CA3AF',
   },
   stepLockedMeta: {
     marginTop: 4,
-    fontSize: 10,
+    fontSize: 15,
     color: '#D1D5DB',
   },
   savingsWrap: {
@@ -663,7 +663,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   savingsLabel: {
-    fontSize: 10,
+    fontSize: 15,
     color: '#6B7280',
     letterSpacing: 0.8,
     fontWeight: '700',

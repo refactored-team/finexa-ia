@@ -20,8 +20,8 @@ import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-na
 import { PrismColors } from '@/constants/theme';
 import { Spacing } from '@/constants/uiStyles';
 import SmartStack, { Finding, Theme } from '@/components/SmartStack';
+import { AuthBackground } from '@/components/auth/AuthBackground';
 import apiClient from '@/src/services/api/apiClient';
-import { getInternalUserIdFromSession } from '@/src/services/api/users/usersService';
 
 // ---------------------------------------------------------------------------
 // Themes
@@ -98,6 +98,7 @@ const CARD_WIDTH = ACCOUNT_CARD_WIDTH + ACCOUNT_CARD_GAP;
 const GAUGE_SIZE = 72;
 const GAUGE_STROKE = 6;
 const GAUGE_RADIUS = (GAUGE_SIZE - GAUGE_STROKE) / 2;
+const HARDCODED_USER_ID = 123;
 
 type ApiEnvelope<T> = {
   ok: boolean;
@@ -116,6 +117,7 @@ type ApiCashFlow = {
 
 type ApiInsight = {
   title?: string | null;
+  description?: string | null;
   affected_category?: string | null;
 };
 
@@ -138,7 +140,7 @@ type UiTransaction = {
 // ---------------------------------------------------------------------------
 // Data
 // ---------------------------------------------------------------------------
-const findings: Finding[] = [
+const fallbackFindings: Finding[] = [
   {
     id: '1',
     title: 'Spotify y Youtube Music contratados',
@@ -238,14 +240,13 @@ export default function SmartStackScreen() {
     let cancelled = false;
     const loadSmartStackData = async () => {
       try {
-        const userId = await getInternalUserIdFromSession();
         const [analysisRes, cashFlowRes, insightsRes, transactionsRes] = await Promise.all([
-          apiClient.get<ApiEnvelope<ApiAnalysis>>(`/mvp/v1/users/${userId}/transactions/analysis/latest`),
-          apiClient.get<ApiEnvelope<ApiCashFlow>>(`/mvp/v1/users/${userId}/transactions/cash-flow/latest`),
-          apiClient.get<ApiEnvelope<ApiInsight[]>>(`/mvp/v1/users/${userId}/transactions/insights`, {
+          apiClient.get<ApiEnvelope<ApiAnalysis>>(`/ms-transactions/v1/users/${HARDCODED_USER_ID}/transactions/analysis/latest`),
+          apiClient.get<ApiEnvelope<ApiCashFlow>>(`/ms-transactions/v1/users/${HARDCODED_USER_ID}/transactions/cash-flow/latest`),
+          apiClient.get<ApiEnvelope<ApiInsight[]>>(`/ms-transactions/v1/users/${HARDCODED_USER_ID}/transactions/insights`, {
             params: { limit: 3, offset: 0 },
           }),
-          apiClient.get<ApiEnvelope<ApiTransaction[]>>(`/mvp/v1/users/${userId}/transactions`, {
+          apiClient.get<ApiEnvelope<ApiTransaction[]>>(`/ms-transactions/v1/users/${HARDCODED_USER_ID}/transactions`, {
             params: { limit: 20, offset: 0 },
           }),
         ]);
@@ -312,6 +313,22 @@ export default function SmartStackScreen() {
   const categoryLabel = apiInsights[0]?.affected_category
     ? `${apiInsights[0].affected_category.replace(/_/g, ' ')} altos`
     : 'Gastos hormiga altos';
+  const stackFindings = useMemo<Finding[]>(() => {
+    if (apiInsights.length === 0) return fallbackFindings;
+
+    return apiInsights.slice(0, 3).map((insight, index) => ({
+      id: String(index + 1),
+      title: insight.title ?? `Insight ${index + 1}`,
+      icon: '💡',
+      cardColor: cardColors[index % 3],
+      buttonColor: index === 2 ? '#6366F1' : '#4F46E5',
+      steps: [
+        { text: 'Analizamos tus transacciones recientes', completed: true, active: false },
+        { text: insight.description ?? 'Detectamos un patrón de gasto relevante', completed: true, active: false },
+        { text: '¿Quieres que te ayude a resolverlo?', completed: false, active: true },
+      ],
+    }));
+  }, [apiInsights]);
   const onAccountsScroll = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {
     const rawIndex = Math.round(e.nativeEvent.contentOffset.x / CARD_WIDTH);
     const clampedIndex = Math.max(0, Math.min(rawIndex, accounts.length - 1));
@@ -348,197 +365,199 @@ export default function SmartStackScreen() {
   }));
 
   return (
-    <View style={[styles.root, { backgroundColor: '#E5E7EB' }]}>
-      <SafeAreaView edges={['top']} style={{ backgroundColor: '#C3E9E9' }} />
-      <SafeAreaView edges={['left', 'right', 'bottom']} style={[styles.safe, { backgroundColor: '#F1F4F9' }]}>
-        <ScrollView
-          contentContainerStyle={[styles.scroll, { paddingBottom: tabBarHeight + 24 }]}
-          contentInset={{ bottom: tabBarHeight + 220 }}
-          scrollIndicatorInsets={{ bottom: tabBarHeight + 220 }}
-          showsVerticalScrollIndicator={false}>
+    <AuthBackground showBottomBar showHeader={false}>
+      <View style={[styles.root, { backgroundColor: '#E5E7EB' }]}>
+        <SafeAreaView edges={['top']} style={{ backgroundColor: '#C3E9E9' }} />
+        <SafeAreaView edges={['left', 'right', 'bottom']} style={[styles.safe, { backgroundColor: '#F1F4F9' }]}>
+          <ScrollView
+            contentContainerStyle={[styles.scroll, { paddingBottom: tabBarHeight + 24 }]}
+            contentInset={{ bottom: tabBarHeight + 220 }}
+            scrollIndicatorInsets={{ bottom: tabBarHeight + 220 }}
+            showsVerticalScrollIndicator={false}>
 
-          {/* Header */}
-          <LinearGradient
-            colors={['#C3E9E9', '#F6FBFB']}
-            start={{ x: 0.5, y: 1 }}
-            end={{ x: 0.5, y: 2 }}
-            style={styles.header}>
-            <View style={styles.topRow}>
-              <View style={styles.userAvatarWrap}>
-                <Image
-                  source={require('@/assets/images/finexa-i.png')}
-                  style={styles.userAvatar}
-                  resizeMode="cover"
-                />
+            {/* Header */}
+            <LinearGradient
+              colors={['#C3E9E9', '#F6FBFB']}
+              start={{ x: 0.5, y: 1 }}
+              end={{ x: 0.5, y: 2 }}
+              style={styles.header}>
+              <View style={styles.topRow}>
+                <View style={styles.userAvatarWrap}>
+                  <Image
+                    source={require('@/assets/images/finexa-i.png')}
+                    style={styles.userAvatar}
+                    resizeMode="cover"
+                  />
+                </View>
+
+                <View style={styles.chatButton}>
+                  <Text style={styles.chatButtonIcon}>💬</Text>
+                </View>
               </View>
 
-              <View style={styles.chatButton}>
-                <Text style={styles.chatButtonIcon}>💬</Text>
-              </View>
-            </View>
-
-            <Text
-              numberOfLines={1}
-              ellipsizeMode="tail"
-              allowFontScaling={false}
-              style={[styles.welcomeLine, { color: '#000' }]}>
-              Hola,{'\u00A0'}
-              <Text style={[styles.nameLine, { color: '#036666' }]}>
-                Ivano{'\u00A0'}Ermakov
+              <Text
+                numberOfLines={1}
+                ellipsizeMode="tail"
+                allowFontScaling={false}
+                style={[styles.welcomeLine, { color: '#000' }]}>
+                Hola,{'\u00A0'}
+                <Text style={[styles.nameLine, { color: '#036666' }]}>
+                  Ivano{'\u00A0'}Ermakov
+                </Text>
               </Text>
-            </Text>
-            <Text style={[styles.welcomeLine, { color: "#000", fontSize: 20 }]}>
-              encontré esto por ti
-            </Text>
-            <View style={styles.chipsRow}>
-              <View style={styles.chip}>
-                <Text style={styles.chipText}>{levelLabel}</Text>
-              </View>
-              <View style={styles.chip}>
-                <Text style={styles.chipText}>{categoryLabel}</Text>
-              </View>
-            </View>
-          </LinearGradient>
-
-          {/* Smart Stack */}
-          <SmartStack
-            findings={findings}
-            theme={theme}
-            currentIndex={currentIndex}
-            onIndexChange={setCurrentIndex}
-          />
-
-          <View style={styles.lowerSection}>
-            <View style={styles.gaugeCard}>
-              <View style={styles.gaugeLeft}>
-                <Svg width={GAUGE_SIZE} height={GAUGE_SIZE}>
-                  <Circle
-                    cx={GAUGE_SIZE / 2}
-                    cy={GAUGE_SIZE / 2}
-                    r={GAUGE_RADIUS}
-                    stroke="#E5E7EB"
-                    strokeWidth={GAUGE_STROKE}
-                    fill="transparent"
-                  />
-                  <Circle
-                    cx={GAUGE_SIZE / 2}
-                    cy={GAUGE_SIZE / 2}
-                    r={GAUGE_RADIUS}
-                    stroke="#2DD4BF"
-                    strokeWidth={GAUGE_STROKE}
-                    fill="transparent"
-                    strokeDasharray={circumference}
-                    strokeDashoffset={strokeDashoffset}
-                    strokeLinecap="round"
-                    rotation="-90"
-                    origin={`${GAUGE_SIZE / 2}, ${GAUGE_SIZE / 2}`}
-                  />
-                </Svg>
-                <View style={styles.gaugeInner}>
-                  <Text style={styles.gaugeInnerValue}>{projectedDays}</Text>
-                  <Text style={styles.gaugeInnerLabel}>DIAS</Text>
+              <Text style={[styles.welcomeLine, { color: "#000", fontSize: 20 }]}>
+                encontré esto por ti
+              </Text>
+              <View style={styles.chipsRow}>
+                <View style={styles.chip}>
+                  <Text style={styles.chipText}>{levelLabel}</Text>
+                </View>
+                <View style={styles.chip}>
+                  <Text style={styles.chipText}>{categoryLabel}</Text>
                 </View>
               </View>
-              <View style={styles.gaugeRight}>
-                <Text style={styles.gaugeRightTitle}>Días de oxigeno</Text>
-                <Text style={styles.gaugeRightSubtitle}>Tu dinero alcanza hasta el {projectedDate}</Text>
-                <View style={styles.insightBadge}>
-                  <Text style={styles.insightBadgeText}>{topInsight}</Text>
-                </View>
-              </View>
-            </View>
+            </LinearGradient>
 
-            <Text style={styles.sectionLabel}>TUS CUENTAS</Text>
-            <FlatList
-              data={accounts}
-              horizontal
-              nestedScrollEnabled
-              showsHorizontalScrollIndicator={false}
-              onScroll={onAccountsScroll}
-              scrollEventThrottle={16}
-              contentContainerStyle={styles.accountsList}
-              keyExtractor={(item) => item.account_id}
-              renderItem={({ item, index }) => (
-                <Pressable
-                  onPress={() => openSheet(item.account_id)}
-                  style={[styles.accountCard, { backgroundColor: cardColors[index % 3] }]}>
-                  <View style={styles.accountDecor} />
-                  <Text style={styles.accountMask}>•••• {item.mask}</Text>
-                  <Text style={styles.accountLabel}>Gastos del mes</Text>
-                  <Text style={styles.accountAmount}>${item.total_expenses.toLocaleString('en-US')}</Text>
-                  <View style={styles.accountPctBadge}>
-                    <Text style={styles.accountPctText}>{item.pct_change >= 0 ? '+' : ''}{item.pct_change}%</Text>
-                  </View>
-                </Pressable>
-              )}
+            {/* Smart Stack */}
+            <SmartStack
+              findings={stackFindings}
+              theme={theme}
+              currentIndex={currentIndex}
+              onIndexChange={setCurrentIndex}
             />
 
-            <Text style={styles.sectionLabel}>MOVIMIENTOS RECIENTES</Text>
-            <View style={styles.recentCard}>
-              {filteredRecent.map((tx, idx) => {
-                const meta = categoryMap[tx.category] ?? categoryMap.variable;
-                const isExpense = tx.amount > 0;
-                const name = (tx.merchant_name || 'Movimiento').slice(0, 20);
-                return (
-                  <View key={tx.id} style={[styles.txRow, idx === filteredRecent.length - 1 && styles.txRowLast]}>
-                    <View style={[styles.txIconWrap, { backgroundColor: meta.bg }]}>
-                      <Text style={styles.txIcon}>{meta.icon}</Text>
-                    </View>
-                    <View style={styles.txMiddle}>
-                      <Text style={styles.txName}>{name}</Text>
-                      <Text style={styles.txMeta}>{formatRelativeDate(tx.dateISO)} · {meta.label}</Text>
-                    </View>
-                    <Text style={[styles.txAmount, { color: isExpense ? '#EF4444' : '#10B981' }]}>
-                      {isExpense ? '-' : '+'}${Math.abs(tx.amount).toLocaleString('en-US')}
-                    </Text>
+            <View style={styles.lowerSection}>
+              <View style={styles.gaugeCard}>
+                <View style={styles.gaugeLeft}>
+                  <Svg width={GAUGE_SIZE} height={GAUGE_SIZE}>
+                    <Circle
+                      cx={GAUGE_SIZE / 2}
+                      cy={GAUGE_SIZE / 2}
+                      r={GAUGE_RADIUS}
+                      stroke="#E5E7EB"
+                      strokeWidth={GAUGE_STROKE}
+                      fill="transparent"
+                    />
+                    <Circle
+                      cx={GAUGE_SIZE / 2}
+                      cy={GAUGE_SIZE / 2}
+                      r={GAUGE_RADIUS}
+                      stroke="#2DD4BF"
+                      strokeWidth={GAUGE_STROKE}
+                      fill="transparent"
+                      strokeDasharray={circumference}
+                      strokeDashoffset={strokeDashoffset}
+                      strokeLinecap="round"
+                      rotation="-90"
+                      origin={`${GAUGE_SIZE / 2}, ${GAUGE_SIZE / 2}`}
+                    />
+                  </Svg>
+                  <View style={styles.gaugeInner}>
+                    <Text style={styles.gaugeInnerValue}>{projectedDays}</Text>
+                    <Text style={styles.gaugeInnerLabel}>DIAS</Text>
                   </View>
-                );
-              })}
-            </View>
-          </View>
-
-          <View style={{ height: tabBarHeight + 24 }} />
-        </ScrollView>
-
-        {selectedAccount && (
-          <>
-            <Pressable onPress={closeSheet} style={styles.sheetBackdrop} />
-            <Animated.View style={[styles.bottomSheet, sheetStyle]}>
-              <View style={styles.sheetHandle} />
-              <View style={styles.sheetCardVisual}>
-                <Text style={styles.sheetCardMask}>•••• {selectedAccount.mask}</Text>
-                <Text style={styles.sheetCardAmount}>${selectedAccount.total_expenses.toLocaleString('en-US')}</Text>
+                </View>
+                <View style={styles.gaugeRight}>
+                  <Text style={styles.gaugeRightTitle}>Días de oxigeno</Text>
+                  <Text style={styles.gaugeRightSubtitle}>Tu dinero alcanza hasta el {projectedDate}</Text>
+                  <View style={styles.insightBadge}>
+                    <Text style={styles.insightBadgeText}>{topInsight}</Text>
+                  </View>
+                </View>
               </View>
-              <Text style={styles.sheetTitle}>Movimientos · {new Date().toLocaleDateString('es-MX', { month: 'long' })}</Text>
+
+              <Text style={styles.sectionLabel}>TUS CUENTAS</Text>
               <FlatList
-                data={selectedAccount.transactions}
-                keyExtractor={(item) => item.id}
-                contentContainerStyle={styles.sheetList}
-                renderItem={({ item }) => {
-                  const meta = categoryMap[item.category] ?? categoryMap.variable;
-                  const isExpense = item.amount > 0;
+                data={accounts}
+                horizontal
+                nestedScrollEnabled
+                showsHorizontalScrollIndicator={false}
+                onScroll={onAccountsScroll}
+                scrollEventThrottle={16}
+                contentContainerStyle={styles.accountsList}
+                keyExtractor={(item) => item.account_id}
+                renderItem={({ item, index }) => (
+                  <Pressable
+                    onPress={() => openSheet(item.account_id)}
+                    style={[styles.accountCard, { backgroundColor: cardColors[index % 3] }]}>
+                    <View style={styles.accountDecor} />
+                    <Text style={styles.accountMask}>•••• {item.mask}</Text>
+                    <Text style={styles.accountLabel}>Gastos del mes</Text>
+                    <Text style={styles.accountAmount}>${item.total_expenses.toLocaleString('en-US')}</Text>
+                    <View style={styles.accountPctBadge}>
+                      <Text style={styles.accountPctText}>{item.pct_change >= 0 ? '+' : ''}{item.pct_change}%</Text>
+                    </View>
+                  </Pressable>
+                )}
+              />
+
+              <Text style={styles.sectionLabel}>MOVIMIENTOS RECIENTES</Text>
+              <View style={styles.recentCard}>
+                {filteredRecent.map((tx, idx) => {
+                  const meta = categoryMap[tx.category] ?? categoryMap.variable;
+                  const isExpense = tx.amount > 0;
+                  const name = (tx.merchant_name || 'Movimiento').slice(0, 20);
                   return (
-                    <View style={styles.txRow}>
+                    <View key={tx.id} style={[styles.txRow, idx === filteredRecent.length - 1 && styles.txRowLast]}>
                       <View style={[styles.txIconWrap, { backgroundColor: meta.bg }]}>
                         <Text style={styles.txIcon}>{meta.icon}</Text>
                       </View>
                       <View style={styles.txMiddle}>
-                        <Text style={styles.txName}>{(item.merchant_name || 'Movimiento').slice(0, 20)}</Text>
-                        <Text style={styles.txMeta}>{formatRelativeDate(item.dateISO)} · {meta.label}</Text>
+                        <Text style={styles.txName}>{name}</Text>
+                        <Text style={styles.txMeta}>{formatRelativeDate(tx.dateISO)} · {meta.label}</Text>
                       </View>
                       <Text style={[styles.txAmount, { color: isExpense ? '#EF4444' : '#10B981' }]}>
-                        {isExpense ? '-' : '+'}${Math.abs(item.amount).toLocaleString('en-US')}
+                        {isExpense ? '-' : '+'}${Math.abs(tx.amount).toLocaleString('en-US')}
                       </Text>
                     </View>
                   );
-                }}
-              />
-            </Animated.View>
-          </>
-        )}
+                })}
+              </View>
+            </View>
 
-      </SafeAreaView>
-    </View>
+            <View style={{ height: tabBarHeight + 24 }} />
+          </ScrollView>
+
+          {selectedAccount && (
+            <>
+              <Pressable onPress={closeSheet} style={styles.sheetBackdrop} />
+              <Animated.View style={[styles.bottomSheet, sheetStyle]}>
+                <View style={styles.sheetHandle} />
+                <View style={styles.sheetCardVisual}>
+                  <Text style={styles.sheetCardMask}>•••• {selectedAccount.mask}</Text>
+                  <Text style={styles.sheetCardAmount}>${selectedAccount.total_expenses.toLocaleString('en-US')}</Text>
+                </View>
+                <Text style={styles.sheetTitle}>Movimientos · {new Date().toLocaleDateString('es-MX', { month: 'long' })}</Text>
+                <FlatList
+                  data={selectedAccount.transactions}
+                  keyExtractor={(item) => item.id}
+                  contentContainerStyle={styles.sheetList}
+                  renderItem={({ item }) => {
+                    const meta = categoryMap[item.category] ?? categoryMap.variable;
+                    const isExpense = item.amount > 0;
+                    return (
+                      <View style={styles.txRow}>
+                        <View style={[styles.txIconWrap, { backgroundColor: meta.bg }]}>
+                          <Text style={styles.txIcon}>{meta.icon}</Text>
+                        </View>
+                        <View style={styles.txMiddle}>
+                          <Text style={styles.txName}>{(item.merchant_name || 'Movimiento').slice(0, 20)}</Text>
+                          <Text style={styles.txMeta}>{formatRelativeDate(item.dateISO)} · {meta.label}</Text>
+                        </View>
+                        <Text style={[styles.txAmount, { color: isExpense ? '#EF4444' : '#10B981' }]}>
+                          {isExpense ? '-' : '+'}${Math.abs(item.amount).toLocaleString('en-US')}
+                        </Text>
+                      </View>
+                    );
+                  }}
+                />
+              </Animated.View>
+            </>
+          )}
+
+        </SafeAreaView>
+      </View>
+    </AuthBackground>
   );
 }
 
@@ -652,12 +671,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   gaugeInnerValue: {
-    fontSize: 15,
+    fontSize: 18,
     fontWeight: '800',
     color: '#111827',
   },
   gaugeInnerLabel: {
-    fontSize: 7,
+    fontSize: 10,
     fontWeight: '700',
     color: '#2DD4BF',
     letterSpacing: 0.8,
@@ -693,7 +712,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   sectionLabel: {
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: '700',
     color: '#6B7280',
     textTransform: 'uppercase',
@@ -767,29 +786,29 @@ const styles = StyleSheet.create({
     borderBottomWidth: 0,
   },
   txIconWrap: {
-    width: 30,
-    height: 30,
+    width: 50,
+    height: 50,
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
   },
   txIcon: {
-    fontSize: 16,
+    fontSize: 22,
   },
   txMiddle: {
     flex: 1,
   },
   txName: {
-    fontSize: 11,
+    fontSize: 14,
     fontWeight: '700',
     color: '#111827',
   },
   txMeta: {
-    fontSize: 9,
+    fontSize: 12,
     color: '#6B7280',
   },
   txAmount: {
-    fontSize: 11,
+    fontSize: 14,
     fontWeight: '700',
   },
   sheetBackdrop: {
@@ -845,6 +864,6 @@ const styles = StyleSheet.create({
   },
   sheetList: {
     paddingHorizontal: 4,
-    paddingBottom: 32,
+    // paddingBottom: 32,
   },
 });

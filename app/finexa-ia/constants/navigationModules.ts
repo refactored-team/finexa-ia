@@ -1,3 +1,4 @@
+import { Scissors } from 'lucide-react-native';
 import { Brain, Compass, Landmark, LayoutDashboard, LucideIcon } from './lucideIcons';
 
 export type NavigationModule = {
@@ -10,8 +11,8 @@ export type NavigationModule = {
 export const NAVIGATION_MODULES: NavigationModule[] = [
   {
     id: 'dashboard',
-    name: 'Panel',
-    route: '/(tabs)/dashboard',
+    name: 'Inicio',
+    route: '/(tabs)/explore',
     icon: LayoutDashboard,
   },
   {
@@ -20,16 +21,22 @@ export const NAVIGATION_MODULES: NavigationModule[] = [
     route: '/(tabs)/horizon',
     icon: Compass,
   },
-  {
-    id: 'link-bank',
-    name: 'Bancos',
-    route: '/(onboarding)/link-bank',
-    icon: Landmark,
-  },
+  // {
+  //   id: 'link-bank',
+  //   name: 'Bancos',
+  //   route: '/(onboarding)/link-bank',
+  //   icon: Landmark,
+  // },
   {
     id: 'intelligence',
     name: 'Inteligencia',
     route: '/(tabs)/intelligence',
     icon: Brain,
+  },
+  {
+    id: 'essential',
+    name: 'Esencial',
+    route: '/(tabs)/essential',
+    icon: Scissors,
   },
 ];
