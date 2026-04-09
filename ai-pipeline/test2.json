@@ -1,0 +1,358 @@
+{
+  "transactions": [
+    {
+      "transaction_id": "plaid_tx_001",
+      "account_id": "acc_demo_001",
+      "amount": -28500.00,
+      "name": "NOMINA ACME CORP SA DE CV",
+      "date": "2026-03-01",
+      "iso_currency_code": "MXN",
+      "payment_channel": "other",
+      "pending": false,
+      "personal_finance_category": {
+        "primary": "INCOME",
+        "detailed": "INCOME_WAGES",
+        "confidence_level": "VERY_HIGH"
+      }
+    },
+    {
+      "transaction_id": "plaid_tx_002",
+      "account_id": "acc_demo_001",
+      "amount": 9200.00,
+      "name": "RENTA DEPTO ROMA NORTE",
+      "date": "2026-03-02",
+      "iso_currency_code": "MXN",
+      "payment_channel": "other",
+      "pending": false,
+      "personal_finance_category": {
+        "primary": "RENT_AND_UTILITIES",
+        "detailed": "RENT_AND_UTILITIES_RENT",
+        "confidence_level": "VERY_HIGH"
+      }
+    },
+    {
+      "transaction_id": "plaid_tx_011",
+      "account_id": "acc_demo_001",
+      "amount": 450.00,
+      "name": "CFE ENERGIA",
+      "date": "2026-03-04",
+      "iso_currency_code": "MXN",
+      "payment_channel": "online",
+      "pending": false,
+      "personal_finance_category": {
+        "primary": "RENT_AND_UTILITIES",
+        "detailed": "RENT_AND_UTILITIES_ELECTRICITY_AND_ENERGY",
+        "confidence_level": "VERY_HIGH"
+      }
+    },
+    {
+      "transaction_id": "plaid_tx_003",
+      "account_id": "acc_demo_001",
+      "amount": 179.00,
+      "name": "NETFLIX.COM",
+      "merchant_name": "Netflix",
+      "date": "2026-03-05",
+      "iso_currency_code": "MXN",
+      "payment_channel": "online",
+      "pending": false,
+      "counterparties": [
+        { "name": "Netflix", "type": "merchant", "confidence_level": "VERY_HIGH" }
+      ],
+      "personal_finance_category": {
+        "primary": "ENTERTAINMENT",
+        "detailed": "ENTERTAINMENT_TV_AND_MOVIES",
+        "confidence_level": "VERY_HIGH"
+      }
+    },
+    {
+      "transaction_id": "plaid_tx_012",
+      "account_id": "acc_demo_001",
+      "amount": 599.00,
+      "name": "TELCEL RECARGA",
+      "merchant_name": "Telcel",
+      "date": "2026-03-06",
+      "iso_currency_code": "MXN",
+      "payment_channel": "online",
+      "pending": false,
+      "personal_finance_category": {
+        "primary": "RENT_AND_UTILITIES",
+        "detailed": "RENT_AND_UTILITIES_TELEPHONE",
+        "confidence_level": "HIGH"
+      }
+    },
+    {
+      "transaction_id": "plaid_tx_004",
+      "account_id": "acc_demo_001",
+      "amount": 89.00,
+      "name": "OXXO SONORA 12",
+      "merchant_name": "OXXO",
+      "date": "2026-03-08",
+      "datetime": "2026-03-08T10:14:00-06:00",
+      "iso_currency_code": "MXN",
+      "payment_channel": "in store",
+      "pending": false,
+      "personal_finance_category": {
+        "primary": "FOOD_AND_DRINK",
+        "detailed": "FOOD_AND_DRINK_CONVENIENCE_STORES",
+        "confidence_level": "VERY_HIGH"
+      }
+    },
+    {
+      "transaction_id": "plaid_tx_013",
+      "account_id": "acc_demo_001",
+      "amount": 499.00,
+      "name": "SMART FIT MEXICO",
+      "merchant_name": "Smart Fit",
+      "date": "2026-03-10",
+      "iso_currency_code": "MXN",
+      "payment_channel": "online",
+      "pending": false,
+      "personal_finance_category": {
+        "primary": "PERSONAL_CARE",
+        "detailed": "PERSONAL_CARE_GYMS_AND_FITNESS_CENTERS",
+        "confidence_level": "VERY_HIGH"
+      }
+    },
+    {
+      "transaction_id": "plaid_tx_005",
+      "account_id": "acc_demo_001",
+      "amount": 65.00,
+      "name": "OXXO INSURGENTES 482",
+      "merchant_name": "OXXO",
+      "date": "2026-03-10",
+      "datetime": "2026-03-10T08:45:00-06:00",
+      "iso_currency_code": "MXN",
+      "payment_channel": "in store",
+      "pending": false,
+      "personal_finance_category": {
+        "primary": "FOOD_AND_DRINK",
+        "detailed": "FOOD_AND_DRINK_CONVENIENCE_STORES",
+        "confidence_level": "VERY_HIGH"
+      }
+    },
+    {
+      "transaction_id": "plaid_tx_006",
+      "account_id": "acc_demo_001",
+      "amount": 340.00,
+      "name": "UBER EATS",
+      "merchant_name": "Uber Eats",
+      "date": "2026-03-12",
+      "datetime": "2026-03-12T20:30:00-06:00",
+      "iso_currency_code": "MXN",
+      "payment_channel": "online",
+      "pending": false,
+      "counterparties": [
+        { "name": "Uber Eats", "type": "merchant", "confidence_level": "HIGH" }
+      ],
+      "personal_finance_category": {
+        "primary": "FOOD_AND_DRINK",
+        "detailed": "FOOD_AND_DRINK_RESTAURANT",
+        "confidence_level": "HIGH"
+      }
+    },
+    {
+      "transaction_id": "plaid_tx_014",
+      "account_id": "acc_demo_001",
+      "amount": 215.50,
+      "name": "FARMACIAS DEL AHORRO",
+      "merchant_name": "Farmacias del Ahorro",
+      "date": "2026-03-14",
+      "iso_currency_code": "MXN",
+      "payment_channel": "in store",
+      "pending": false,
+      "personal_finance_category": {
+        "primary": "MEDICAL",
+        "detailed": "MEDICAL_PHARMACIES_AND_SUPPLEMENTS",
+        "confidence_level": "VERY_HIGH"
+      }
+    },
+    {
+      "transaction_id": "plaid_tx_007",
+      "account_id": "acc_demo_001",
+      "amount": 1850.00,
+      "name": "WALMART PERISUR",
+      "merchant_name": "Walmart",
+      "date": "2026-03-15",
+      "iso_currency_code": "MXN",
+      "payment_channel": "in store",
+      "pending": false,
+      "personal_finance_category": {
+        "primary": "GENERAL_MERCHANDISE",
+        "detailed": "GENERAL_MERCHANDISE_SUPERSTORES",
+        "confidence_level": "VERY_HIGH"
+      }
+    },
+    {
+      "transaction_id": "plaid_tx_015",
+      "account_id": "acc_demo_001",
+      "amount": 3000.00,
+      "name": "TRASPASO A CUENTA AHORRO",
+      "date": "2026-03-16",
+      "iso_currency_code": "MXN",
+      "payment_channel": "other",
+      "pending": false,
+      "personal_finance_category": {
+        "primary": "TRANSFER_OUT",
+        "detailed": "TRANSFER_OUT_SAVINGS",
+        "confidence_level": "HIGH"
+      }
+    },
+    {
+      "transaction_id": "plaid_tx_008",
+      "account_id": "acc_demo_001",
+      "amount": 450.00,
+      "name": "UBER TRIP",
+      "merchant_name": "Uber",
+      "date": "2026-03-18",
+      "datetime": "2026-03-18T09:10:00-06:00",
+      "iso_currency_code": "MXN",
+      "payment_channel": "online",
+      "pending": false,
+      "personal_finance_category": {
+        "primary": "TRANSPORTATION",
+        "detailed": "TRANSPORTATION_TAXIS_AND_RIDE_SHARES",
+        "confidence_level": "VERY_HIGH"
+      }
+    },
+    {
+      "transaction_id": "plaid_tx_016",
+      "account_id": "acc_demo_001",
+      "amount": 115.00,
+      "name": "STARBUCKS CONDESA",
+      "merchant_name": "Starbucks",
+      "date": "2026-03-22",
+      "datetime": "2026-03-22T08:15:00-06:00",
+      "iso_currency_code": "MXN",
+      "payment_channel": "in store",
+      "pending": false,
+      "personal_finance_category": {
+        "primary": "FOOD_AND_DRINK",
+        "detailed": "FOOD_AND_DRINK_COFFEE",
+        "confidence_level": "VERY_HIGH"
+      }
+    },
+    {
+      "transaction_id": "plaid_tx_017",
+      "account_id": "acc_demo_001",
+      "amount": 1450.00,
+      "name": "MERCADOLIBRE *COMPRA",
+      "merchant_name": "Mercado Libre",
+      "date": "2026-03-26",
+      "iso_currency_code": "MXN",
+      "payment_channel": "online",
+      "pending": false,
+      "personal_finance_category": {
+        "primary": "GENERAL_MERCHANDISE",
+        "detailed": "GENERAL_MERCHANDISE_ONLINE_MARKETPLACES",
+        "confidence_level": "VERY_HIGH"
+      }
+    },
+    {
+      "transaction_id": "plaid_tx_018",
+      "account_id": "acc_demo_001",
+      "amount": 320.00,
+      "name": "CINEPOLIS DIANA",
+      "merchant_name": "Cinépolis",
+      "date": "2026-03-28",
+      "iso_currency_code": "MXN",
+      "payment_channel": "in store",
+      "pending": false,
+      "personal_finance_category": {
+        "primary": "ENTERTAINMENT",
+        "detailed": "ENTERTAINMENT_MOVIES_AND_THEATERS",
+        "confidence_level": "VERY_HIGH"
+      }
+    },
+    {
+      "transaction_id": "plaid_tx_009",
+      "account_id": "acc_demo_001",
+      "amount": -28500.00,
+      "name": "NOMINA ACME CORP SA DE CV",
+      "date": "2026-04-01",
+      "iso_currency_code": "MXN",
+      "payment_channel": "other",
+      "pending": false,
+      "personal_finance_category": {
+        "primary": "INCOME",
+        "detailed": "INCOME_WAGES",
+        "confidence_level": "VERY_HIGH"
+      }
+    },
+    {
+      "transaction_id": "plaid_tx_010",
+      "account_id": "acc_demo_001",
+      "amount": 9200.00,
+      "name": "RENTA DEPTO ROMA NORTE",
+      "date": "2026-04-02",
+      "iso_currency_code": "MXN",
+      "payment_channel": "other",
+      "pending": false,
+      "personal_finance_category": {
+        "primary": "RENT_AND_UTILITIES",
+        "detailed": "RENT_AND_UTILITIES_RENT",
+        "confidence_level": "VERY_HIGH"
+      }
+    },
+    {
+      "transaction_id": "plaid_tx_019",
+      "account_id": "acc_demo_001",
+      "amount": 129.00,
+      "name": "SPOTIFY PREMIUM",
+      "merchant_name": "Spotify",
+      "date": "2026-04-03",
+      "iso_currency_code": "MXN",
+      "payment_channel": "online",
+      "pending": false,
+      "personal_finance_category": {
+        "primary": "ENTERTAINMENT",
+        "detailed": "ENTERTAINMENT_MUSIC_AND_AUDIO",
+        "confidence_level": "VERY_HIGH"
+      }
+    },
+    {
+      "transaction_id": "plaid_tx_020",
+      "account_id": "acc_demo_001",
+      "amount": 2250.00,
+      "name": "SUPERAMA/WALMART EXPRESS",
+      "merchant_name": "Walmart Express",
+      "date": "2026-04-05",
+      "iso_currency_code": "MXN",
+      "payment_channel": "in store",
+      "pending": false,
+      "personal_finance_category": {
+        "primary": "FOOD_AND_DRINK",
+        "detailed": "FOOD_AND_DRINK_GROCERIES",
+        "confidence_level": "VERY_HIGH"
+      }
+    },
+    {
+      "transaction_id": "plaid_tx_021",
+      "account_id": "acc_demo_001",
+      "amount": 680.00,
+      "name": "RESTAURANTE EL CALIFA",
+      "merchant_name": "El Califa",
+      "date": "2026-04-07",
+      "datetime": "2026-04-07T21:15:00-06:00",
+      "iso_currency_code": "MXN",
+      "payment_channel": "in store",
+      "pending": true,
+      "personal_finance_category": {
+        "primary": "FOOD_AND_DRINK",
+        "detailed": "FOOD_AND_DRINK_RESTAURANT",
+        "confidence_level": "VERY_HIGH"
+      }
+    }
+  ],
+  "user_profile": {
+    "edad": 29,
+    "ocupacion": "Diseñadora UX",
+    "ingresos_mensuales": 28500.00,
+    "metas": [
+      "fondo de emergencia 3 meses",
+      "viaje a Japon 2027",
+      "renovar equipo de computo"
+    ],
+    "dependientes": 0
+  },
+  "saldo_actual": 17450.50
+}

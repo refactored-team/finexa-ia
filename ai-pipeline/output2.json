@@ -1,0 +1,372 @@
+{
+  "ok": true,
+  "data": {
+    "classified": [
+      {
+        "transaction_id": "plaid_tx_001",
+        "name": "NOMINA ACME CORP SA DE CV",
+        "amount": -28500.0,
+        "date": "2026-03-01",
+        "category": "ingreso",
+        "confidence": 0.93,
+        "is_ant_expense": false,
+        "reasoning": "Heuristic rule match: nomina|nómina|salario|transferencia\\s?re...",
+        "source": "heuristic"
+      },
+      {
+        "transaction_id": "plaid_tx_002",
+        "name": "RENTA DEPTO ROMA NORTE",
+        "amount": 9200.0,
+        "date": "2026-03-02",
+        "category": "fijo",
+        "confidence": 0.93,
+        "is_ant_expense": false,
+        "reasoning": "Heuristic rule match: renta|alquiler|hipoteca|luz|cfe|agua|sac...",
+        "source": "heuristic"
+      },
+      {
+        "transaction_id": "plaid_tx_011",
+        "name": "CFE ENERGIA",
+        "amount": 450.0,
+        "date": "2026-03-04",
+        "category": "fijo",
+        "confidence": 0.93,
+        "is_ant_expense": false,
+        "reasoning": "Heuristic rule match: renta|alquiler|hipoteca|luz|cfe|agua|sac...",
+        "source": "heuristic"
+      },
+      {
+        "transaction_id": "plaid_tx_003",
+        "name": "NETFLIX.COM",
+        "merchant_name": "Netflix",
+        "amount": 179.0,
+        "date": "2026-03-05",
+        "category": "suscripcion",
+        "confidence": 0.93,
+        "is_ant_expense": false,
+        "reasoning": "Cached classification",
+        "source": "cache"
+      },
+      {
+        "transaction_id": "plaid_tx_012",
+        "name": "TELCEL RECARGA",
+        "merchant_name": "Telcel",
+        "amount": 599.0,
+        "date": "2026-03-06",
+        "category": "fijo",
+        "confidence": 0.93,
+        "is_ant_expense": false,
+        "reasoning": "Heuristic rule match: renta|alquiler|hipoteca|luz|cfe|agua|sac...",
+        "source": "heuristic"
+      },
+      {
+        "transaction_id": "plaid_tx_004",
+        "name": "OXXO SONORA 12",
+        "merchant_name": "OXXO",
+        "amount": 89.0,
+        "date": "2026-03-08",
+        "datetime": "2026-03-08T10:14:00-06:00",
+        "category": "hormiga",
+        "confidence": 0.93,
+        "is_ant_expense": true,
+        "reasoning": "Cached classification",
+        "source": "cache"
+      },
+      {
+        "transaction_id": "plaid_tx_013",
+        "name": "SMART FIT MEXICO",
+        "merchant_name": "Smart Fit",
+        "amount": 499.0,
+        "date": "2026-03-10",
+        "category": "fijo",
+        "confidence": 0.93,
+        "is_ant_expense": false,
+        "reasoning": "Heuristic rule match: renta|alquiler|hipoteca|luz|cfe|agua|sac...",
+        "source": "heuristic"
+      },
+      {
+        "transaction_id": "plaid_tx_005",
+        "name": "OXXO INSURGENTES 482",
+        "merchant_name": "OXXO",
+        "amount": 65.0,
+        "date": "2026-03-10",
+        "datetime": "2026-03-10T08:45:00-06:00",
+        "category": "hormiga",
+        "confidence": 0.93,
+        "is_ant_expense": true,
+        "reasoning": "Cached classification",
+        "source": "cache"
+      },
+      {
+        "transaction_id": "plaid_tx_006",
+        "name": "UBER EATS",
+        "merchant_name": "Uber Eats",
+        "amount": 340.0,
+        "date": "2026-03-12",
+        "datetime": "2026-03-12T20:30:00-06:00",
+        "category": "hormiga",
+        "confidence": 0.93,
+        "is_ant_expense": true,
+        "reasoning": "Cached classification",
+        "source": "cache"
+      },
+      {
+        "transaction_id": "plaid_tx_014",
+        "name": "FARMACIAS DEL AHORRO",
+        "merchant_name": "Farmacias del Ahorro",
+        "amount": 215.5,
+        "date": "2026-03-14",
+        "category": "salud",
+        "confidence": 0.93,
+        "is_ant_expense": false,
+        "reasoning": "Heuristic rule match: farmacia|hospital|doctor|médico|medico|l...",
+        "source": "heuristic"
+      },
+      {
+        "transaction_id": "plaid_tx_007",
+        "name": "WALMART PERISUR",
+        "merchant_name": "Walmart",
+        "amount": 1850.0,
+        "date": "2026-03-15",
+        "category": "alimentacion",
+        "confidence": 0.93,
+        "is_ant_expense": false,
+        "reasoning": "Cached classification",
+        "source": "cache"
+      },
+      {
+        "transaction_id": "plaid_tx_015",
+        "name": "TRASPASO A CUENTA AHORRO",
+        "amount": 3000.0,
+        "date": "2026-03-16",
+        "category": "salud",
+        "confidence": 0.93,
+        "is_ant_expense": false,
+        "reasoning": "Heuristic rule match: farmacia|hospital|doctor|médico|medico|l...",
+        "source": "heuristic"
+      },
+      {
+        "transaction_id": "plaid_tx_008",
+        "name": "UBER TRIP",
+        "merchant_name": "Uber",
+        "amount": 450.0,
+        "date": "2026-03-18",
+        "datetime": "2026-03-18T09:10:00-06:00",
+        "category": "transporte",
+        "confidence": 0.93,
+        "is_ant_expense": false,
+        "reasoning": "Cached classification",
+        "source": "cache"
+      },
+      {
+        "transaction_id": "plaid_tx_016",
+        "name": "STARBUCKS CONDESA",
+        "merchant_name": "Starbucks",
+        "amount": 115.0,
+        "date": "2026-03-22",
+        "datetime": "2026-03-22T08:15:00-06:00",
+        "category": "hormiga",
+        "confidence": 0.93,
+        "is_ant_expense": true,
+        "reasoning": "Heuristic rule match: oxxo|7.?eleven|circulo\\s?k|tiendas\\s?ext...",
+        "source": "heuristic"
+      },
+      {
+        "transaction_id": "plaid_tx_018",
+        "name": "CINEPOLIS DIANA",
+        "merchant_name": "Cinépolis",
+        "amount": 320.0,
+        "date": "2026-03-28",
+        "category": "hormiga",
+        "confidence": 0.93,
+        "is_ant_expense": true,
+        "reasoning": "Heuristic rule match: oxxo|7.?eleven|circulo\\s?k|tiendas\\s?ext...",
+        "source": "heuristic"
+      },
+      {
+        "transaction_id": "plaid_tx_009",
+        "name": "NOMINA ACME CORP SA DE CV",
+        "amount": -28500.0,
+        "date": "2026-04-01",
+        "category": "ingreso",
+        "confidence": 0.93,
+        "is_ant_expense": false,
+        "reasoning": "Heuristic rule match: nomina|nómina|salario|transferencia\\s?re...",
+        "source": "heuristic"
+      },
+      {
+        "transaction_id": "plaid_tx_010",
+        "name": "RENTA DEPTO ROMA NORTE",
+        "amount": 9200.0,
+        "date": "2026-04-02",
+        "category": "fijo",
+        "confidence": 0.93,
+        "is_ant_expense": false,
+        "reasoning": "Heuristic rule match: renta|alquiler|hipoteca|luz|cfe|agua|sac...",
+        "source": "heuristic"
+      },
+      {
+        "transaction_id": "plaid_tx_019",
+        "name": "SPOTIFY PREMIUM",
+        "merchant_name": "Spotify",
+        "amount": 129.0,
+        "date": "2026-04-03",
+        "category": "suscripcion",
+        "confidence": 0.93,
+        "is_ant_expense": false,
+        "reasoning": "Heuristic rule match: netflix|spotify|disney\\+?|hbo|max|amazon...",
+        "source": "heuristic"
+      },
+      {
+        "transaction_id": "plaid_tx_020",
+        "name": "SUPERAMA/WALMART EXPRESS",
+        "merchant_name": "Walmart Express",
+        "amount": 2250.0,
+        "date": "2026-04-05",
+        "category": "alimentacion",
+        "confidence": 0.93,
+        "is_ant_expense": false,
+        "reasoning": "Heuristic rule match: walmart|bodega\\s?aurrera|soriana|chedrau...",
+        "source": "heuristic"
+      },
+      {
+        "transaction_id": "plaid_tx_021",
+        "name": "RESTAURANTE EL CALIFA",
+        "merchant_name": "El Califa",
+        "amount": 680.0,
+        "date": "2026-04-07",
+        "datetime": "2026-04-07T21:15:00-06:00",
+        "category": "alimentacion",
+        "confidence": 0.92,
+        "is_ant_expense": false,
+        "reasoning": "Plaid high-confidence: FOOD_AND_DRINK/FOOD_AND_DRINK_RESTAURANT",
+        "source": "heuristic"
+      },
+      {
+        "transaction_id": "plaid_tx_017",
+        "name": "MERCADOLIBRE *COMPRA",
+        "merchant_name": "Mercado Libre",
+        "amount": 1450.0,
+        "date": "2026-03-26",
+        "category": "variable",
+        "confidence": 0.92,
+        "is_ant_expense": false,
+        "reasoning": "Mercado Libre es una plataforma de e-commerce. Una compra de $1,450 MXN en GENERAL_MERCHANDISE corresponde a un gasto no recurrente (ropa, electrónica, artículos del hogar, etc.). El monto supera $250 MXN, por lo que no aplica como gasto hormiga.",
+        "source": "bedrock"
+      }
+    ],
+    "analysis": {
+      "ant_expense_total": 929.0,
+      "ant_expense_percentage": 2.99,
+      "risk_level": "bajo",
+      "insights": [
+        {
+          "title": "Tu renta aparece duplicada — ¿doble cobro? 🚨",
+          "description": "En tus gastos fijos aparecen dos cargos de 'RENTA DEPTO ROMA NORTE' por $9,200 cada uno, sumando [~$18,400] solo en renta. Si fue un doble cobro o un error, podrías recuperar $9,200 este mes. Te recomendamos revisar tu estado de cuenta con tu arrendador de inmediato y solicitar aclaración si solo deberías haber pagado una mensualidad.",
+          "priority": "alta",
+          "potential_monthly_saving": 9200.0,
+          "affected_category": "fijo"
+        },
+        {
+          "title": "Uber Eats y OXXO se están comiendo tu dinero de a poco 🐜",
+          "description": "Tus gastos hormiga suman $929 este periodo: Uber Eats ($340), Cinépolis ($320), Starbucks ($115) y dos visitas a OXXO ($154 en total). El más impactante es Uber Eats — si lo usas 2-3 veces por semana, fácilmente llegas a [~$1,200]-[~$1,500] al mes. Considera cocinar en casa un par de días extra o preparar café en casa antes de salir. Con pequeños ajustes podrías ahorrar unos $500 al mes sin sacrificar mucho.",
+          "priority": "media",
+          "potential_monthly_saving": 500.0,
+          "affected_category": "hormiga"
+        },
+        {
+          "title": "Smart Fit + Starbucks: ¿estás aprovechando el gym? 💪",
+          "description": "Pagas $499 al mes en Smart Fit, lo cual es una excelente inversión si lo usas seguido. Sin embargo, también gastaste $115 en Starbucks este periodo. Si combinas el gym con preparar tus bebidas en casa (un café de especialidad casero cuesta menos de $20), podrías liberar unos $100-$115 al mes. Además, muchos Smart Fit tienen áreas de hidratación — ¡aprovéchalas! El punto no es que dejes de darte gustos, sino que cada peso cuente.",
+          "priority": "baja",
+          "potential_monthly_saving": 115.0,
+          "affected_category": "suscripcion"
+        }
+      ],
+      "summary": "¡Vas muy bien! Este periodo tuviste ingresos de [~$57,000] MXN y solo gastaste $31,080.50, lo que significa que guardaste casi [~$26,000] — eso es un ahorro del [~45%] de tu ingreso, algo que muy poca gente logra. 🎉 Tus gastos fijos están bien controlados y ya tienes el hábito de transferir a una cuenta de ahorro ($3,000 este periodo). Los puntos a mejorar son pequeños pero consistentes: los gastos hormiga suman $929 entre OXXO, Starbucks, Uber Eats y Cinépolis, y hay una duplicación en tu renta fija que vale la pena revisar. En general, tu perfil financiero es sólido y de riesgo bajo."
+    },
+    "resilience": {
+      "score_total": 65.1,
+      "nivel": "estable",
+      "factores": [
+        {
+          "nombre": "ratio_ahorro_ingreso",
+          "peso": 0.3,
+          "score_raw": 100.0,
+          "score_ponderado": 30.0,
+          "descripcion": "Ahorro estimado: 45.5% del ingreso ($25920 de $57000). Referencia ideal: >= 20%."
+        },
+        {
+          "nombre": "control_fijos",
+          "peso": 0.25,
+          "score_raw": 49.2,
+          "score_ponderado": 12.3,
+          "descripcion": "Gastos fijos: 35.5% del ingreso ($20256). Referencia ideal: <= 40%."
+        },
+        {
+          "nombre": "frecuencia_hormiga",
+          "peso": 0.2,
+          "score_raw": 100.0,
+          "score_ponderado": 20.0,
+          "descripcion": "Gastos hormiga: 3.0% del gasto total ($929). Referencia ideal: <= 5%."
+        },
+        {
+          "nombre": "variabilidad_ingresos",
+          "peso": 0.15,
+          "score_raw": 0.0,
+          "score_ponderado": 0.0,
+          "descripcion": "Variación ingreso observado vs declarado: 100.0% ($57000 observado vs $28500 declarado). Referencia ideal: <= 5%."
+        },
+        {
+          "nombre": "runway",
+          "peso": 0.1,
+          "score_raw": 27.8,
+          "score_ponderado": 2.8,
+          "descripcion": "Runway estimado: 0.8 meses de gastos cubiertos por el ahorro. Referencia ideal: >= 3 meses."
+        }
+      ],
+      "explicacion_llm": "# Tu Score de Resiliencia Financiera: Nivel Estable 💪\n\n---\n\n**¿Tus ingresos son siempre los mismos cada mes?** Este factor mide qué tan predecibles son tus entradas de dinero, y aquí encontramos algo importante: en el período analizado, recibiste casi el doble de tu ingreso habitual. Eso puede sonar genial, pero cuando hay meses \"gordos\" y meses \"flacos\", es fácil gastar como si el extra fuera la norma y luego sentir el golpe. Como diseñadora UX, es probable que tengas proyectos freelance o bonos que hacen que tu ingreso varíe. **Tu acción concreta:** Abre una cuenta separada y cada vez que llegue un ingreso extra, transfiere automáticamente el 50% a ella — así proteges tu estabilidad sin renunciar a disfrutar el resto.\n\n---\n\n**¿Cuánto de tu sueldo ya está \"comprometido\" antes de que lo toques?** Este factor analiza tus gastos fijos: renta, servicios, suscripciones, todo lo que pagas sí o sí cada mes. La buena noticia es que estás dentro de un rango saludable — poco más de un tercio de tu ingreso va a esos compromisos, lo que te deja margen real para moverte. Sin dependientes a tu cargo, tienes una ventaja enorme para optimizar esto antes de que tu vida cambie. **Tu acción concreta:** Revisa tus suscripciones activas este fin de semana — es común encontrar 2 o 3 que ya no usas y que, canceladas, pueden sumar varios cientos de pesos al mes hacia tu viaje a Japón 2027.\n\n---\n\n**¿Cuánto tiempo podrías sostenerte si mañana se detuvieran tus ingresos?** Esto es tu \"colchón de emergencia\", y hoy en día alcanzaría para cubrir menos de un mes de tus gastos. Considerando que tu meta ya es llegar a tres meses de fondo de emergencia, ¡ya sabes exactamente hacia dónde apuntar! A los 29 años y sin dependientes, este es el mejor momento para construirlo rápido. **Tu acción concreta:** Define un monto fijo mensual destinado exclusivamente al fondo de emergencia — incluso [~$1,500] al mes te llevaría a tu meta en menos de un año, y una vez que lo tengas, el camino hacia Japón y tu nuevo equipo se vuelve mucho más claro y seguro."
+    },
+    "cash_flow": {
+      "recurring_expenses": [
+        {
+          "merchant": "RENTA DEPTO ROMA NORTE",
+          "avg_amount": 9200.0,
+          "amount_variance": 0.0,
+          "periodicity_days": 30,
+          "periodicity_label": "mensual",
+          "last_seen_date": "2026-04-02",
+          "next_expected_date": "2026-05-02",
+          "occurrences": 2,
+          "category": "fijo",
+          "is_pending": true
+        }
+      ],
+      "projected_liquidity": 8250.5,
+      "impulse_alerts": [],
+      "forecast_horizon_days": 30
+    },
+    "pulse": {
+      "reference_date": "2026-04-09",
+      "presupuesto_libre_diario": 0.0,
+      "saldo_actual": 17450.5,
+      "gasto_fijo_mensual": 20256.0,
+      "gasto_variable_hoy": 0.0,
+      "gasto_promedio_diario": 902.04,
+      "dias_restantes_mes": 22,
+      "porcentaje_consumido_mes": 109.1,
+      "alerta": "presupuesto_agotado"
+    }
+  },
+  "meta": {
+    "elapsed_ms": 23222,
+    "total_transactions": 21,
+    "parsed": 21,
+    "classified": 21,
+    "parse_errors": 0,
+    "from_cache": 6,
+    "from_heuristic": 14,
+    "from_bedrock": 1,
+    "from_fallback": 0,
+    "ant_expenses_detected": 5
+  }
+}

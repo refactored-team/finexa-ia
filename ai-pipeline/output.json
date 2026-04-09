@@ -1,1 +1,240 @@
-{"ok":true,"data":{"classified":[{"transaction_id":"plaid_tx_001","name":"NOMINA ACME CORP SA DE CV","amount":-28500.0,"date":"2026-03-01","category":"ingreso","confidence":0.93,"is_ant_expense":false,"reasoning":"Heuristic rule match: nomina|nómina|salario|transferencia\\s?re...","source":"heuristic"},{"transaction_id":"plaid_tx_002","name":"RENTA DEPTO ROMA NORTE","amount":9200.0,"date":"2026-03-02","category":"fijo","confidence":0.93,"is_ant_expense":false,"reasoning":"Heuristic rule match: renta|alquiler|hipoteca|luz|cfe|agua|sac...","source":"heuristic"},{"transaction_id":"plaid_tx_003","name":"NETFLIX.COM","merchant_name":"Netflix","amount":179.0,"date":"2026-03-05","category":"suscripcion","confidence":0.93,"is_ant_expense":false,"reasoning":"Cached classification","source":"cache"},{"transaction_id":"plaid_tx_004","name":"OXXO SONORA 12","merchant_name":"OXXO","amount":89.0,"date":"2026-03-08","datetime":"2026-03-08T10:14:00-06:00","category":"hormiga","confidence":0.93,"is_ant_expense":true,"reasoning":"Cached classification","source":"cache"},{"transaction_id":"plaid_tx_005","name":"OXXO INSURGENTES 482","merchant_name":"OXXO","amount":65.0,"date":"2026-03-10","datetime":"2026-03-10T08:45:00-06:00","category":"hormiga","confidence":0.93,"is_ant_expense":true,"reasoning":"Cached classification","source":"cache"},{"transaction_id":"plaid_tx_006","name":"UBER EATS","merchant_name":"Uber Eats","amount":340.0,"date":"2026-03-12","datetime":"2026-03-12T20:30:00-06:00","category":"hormiga","confidence":0.93,"is_ant_expense":true,"reasoning":"Cached classification","source":"cache"},{"transaction_id":"plaid_tx_007","name":"WALMART PERISUR","merchant_name":"Walmart","amount":1850.0,"date":"2026-03-15","category":"alimentacion","confidence":0.93,"is_ant_expense":false,"reasoning":"Cached classification","source":"cache"},{"transaction_id":"plaid_tx_008","name":"UBER TRIP","merchant_name":"Uber","amount":450.0,"date":"2026-03-18","datetime":"2026-03-18T09:10:00-06:00","category":"transporte","confidence":0.93,"is_ant_expense":false,"reasoning":"Cached classification","source":"cache"},{"transaction_id":"plaid_tx_009","name":"NOMINA ACME CORP SA DE CV","amount":-28500.0,"date":"2026-04-01","category":"ingreso","confidence":0.93,"is_ant_expense":false,"reasoning":"Heuristic rule match: nomina|nómina|salario|transferencia\\s?re...","source":"heuristic"},{"transaction_id":"plaid_tx_010","name":"RENTA DEPTO ROMA NORTE","amount":9200.0,"date":"2026-04-02","category":"fijo","confidence":0.93,"is_ant_expense":false,"reasoning":"Heuristic rule match: renta|alquiler|hipoteca|luz|cfe|agua|sac...","source":"heuristic"}],"analysis":{"ant_expense_total":494.0,"ant_expense_percentage":2.31,"risk_level":"bajo","insights":[{"title":"Uber Eats se está comiendo tu presupuesto 🍔","description":"Gastaste $340 en un solo pedido de Uber Eats, que representa el 68% de todos tus gastos hormiga del periodo. Si pides delivery una vez por semana, podrías estar gastando hasta [~$1,360] al mes solo en comida a domicilio. Considera cocinar en casa 2-3 veces más por semana o usar Uber Eats solo como premio ocasional — podrías ahorrar fácilmente [~$800]-[~$1,000] al mes sin sacrificar mucho.","priority":"alta","potential_monthly_saving":900.0,"affected_category":"hormiga"},{"title":"Las visitas al OXXO suman más de lo que crees 🏪","description":"Hiciste 2 paradas en OXXO por un total de [~$154] en este periodo. Parece poco, pero si mantienes ese ritmo, podrías gastar hasta [~$308] al mes en compras impulsivas de conveniencia (snacks, bebidas, artículos de último minuto). Hacer una lista de pendientes antes de salir y abastecerte en el súper (ya lo haces en Walmart, ¡bien!) puede reducir estas paradas a la mitad.","priority":"media","potential_monthly_saving":154.0,"affected_category":"hormiga"},{"title":"Tu ahorro este periodo es una fortaleza 💪","description":"Guardaste [~$35,627] de [~$57,000] de ingreso — eso es un [~62.5%] de tasa de ahorro, muy por encima del promedio. Estás cubriendo tus gastos fijos, alimentación y transporte sin problema. Si aún no tienes un fondo de emergencia, este es el momento ideal para apartar al menos 3 meses de gastos fijos (~[~$55,200]) en una cuenta de ahorro separada. ¡Ya tienes el hábito, solo falta darle destino a ese dinero!","priority":"baja","potential_monthly_saving":0.0,"affected_category":"ingreso"}],"summary":"¡Vas muy bien! Tu balance este periodo es súper sólido: gastaste solo $21,373 de [~$57,000] que ingresaron, lo que significa que conservaste el [~62.5%] de tu ingreso. 🎉 Tu gasto más grande es la renta ($18,400), que representa el 86% de tus gastos totales — eso es completamente normal para vivir en Roma Norte. Lo que sí vale la pena revisar son los pequeños gastos del día a día: tres compras en OXXO y un pedido de Uber Eats suman $494 este periodo. No es una cantidad alarmante, pero si se repite cada quincena, puede convertirse en un hábito costoso. En general, tu perfil financiero es saludable y tienes un margen de ahorro envidiable."},"resilience":{"score_total":68.9,"nivel":"estable","factores":[{"nombre":"ratio_ahorro_ingreso","peso":0.3,"score_raw":100.0,"score_ponderado":30.0,"descripcion":"Ahorro estimado: 62.5% del ingreso ($35627 de $57000). Referencia ideal: >= 20%."},{"nombre":"control_fijos","peso":0.25,"score_raw":53.4,"score_ponderado":13.4,"descripcion":"Gastos fijos: 32.6% del ingreso ($18579). Referencia ideal: <= 40%."},{"nombre":"frecuencia_hormiga","peso":0.2,"score_raw":100.0,"score_ponderado":20.0,"descripcion":"Gastos hormiga: 2.3% del gasto total ($494). Referencia ideal: <= 5%."},{"nombre":"variabilidad_ingresos","peso":0.15,"score_raw":0.0,"score_ponderado":0.0,"descripcion":"Variación ingreso observado vs declarado: 100.0% ($57000 observado vs $28500 declarado). Referencia ideal: <= 5%."},{"nombre":"runway","peso":0.1,"score_raw":55.6,"score_ponderado":5.6,"descripcion":"Runway estimado: 1.7 meses de gastos cubiertos por el ahorro. Referencia ideal: >= 3 meses."}],"explicacion_llm":"# Tu Score de Resiliencia Financiera: Estable (68.9) 💪\n\n---\n\n**Tus ingresos tienen más movimiento del esperado**\nEl primer factor mide qué tan predecibles son tus entradas de dinero cada mes. En tu caso, detectamos que lo que realmente ingresó a tus cuentas fue significativamente mayor a lo que declaraste como ingreso habitual, lo que puede indicar ingresos variables, pagos extras o proyectos freelance. Eso no es malo, ¡pero sí hace más difícil planear! Como diseñadora UX, es probable que tengas meses con más proyectos que otros. **Tu acción concreta:** registra durante los próximos 30 días *todas* tus fuentes de ingreso por separado (sueldo fijo vs. extras) para que puedas presupuestar sobre tu ingreso mínimo garantizado, no el promedio.\n\n---\n\n**Tus gastos fijos están en una zona saludable**\nEste factor analiza cuánto de tu dinero ya está \"comprometido\" antes de que empiece el mes: renta, servicios, suscripciones, transporte. La buena noticia es que estás por debajo del límite recomendado, lo que significa que tienes margen real de maniobra cada mes. Eso es un activo valioso, especialmente si tu meta es ese viaje a Japón en 2027 🇯🇵. **Tu acción concreta:** revisa tus suscripciones activas esta semana y cancela al menos una que uses poco; ese dinero liberado puede ir directo a tu fondo de viaje.\n\n---\n\n**Tu colchón de emergencia aún está en construcción**\nEste factor mide cuánto tiempo podrías sostenerte económicamente si de repente dejaras de recibir ingresos. Hoy podrías cubrir poco más de mes y medio de tus gastos, y tu propia meta es llegar a tres meses, así que ya sabes exactamente hacia dónde apuntar. Sin dependientes a tu cargo, tienes una ventaja enorme: cada peso extra que ahorres trabaja solo para ti. **Tu acción concreta:** abre (o etiqueta) una cuenta de ahorro exclusiva para emergencias y programa una transferencia automática el día de tu pago, aunque sea pequeña; la constancia aquí vale más que el monto.\n\n---\n\n> 🎯 *Estás en un punto estable y con mucho potencial de mejora. Trabajar en la consistencia de tus ingresos y en crecer tu fondo de emergencia te acercará tanto a la tranquilidad financiera como a ese viaje soñado.*"},"cash_flow":{"recurring_expenses":[{"merchant":"RENTA DEPTO ROMA NORTE","avg_amount":9200.0,"amount_variance":0.0,"periodicity_days":30,"periodicity_label":"mensual","last_seen_date":"2026-04-02","next_expected_date":"2026-05-02","occurrences":2,"category":"fijo","is_pending":true}],"projected_liquidity":5000.0,"impulse_alerts":[],"forecast_horizon_days":30},"pulse":{"reference_date":"2026-04-09","presupuesto_libre_diario":0.0,"saldo_actual":14200.0,"gasto_fijo_mensual":18579.0,"gasto_variable_hoy":0.0,"gasto_promedio_diario":558.8,"dias_restantes_mes":22,"porcentaje_consumido_mes":75.0,"alerta":"presupuesto_agotado"}},"meta":{"elapsed_ms":19215,"total_transactions":10,"parsed":10,"classified":10,"parse_errors":0,"from_cache":6,"from_heuristic":4,"from_bedrock":0,"from_fallback":0,"ant_expenses_detected":3}}
+{
+  "ok": true,
+  "data": {
+    "classified": [
+      {
+        "transaction_id": "plaid_tx_001",
+        "name": "NOMINA ACME CORP SA DE CV",
+        "amount": -28500.0,
+        "date": "2026-03-01",
+        "category": "ingreso",
+        "confidence": 0.93,
+        "is_ant_expense": false,
+        "reasoning": "Heuristic rule match: nomina|nómina|salario|transferencia\\s?re...",
+        "source": "heuristic"
+      },
+      {
+        "transaction_id": "plaid_tx_002",
+        "name": "RENTA DEPTO ROMA NORTE",
+        "amount": 9200.0,
+        "date": "2026-03-02",
+        "category": "fijo",
+        "confidence": 0.93,
+        "is_ant_expense": false,
+        "reasoning": "Heuristic rule match: renta|alquiler|hipoteca|luz|cfe|agua|sac...",
+        "source": "heuristic"
+      },
+      {
+        "transaction_id": "plaid_tx_003",
+        "name": "NETFLIX.COM",
+        "merchant_name": "Netflix",
+        "amount": 179.0,
+        "date": "2026-03-05",
+        "category": "suscripcion",
+        "confidence": 0.93,
+        "is_ant_expense": false,
+        "reasoning": "Cached classification",
+        "source": "cache"
+      },
+      {
+        "transaction_id": "plaid_tx_004",
+        "name": "OXXO SONORA 12",
+        "merchant_name": "OXXO",
+        "amount": 89.0,
+        "date": "2026-03-08",
+        "datetime": "2026-03-08T10:14:00-06:00",
+        "category": "hormiga",
+        "confidence": 0.93,
+        "is_ant_expense": true,
+        "reasoning": "Cached classification",
+        "source": "cache"
+      },
+      {
+        "transaction_id": "plaid_tx_005",
+        "name": "OXXO INSURGENTES 482",
+        "merchant_name": "OXXO",
+        "amount": 65.0,
+        "date": "2026-03-10",
+        "datetime": "2026-03-10T08:45:00-06:00",
+        "category": "hormiga",
+        "confidence": 0.93,
+        "is_ant_expense": true,
+        "reasoning": "Cached classification",
+        "source": "cache"
+      },
+      {
+        "transaction_id": "plaid_tx_006",
+        "name": "UBER EATS",
+        "merchant_name": "Uber Eats",
+        "amount": 340.0,
+        "date": "2026-03-12",
+        "datetime": "2026-03-12T20:30:00-06:00",
+        "category": "hormiga",
+        "confidence": 0.93,
+        "is_ant_expense": true,
+        "reasoning": "Cached classification",
+        "source": "cache"
+      },
+      {
+        "transaction_id": "plaid_tx_007",
+        "name": "WALMART PERISUR",
+        "merchant_name": "Walmart",
+        "amount": 1850.0,
+        "date": "2026-03-15",
+        "category": "alimentacion",
+        "confidence": 0.93,
+        "is_ant_expense": false,
+        "reasoning": "Cached classification",
+        "source": "cache"
+      },
+      {
+        "transaction_id": "plaid_tx_008",
+        "name": "UBER TRIP",
+        "merchant_name": "Uber",
+        "amount": 450.0,
+        "date": "2026-03-18",
+        "datetime": "2026-03-18T09:10:00-06:00",
+        "category": "transporte",
+        "confidence": 0.93,
+        "is_ant_expense": false,
+        "reasoning": "Cached classification",
+        "source": "cache"
+      },
+      {
+        "transaction_id": "plaid_tx_009",
+        "name": "NOMINA ACME CORP SA DE CV",
+        "amount": -28500.0,
+        "date": "2026-04-01",
+        "category": "ingreso",
+        "confidence": 0.93,
+        "is_ant_expense": false,
+        "reasoning": "Heuristic rule match: nomina|nómina|salario|transferencia\\s?re...",
+        "source": "heuristic"
+      },
+      {
+        "transaction_id": "plaid_tx_010",
+        "name": "RENTA DEPTO ROMA NORTE",
+        "amount": 9200.0,
+        "date": "2026-04-02",
+        "category": "fijo",
+        "confidence": 0.93,
+        "is_ant_expense": false,
+        "reasoning": "Heuristic rule match: renta|alquiler|hipoteca|luz|cfe|agua|sac...",
+        "source": "heuristic"
+      }
+    ],
+    "analysis": {
+      "ant_expense_total": 494.0,
+      "ant_expense_percentage": 2.31,
+      "risk_level": "bajo",
+      "insights": [
+        {
+          "title": "Uber Eats se está comiendo tu presupuesto 🍔",
+          "description": "Gastaste $340 en un solo pedido de Uber Eats, que representa el 68% de todos tus gastos hormiga del periodo. Si pides delivery una vez por semana, podrías estar gastando hasta [~$1,360] al mes solo en comida a domicilio. Considera cocinar en casa 2-3 veces más por semana o usar Uber Eats solo como premio ocasional — podrías ahorrar fácilmente [~$800]-[~$1,000] al mes sin sacrificar mucho.",
+          "priority": "alta",
+          "potential_monthly_saving": 900.0,
+          "affected_category": "hormiga"
+        },
+        {
+          "title": "Las visitas al OXXO suman más de lo que crees 🏪",
+          "description": "Hiciste 2 paradas en OXXO por un total de [~$154] en este periodo. Parece poco, pero si mantienes ese ritmo, podrías gastar hasta [~$308] al mes en compras impulsivas de conveniencia (snacks, bebidas, artículos de último minuto). Hacer una lista de pendientes antes de salir y abastecerte en el súper (ya lo haces en Walmart, ¡bien!) puede reducir estas paradas a la mitad.",
+          "priority": "media",
+          "potential_monthly_saving": 154.0,
+          "affected_category": "hormiga"
+        },
+        {
+          "title": "Tu ahorro este periodo es una fortaleza 💪",
+          "description": "Guardaste [~$35,627] de [~$57,000] de ingreso — eso es un [~62.5%] de tasa de ahorro, muy por encima del promedio. Estás cubriendo tus gastos fijos, alimentación y transporte sin problema. Si aún no tienes un fondo de emergencia, este es el momento ideal para apartar al menos 3 meses de gastos fijos (~[~$55,200]) en una cuenta de ahorro separada. ¡Ya tienes el hábito, solo falta darle destino a ese dinero!",
+          "priority": "baja",
+          "potential_monthly_saving": 0.0,
+          "affected_category": "ingreso"
+        }
+      ],
+      "summary": "¡Vas muy bien! Tu balance este periodo es súper sólido: gastaste solo $21,373 de [~$57,000] que ingresaron, lo que significa que conservaste el [~62.5%] de tu ingreso. 🎉 Tu gasto más grande es la renta ($18,400), que representa el 86% de tus gastos totales — eso es completamente normal para vivir en Roma Norte. Lo que sí vale la pena revisar son los pequeños gastos del día a día: tres compras en OXXO y un pedido de Uber Eats suman $494 este periodo. No es una cantidad alarmante, pero si se repite cada quincena, puede convertirse en un hábito costoso. En general, tu perfil financiero es saludable y tienes un margen de ahorro envidiable."
+    },
+    "resilience": {
+      "score_total": 68.9,
+      "nivel": "estable",
+      "factores": [
+        {
+          "nombre": "ratio_ahorro_ingreso",
+          "peso": 0.3,
+          "score_raw": 100.0,
+          "score_ponderado": 30.0,
+          "descripcion": "Ahorro estimado: 62.5% del ingreso ($35627 de $57000). Referencia ideal: >= 20%."
+        },
+        {
+          "nombre": "control_fijos",
+          "peso": 0.25,
+          "score_raw": 53.4,
+          "score_ponderado": 13.4,
+          "descripcion": "Gastos fijos: 32.6% del ingreso ($18579). Referencia ideal: <= 40%."
+        },
+        {
+          "nombre": "frecuencia_hormiga",
+          "peso": 0.2,
+          "score_raw": 100.0,
+          "score_ponderado": 20.0,
+          "descripcion": "Gastos hormiga: 2.3% del gasto total ($494). Referencia ideal: <= 5%."
+        },
+        {
+          "nombre": "variabilidad_ingresos",
+          "peso": 0.15,
+          "score_raw": 0.0,
+          "score_ponderado": 0.0,
+          "descripcion": "Variación ingreso observado vs declarado: 100.0% ($57000 observado vs $28500 declarado). Referencia ideal: <= 5%."
+        },
+        {
+          "nombre": "runway",
+          "peso": 0.1,
+          "score_raw": 55.6,
+          "score_ponderado": 5.6,
+          "descripcion": "Runway estimado: 1.7 meses de gastos cubiertos por el ahorro. Referencia ideal: >= 3 meses."
+        }
+      ],
+      "explicacion_llm": "# Tu Score de Resiliencia Financiera: Estable (68.9) 💪\n\n---\n\n**Tus ingresos tienen más movimiento del esperado**\nEl primer factor mide qué tan predecibles son tus entradas de dinero cada mes. En tu caso, detectamos que lo que realmente ingresó a tus cuentas fue significativamente mayor a lo que declaraste como ingreso habitual, lo que puede indicar ingresos variables, pagos extras o proyectos freelance. Eso no es malo, ¡pero sí hace más difícil planear! Como diseñadora UX, es probable que tengas meses con más proyectos que otros. **Tu acción concreta:** registra durante los próximos 30 días *todas* tus fuentes de ingreso por separado (sueldo fijo vs. extras) para que puedas presupuestar sobre tu ingreso mínimo garantizado, no el promedio.\n\n---\n\n**Tus gastos fijos están en una zona saludable**\nEste factor analiza cuánto de tu dinero ya está \"comprometido\" antes de que empiece el mes: renta, servicios, suscripciones, transporte. La buena noticia es que estás por debajo del límite recomendado, lo que significa que tienes margen real de maniobra cada mes. Eso es un activo valioso, especialmente si tu meta es ese viaje a Japón en 2027 🇯🇵. **Tu acción concreta:** revisa tus suscripciones activas esta semana y cancela al menos una que uses poco; ese dinero liberado puede ir directo a tu fondo de viaje.\n\n---\n\n**Tu colchón de emergencia aún está en construcción**\nEste factor mide cuánto tiempo podrías sostenerte económicamente si de repente dejaras de recibir ingresos. Hoy podrías cubrir poco más de mes y medio de tus gastos, y tu propia meta es llegar a tres meses, así que ya sabes exactamente hacia dónde apuntar. Sin dependientes a tu cargo, tienes una ventaja enorme: cada peso extra que ahorres trabaja solo para ti. **Tu acción concreta:** abre (o etiqueta) una cuenta de ahorro exclusiva para emergencias y programa una transferencia automática el día de tu pago, aunque sea pequeña; la constancia aquí vale más que el monto.\n\n---\n\n> 🎯 *Estás en un punto estable y con mucho potencial de mejora. Trabajar en la consistencia de tus ingresos y en crecer tu fondo de emergencia te acercará tanto a la tranquilidad financiera como a ese viaje soñado.*"
+    },
+    "cash_flow": {
+      "recurring_expenses": [
+        {
+          "merchant": "RENTA DEPTO ROMA NORTE",
+          "avg_amount": 9200.0,
+          "amount_variance": 0.0,
+          "periodicity_days": 30,
+          "periodicity_label": "mensual",
+          "last_seen_date": "2026-04-02",
+          "next_expected_date": "2026-05-02",
+          "occurrences": 2,
+          "category": "fijo",
+          "is_pending": true
+        }
+      ],
+      "projected_liquidity": 5000.0,
+      "impulse_alerts": [],
+      "forecast_horizon_days": 30
+    },
+    "pulse": {
+      "reference_date": "2026-04-09",
+      "presupuesto_libre_diario": 0.0,
+      "saldo_actual": 14200.0,
+      "gasto_fijo_mensual": 18579.0,
+      "gasto_variable_hoy": 0.0,
+      "gasto_promedio_diario": 558.8,
+      "dias_restantes_mes": 22,
+      "porcentaje_consumido_mes": 75.0,
+      "alerta": "presupuesto_agotado"
+    }
+  },
+  "meta": {
+    "elapsed_ms": 19215,
+    "total_transactions": 10,
+    "parsed": 10,
+    "classified": 10,
+    "parse_errors": 0,
+    "from_cache": 6,
+    "from_heuristic": 4,
+    "from_bedrock": 0,
+    "from_fallback": 0,
+    "ant_expenses_detected": 3
+  }
+}
