@@ -1527,12 +1527,14 @@
           "title": {
             "type": "string",
             "maxLength": 80,
-            "title": "Title"
+            "title": "Title",
+            "description": "Encabezado corto. Si es una acción inmediata debe empezar con un verbo imperativo claro (ej. 'Cancela tu suscripción a HBO Max')."
           },
           "description": {
             "type": "string",
             "maxLength": 3000,
-            "title": "Description"
+            "title": "Description",
+            "description": "Explicación breve del problema y por qué al usuario le conviene actuar. Los pasos concretos van en `action_steps`, no aquí."
           },
           "priority": {
             "type": "string",
@@ -1543,10 +1545,46 @@
             "type": "number",
             "minimum": 0.0,
             "title": "Potential Monthly Saving",
+            "description": "Ahorro mensual estimado en MXN al ejecutar la acción.",
             "default": 0.0
           },
           "affected_category": {
             "$ref": "#/components/schemas/FinexaCategory"
+          },
+          "is_immediate_action": {
+            "type": "boolean",
+            "title": "Is Immediate Action",
+            "description": "True cuando el usuario puede cerrar este mal hábito AHORA en menos de 5 minutos (cancelar una suscripción online, dar de baja un servicio, etc.). La UI puede destacar estos insights con un botón de acción directa.",
+            "default": false
+          },
+          "action_steps": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array",
+                "maxItems": 6
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Action Steps",
+            "description": "Pasos numerados para ejecutar la acción ahora mismo. Incluir URL/ruta exacta, nombres de menú/botones y qué confirmación aparece. Obligatorio cuando `is_immediate_action=true`."
+          },
+          "action_url": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 300
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Action Url",
+            "description": "URL directa al panel de cancelación o al sitio de gestión del servicio, cuando exista. Ejemplo: https://www.netflix.com/youraccount"
           }
         },
         "type": "object",
