@@ -1,594 +1,850 @@
-import { LinearGradient } from 'expo-linear-gradient';
-import { Settings } from 'lucide-react-native';
-import { useState } from 'react';
 import {
+  FlatList,
   Image,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
   View,
+  Dimensions,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import Svg, { Circle, Defs, LinearGradient as SvgLinearGradient, Stop } from 'react-native-svg';
+import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
-import { ThemedView } from '@/components/themed-view';
 import { PrismColors } from '@/constants/theme';
-import { Layout, Spacing } from '@/constants/uiStyles';
+import { Spacing } from '@/constants/uiStyles';
+import SmartStack, { Finding, Theme } from '@/components/SmartStack';
+import apiClient from '@/src/services/api/apiClient';
+import { getInternalUserIdFromSession } from '@/src/services/api/users/usersService';
 
-export default function ExploreScreen() {
-  const [oxygenDays] = useState(14);
-  const [foodOrders] = useState(34);
-  const [potentialSavings] = useState(608.82);
+// ---------------------------------------------------------------------------
+// Themes
+// ---------------------------------------------------------------------------
+const THEMES: Record<string, Theme> = {
+  light: {
+    id: 'light',
+    name: 'Light',
+    backgroundColor: PrismColors.neutral,
+    cardBackground: PrismColors.surface,
+    textPrimary: PrismColors.textPrimary,
+    textSecondary: PrismColors.textSecondary,
+    accentColor: PrismColors.primary,
+    badgeGradient: [PrismColors.primary, PrismColors.tertiary] as [string, string],
+    checkmarkBg: '#10B981',
+    activeBg: '#F59E0B',
+  },
+  dark: {
+    id: 'dark',
+    name: 'Dark',
+    backgroundColor: '#0F172A',
+    cardBackground: '#1E293B',
+    textPrimary: '#F8FAFC',
+    textSecondary: '#94A3B8',
+    accentColor: PrismColors.tertiary,
+    badgeGradient: ['#1E40AF', '#6D28D9'] as [string, string],
+    checkmarkBg: '#0891B2',
+    activeBg: PrismColors.secondary,
+  },
+  bold: {
+    id: 'bold',
+    name: 'Bold',
+    backgroundColor: '#000000',
+    cardBackground: PrismColors.primary,
+    textPrimary: PrismColors.surface,
+    textSecondary: 'rgba(255,255,255,0.8)',
+    accentColor: PrismColors.tertiary,
+    badgeGradient: [PrismColors.tertiary, PrismColors.secondary] as [string, string],
+    checkmarkBg: '#10B981',
+    activeBg: '#FACC15',
+  },
+  gradient: {
+    id: 'gradient',
+    name: 'Gradient',
+    backgroundColor: '#0F172A',
+    cardBackground: 'gradient',
+    cardGradientColors: ['#2563EB', '#7C3AED', '#06B6D4'] as [string, string, string],
+    textPrimary: PrismColors.surface,
+    textSecondary: 'rgba(255,255,255,0.9)',
+    accentColor: PrismColors.surface,
+    badgeGradient: ['rgba(255,255,255,0.3)', 'rgba(255,255,255,0.1)'] as [string, string],
+    checkmarkBg: 'rgba(255,255,255,0.3)',
+    activeBg: '#FACC15',
+  },
+};
 
-  const gaugeProgress = (oxygenDays / 30) * 100;
-  const circumference = 2 * Math.PI * 100;
-  const strokeDashoffset = circumference - (gaugeProgress / 100) * circumference;
+type ThemeKey = keyof typeof THEMES;
+
+const HERO_THEME: Theme = {
+  id: 'hero',
+  name: 'Hero',
+  backgroundColor: '#000000',
+  cardBackground: PrismColors.surface,
+  textPrimary: '#FFFFFF',
+  textSecondary: 'rgba(255,255,255,0.72)',
+  accentColor: '#D7FF2F',
+  badgeGradient: [PrismColors.primary, PrismColors.tertiary],
+  checkmarkBg: '#10B981',
+  activeBg: '#F3F5F8',
+};
+const ACCOUNT_CARD_WIDTH = 160;
+const ACCOUNT_CARD_GAP = 10;
+const CARD_WIDTH = ACCOUNT_CARD_WIDTH + ACCOUNT_CARD_GAP;
+const GAUGE_SIZE = 72;
+const GAUGE_STROKE = 6;
+const GAUGE_RADIUS = (GAUGE_SIZE - GAUGE_STROKE) / 2;
+
+type ApiEnvelope<T> = {
+  ok: boolean;
+  data: T;
+};
+
+type ApiAnalysis = {
+  ant_expense_total?: number | null;
+  risk_level?: string | null;
+};
+
+type ApiCashFlow = {
+  projected_liquidity?: number | null;
+  forecast_horizon_days?: number | null;
+};
+
+type ApiInsight = {
+  title?: string | null;
+  affected_category?: string | null;
+};
+
+type ApiTransaction = {
+  id: number;
+  amount_cents: number;
+  description?: string;
+  posted_at: string;
+  category?: string | null;
+};
+
+type UiTransaction = {
+  id: string;
+  merchant_name: string;
+  category: string;
+  amount: number;
+  dateISO: string;
+};
+
+// ---------------------------------------------------------------------------
+// Data
+// ---------------------------------------------------------------------------
+const findings: Finding[] = [
+  {
+    id: '1',
+    title: 'Spotify y Youtube Music contratados',
+    icon: '💡',
+    cardColor: '#312E81',
+    buttonColor: '#4F46E5',
+    steps: [
+      { text: 'Ya revisé tus cargos', completed: true, active: false },
+      { text: 'Tengo la documentación lista', completed: true, active: false },
+      { text: '¿Quieres que lo cancele por ti?', completed: false, active: true },
+    ],
+  },
+  {
+    id: '2',
+    title: 'HBO Max - Suscripción sin uso',
+    icon: '📺',
+    cardColor: '#3730A3',
+    buttonColor: '#4F46E5',
+    steps: [
+      { text: 'No has abierto la app en 90 días', completed: true, active: false },
+      { text: 'Puedes ahorrar $129/mes', completed: true, active: false },
+      { text: '¿Quieres que la cancele?', completed: false, active: true },
+    ],
+  },
+  {
+    id: '3',
+    title: 'Uber Eats - Cargo duplicado',
+    icon: '🍔',
+    cardColor: '#4338CA',
+    buttonColor: '#6366F1',
+    steps: [
+      { text: 'Detecté un cargo doble de $342', completed: true, active: false },
+      { text: 'Ya contacté a soporte', completed: true, active: false },
+      { text: 'Reembolso en proceso', completed: false, active: true },
+    ],
+  },
+];
+
+// ---------------------------------------------------------------------------
+// Screen
+// ---------------------------------------------------------------------------
+export default function SmartStackScreen() {
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [activeCardIndex, setActiveCardIndex] = useState(0);
+  const theme = HERO_THEME;
+  const tabBarHeight = useBottomTabBarHeight();
+  const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
+  const screenHeight = Dimensions.get('window').height;
+  const sheetY = useSharedValue(screenHeight);
+  const fallbackAnalysis = {
+    resilience: { score_total: 14 },
+    cash_flow: { projected_liquidity: 1400 },
+    ant_expense_total: 2100,
+    insights: [{ title: 'Gastos hormiga altos en delivery y cafés' }],
+  };
+  const [apiAnalysis, setApiAnalysis] = useState<ApiAnalysis | null>(null);
+  const [apiCashFlow, setApiCashFlow] = useState<ApiCashFlow | null>(null);
+  const [apiInsights, setApiInsights] = useState<ApiInsight[]>([]);
+  const [apiTransactions, setApiTransactions] = useState<UiTransaction[]>([]);
+  const accounts = [
+    {
+      account_id: 'acc_1',
+      mask: '5382',
+      name: 'Tarjeta principal',
+      total_expenses: 1650,
+      pct_change: 12,
+      transactions: [
+        { id: 't1', merchant_name: 'Starbucks', category: 'hormiga', amount: 45, dateISO: new Date().toISOString() },
+        { id: 't2', merchant_name: 'Spotify', category: 'suscripcion', amount: 13, dateISO: new Date(Date.now() - 86400000).toISOString() },
+        { id: 't3', merchant_name: 'Uber Eats', category: 'hormiga', amount: 72, dateISO: new Date(Date.now() - 86400000 * 3).toISOString() },
+        { id: 't4', merchant_name: 'Nomina', category: 'ingreso', amount: -810, dateISO: new Date(Date.now() - 86400000 * 5).toISOString() },
+      ],
+    },
+    {
+      account_id: 'acc_2',
+      mask: '7741',
+      name: 'Tarjeta gastos',
+      total_expenses: 890,
+      pct_change: -4,
+      transactions: [
+        { id: 't5', merchant_name: 'PayByPhone', category: 'transporte', amount: 134, dateISO: new Date(Date.now() - 86400000 * 4).toISOString() },
+        { id: 't6', merchant_name: 'Burger Place', category: 'alimentacion', amount: 23, dateISO: new Date(Date.now() - 86400000 * 2).toISOString() },
+      ],
+    },
+    {
+      account_id: 'acc_3',
+      mask: '9910',
+      name: 'Tarjeta secundaria',
+      total_expenses: 420,
+      pct_change: 5,
+      transactions: [
+        { id: 't7', merchant_name: 'Cinepolis', category: 'entretenimiento', amount: 58, dateISO: new Date(Date.now() - 86400000 * 6).toISOString() },
+      ],
+    },
+  ];
+  useEffect(() => {
+    let cancelled = false;
+    const loadSmartStackData = async () => {
+      try {
+        const userId = await getInternalUserIdFromSession();
+        const [analysisRes, cashFlowRes, insightsRes, transactionsRes] = await Promise.all([
+          apiClient.get<ApiEnvelope<ApiAnalysis>>(`/mvp/v1/users/${userId}/transactions/analysis/latest`),
+          apiClient.get<ApiEnvelope<ApiCashFlow>>(`/mvp/v1/users/${userId}/transactions/cash-flow/latest`),
+          apiClient.get<ApiEnvelope<ApiInsight[]>>(`/mvp/v1/users/${userId}/transactions/insights`, {
+            params: { limit: 3, offset: 0 },
+          }),
+          apiClient.get<ApiEnvelope<ApiTransaction[]>>(`/mvp/v1/users/${userId}/transactions`, {
+            params: { limit: 20, offset: 0 },
+          }),
+        ]);
+
+        if (cancelled) return;
+        setApiAnalysis(analysisRes.data?.data ?? null);
+        setApiCashFlow(cashFlowRes.data?.data ?? null);
+        setApiInsights(insightsRes.data?.data ?? []);
+        setApiTransactions(
+          (transactionsRes.data?.data ?? []).map((tx) => ({
+            id: String(tx.id),
+            merchant_name: (tx.description || 'Movimiento').slice(0, 20),
+            category: tx.category || 'variable',
+            amount: (tx.amount_cents || 0) / 100,
+            dateISO: tx.posted_at,
+          }))
+        );
+      } catch {
+        if (!cancelled) {
+          setApiAnalysis(null);
+          setApiCashFlow(null);
+          setApiInsights([]);
+          setApiTransactions([]);
+        }
+      }
+    };
+    loadSmartStackData();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const antExpenseTotal = apiAnalysis?.ant_expense_total ?? fallbackAnalysis.ant_expense_total;
+  const projectedLiquidity = apiCashFlow?.projected_liquidity ?? fallbackAnalysis.cash_flow.projected_liquidity;
+  const dailySpend = Math.max(1, antExpenseTotal / 30);
+  const projectedDays = Math.max(0, apiCashFlow?.forecast_horizon_days ?? Math.round(projectedLiquidity / dailySpend));
+  const projectedDate = new Date(Date.now() + projectedDays * 86400000).toLocaleDateString('es-MX', {
+    day: 'numeric',
+    month: 'short',
+  });
+  const gaugeProgress = Math.min(1, projectedDays / 30);
+  const circumference = 2 * Math.PI * GAUGE_RADIUS;
+  const strokeDashoffset = circumference - gaugeProgress * circumference;
+  const topInsight = apiInsights[0]?.title ?? fallbackAnalysis.insights[0]?.title ?? '';
+  const cardColors = ['#312E81', '#3730A3', '#4338CA'];
+  const selectedAccount = accounts.find((a) => a.account_id === selectedAccountId) ?? null;
+  const filteredRecent = useMemo(() => {
+    if (apiTransactions.length > 0) {
+      return apiTransactions
+        .slice()
+        .sort((a, b) => new Date(b.dateISO).getTime() - new Date(a.dateISO).getTime())
+        .slice(0, 8);
+    }
+    const visibleAccountId = accounts[activeCardIndex]?.account_id;
+    return (
+      accounts
+        .find((a) => a.account_id === visibleAccountId)
+        ?.transactions?.slice()
+        .sort((a, b) => new Date(b.dateISO).getTime() - new Date(a.dateISO).getTime())
+        .slice(0, 8) ?? []
+    );
+  }, [accounts, activeCardIndex, apiTransactions]);
+  const levelLabel = apiAnalysis?.risk_level ? `Nivel ${apiAnalysis.risk_level.toLowerCase()}` : 'Nivel estable';
+  const categoryLabel = apiInsights[0]?.affected_category
+    ? `${apiInsights[0].affected_category.replace(/_/g, ' ')} altos`
+    : 'Gastos hormiga altos';
+  const onAccountsScroll = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const rawIndex = Math.round(e.nativeEvent.contentOffset.x / CARD_WIDTH);
+    const clampedIndex = Math.max(0, Math.min(rawIndex, accounts.length - 1));
+    setActiveCardIndex(clampedIndex);
+  }, []);
+  const categoryMap: Record<string, { bg: string; icon: string; label: string }> = {
+    alimentacion: { bg: '#FEF3C7', icon: '🍽️', label: 'alimentacion' },
+    hormiga: { bg: '#FEE2E2', icon: '🐜', label: 'hormiga' },
+    fijo: { bg: '#EDE9FE', icon: '🔒', label: 'fijo' },
+    transporte: { bg: '#E0F2FE', icon: '🚗', label: 'transporte' },
+    entretenimiento: { bg: '#F3E8FF', icon: '🎮', label: 'entretenimiento' },
+    suscripcion: { bg: '#EDE9FE', icon: '🎵', label: 'suscripcion' },
+    ingreso: { bg: '#DCFCE7', icon: '💰', label: 'ingreso' },
+    variable: { bg: '#F1F5F9', icon: '🔀', label: 'variable' },
+    transferencia: { bg: '#F1F5F9', icon: '↔️', label: 'transferencia' },
+  };
+  const formatRelativeDate = (iso: string) => {
+    const d = new Date(iso);
+    const diff = Math.floor((Date.now() - d.getTime()) / 86400000);
+    if (diff <= 0) return 'Hoy';
+    if (diff === 1) return 'Ayer';
+    return `Hace ${diff} dias`;
+  };
+  const openSheet = (id: string) => {
+    setSelectedAccountId(id);
+    sheetY.value = withTiming(0, { duration: 250 });
+  };
+  const closeSheet = () => {
+    sheetY.value = withTiming(screenHeight, { duration: 220 });
+    setTimeout(() => setSelectedAccountId(null), 230);
+  };
+  const sheetStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: sheetY.value }],
+  }));
 
   return (
-    <ThemedView style={Layout.flex1}>
-      <SafeAreaView style={Layout.flex1} edges={['top']}>
-        <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+    <View style={[styles.root, { backgroundColor: '#E5E7EB' }]}>
+      <SafeAreaView edges={['top']} style={{ backgroundColor: '#C3E9E9' }} />
+      <SafeAreaView edges={['left', 'right', 'bottom']} style={[styles.safe, { backgroundColor: '#F1F4F9' }]}>
+        <ScrollView
+          contentContainerStyle={[styles.scroll, { paddingBottom: tabBarHeight + 24 }]}
+          contentInset={{ bottom: tabBarHeight + 220 }}
+          scrollIndicatorInsets={{ bottom: tabBarHeight + 220 }}
+          showsVerticalScrollIndicator={false}>
 
-          {/* Header Section */}
-          <View style={styles.header}>
-            <View style={styles.headerRow}>
-              <View style={styles.titleContainer}>
-                <Text style={styles.mainTitle}>El Observatorio Financiero</Text>
-                <Text style={styles.subtitle}>[FNX_ENGINE_v4.2]</Text>
+          {/* Header */}
+          <LinearGradient
+            colors={['#C3E9E9', '#F6FBFB']}
+            start={{ x: 0.5, y: 1 }}
+            end={{ x: 0.5, y: 2 }}
+            style={styles.header}>
+            <View style={styles.topRow}>
+              <View style={styles.userAvatarWrap}>
+                <Image
+                  source={require('@/assets/images/finexa-i.png')}
+                  style={styles.userAvatar}
+                  resizeMode="cover"
+                />
               </View>
-              <Pressable style={styles.settingsButton}>
-                <Settings size={20} color={PrismColors.textSecondary} />
-              </Pressable>
-            </View>
-          </View>
 
-          {/* Hero Section */}
-          <View style={styles.heroSection}>
-            <Text style={styles.heroTitle}>Hola, analicé tus movimientos.</Text>
-            <Text style={styles.heroSubtitle}>
-              Esto es lo único que requiere tu atención hoy para salvar tu mes.
+              <View style={styles.chatButton}>
+                <Text style={styles.chatButtonIcon}>💬</Text>
+              </View>
+            </View>
+
+            <Text
+              numberOfLines={1}
+              ellipsizeMode="tail"
+              allowFontScaling={false}
+              style={[styles.welcomeLine, { color: '#000' }]}>
+              Hola,{'\u00A0'}
+              <Text style={[styles.nameLine, { color: '#036666' }]}>
+                Ivano{'\u00A0'}Ermakov
+              </Text>
             </Text>
-          </View>
-
-          {/* Main Content Grid */}
-          <View style={styles.contentGrid}>
-            {/* Right Column - Main Alert */}
-            <View style={styles.rightColumn}>
-              <View style={[styles.glassCard, styles.alertCard]}>
-                {/* <Text style={[styles.microStatus, styles.microStatusLeft]}>
-                    [SECURE_PROTOCOL_ENFORCED]
-                  </Text> */}
-
-                <View style={styles.alertHeader}>
-                  <View style={styles.spotifyIcon}>
-                    <Text style={styles.spotifyIconText}>♪</Text>
-                  </View>
-                  <View style={styles.criticalBadge}>
-                    <Text style={styles.criticalBadgeText}>Crítico</Text>
-                  </View>
-                </View>
-
-                <Text style={styles.alertTitle}>
-                  Fuga Detectada: Spotify cobrado 4 veces.
-                </Text>
-
-                <View style={styles.protocolSection}>
-                  <Text style={styles.protocolLabel}>Protocolo Finexa Ejecutado:</Text>
-
-                  <View style={styles.protocolList}>
-                    <View style={styles.protocolItem}>
-                      <View style={[styles.protocolIcon, styles.protocolComplete]}>
-                        <Text style={styles.checkmark}>✓</Text>
-                      </View>
-                      <Text style={styles.protocolText}>
-                        Aislar Cargos: Identificando tokens de suscripción redundantes.
-                      </Text>
-                    </View>
-
-                    <View style={styles.protocolItem}>
-                      <View style={[styles.protocolIcon, styles.protocolComplete]}>
-                        <Text style={styles.checkmark}>✓</Text>
-                      </View>
-                      <Text style={styles.protocolText}>
-                        Preparar Solicitud de Reembolso: Documentación para disputa con comerciante.
-                      </Text>
-                    </View>
-
-                    <View style={styles.protocolItem}>
-                      <View style={[styles.protocolIcon, styles.protocolActive]}>
-                        <Text style={styles.spinner}>○</Text>
-                      </View>
-                      <Text style={[styles.protocolText, styles.protocolTextActive]}>
-                        Ejecutar Cancelación: Resolución API de un clic.
-                      </Text>
-                    </View>
-                  </View>
-                </View>
-
-                <LinearGradient
-                  colors={[PrismColors.primary, PrismColors.secondary]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={styles.killSwitchButton}>
-                  <Pressable style={styles.killSwitchPressable}>
-                    <Text style={styles.killSwitchText}>Detener Fuga Ahora</Text>
-                  </Pressable>
-                </LinearGradient>
+            <Text style={[styles.welcomeLine, { color: "#000", fontSize: 20 }]}>
+              encontré esto por ti
+            </Text>
+            <View style={styles.chipsRow}>
+              <View style={styles.chip}>
+                <Text style={styles.chipText}>{levelLabel}</Text>
               </View>
+              <View style={styles.chip}>
+                <Text style={styles.chipText}>{categoryLabel}</Text>
+              </View>
+            </View>
+          </LinearGradient>
 
-              {/* Bottom Mini Cards */}
-              <View style={styles.miniCardsRow}>
-                <View style={[styles.glassCard, styles.miniCard]}>
-                  <View style={[styles.miniIcon, styles.miniIconGreen]}>
-                    <Text style={styles.miniIconSymbol}>🛡</Text>
-                  </View>
-                  <View>
-                    <Text style={styles.miniLabel}>Protección</Text>
-                    <Text style={styles.miniValue}>Activa</Text>
-                  </View>
+          {/* Smart Stack */}
+          <SmartStack
+            findings={findings}
+            theme={theme}
+            currentIndex={currentIndex}
+            onIndexChange={setCurrentIndex}
+          />
+
+          <View style={styles.lowerSection}>
+            <View style={styles.gaugeCard}>
+              <View style={styles.gaugeLeft}>
+                <Svg width={GAUGE_SIZE} height={GAUGE_SIZE}>
+                  <Circle
+                    cx={GAUGE_SIZE / 2}
+                    cy={GAUGE_SIZE / 2}
+                    r={GAUGE_RADIUS}
+                    stroke="#E5E7EB"
+                    strokeWidth={GAUGE_STROKE}
+                    fill="transparent"
+                  />
+                  <Circle
+                    cx={GAUGE_SIZE / 2}
+                    cy={GAUGE_SIZE / 2}
+                    r={GAUGE_RADIUS}
+                    stroke="#2DD4BF"
+                    strokeWidth={GAUGE_STROKE}
+                    fill="transparent"
+                    strokeDasharray={circumference}
+                    strokeDashoffset={strokeDashoffset}
+                    strokeLinecap="round"
+                    rotation="-90"
+                    origin={`${GAUGE_SIZE / 2}, ${GAUGE_SIZE / 2}`}
+                  />
+                </Svg>
+                <View style={styles.gaugeInner}>
+                  <Text style={styles.gaugeInnerValue}>{projectedDays}</Text>
+                  <Text style={styles.gaugeInnerLabel}>DIAS</Text>
                 </View>
-
-                <View style={[styles.glassCard, styles.miniCard]}>
-                  <View style={[styles.miniIcon, styles.miniIconPrimary]}>
-                    <Text style={styles.miniIconSymbol}>⏰</Text>
-                  </View>
-                  <View>
-                    <Text style={styles.miniLabel}>Último Escaneo</Text>
-                    <Text style={styles.miniValue}>Hace 2 min</Text>
-                  </View>
+              </View>
+              <View style={styles.gaugeRight}>
+                <Text style={styles.gaugeRightTitle}>Días de oxigeno</Text>
+                <Text style={styles.gaugeRightSubtitle}>Tu dinero alcanza hasta el {projectedDate}</Text>
+                <View style={styles.insightBadge}>
+                  <Text style={styles.insightBadgeText}>{topInsight}</Text>
                 </View>
               </View>
             </View>
-            {/* Left Column - Oxygen Gauge */}
-            <View style={styles.leftColumn}>
-              <View style={styles.glassCard}>
-                <Text style={styles.microStatus}>[DATA_SYNC: OK]</Text>
 
-                {/* Oxygen Gauge */}
-                <View style={styles.gaugeContainer}>
-                  <Svg width={240} height={240} style={styles.gaugeSvg}>
-                    <Defs>
-                      <SvgLinearGradient id="gaugeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                        <Stop offset="0%" stopColor={PrismColors.primary} />
-                        <Stop offset="100%" stopColor={PrismColors.tertiary} />
-                      </SvgLinearGradient>
-                    </Defs>
-                    <Circle
-                      cx="120"
-                      cy="120"
-                      r="100"
-                      stroke={PrismColors.neutral}
-                      strokeWidth="6"
-                      fill="transparent"
-                    />
-                    <Circle
-                      cx="120"
-                      cy="120"
-                      r="100"
-                      stroke="url(#gaugeGradient)"
-                      strokeWidth="6"
-                      fill="transparent"
-                      strokeDasharray={circumference}
-                      strokeDashoffset={strokeDashoffset}
-                      strokeLinecap="round"
-                      rotation="0"
-                      origin="120, 120"
-                    />
-                  </Svg>
-                  <View style={styles.gaugeCenter}>
-                    <Text style={styles.gaugeNumber}>{oxygenDays}</Text>
-                    <Text style={styles.gaugeLabel}>Días de Oxígeno</Text>
+            <Text style={styles.sectionLabel}>TUS CUENTAS</Text>
+            <FlatList
+              data={accounts}
+              horizontal
+              nestedScrollEnabled
+              showsHorizontalScrollIndicator={false}
+              onScroll={onAccountsScroll}
+              scrollEventThrottle={16}
+              contentContainerStyle={styles.accountsList}
+              keyExtractor={(item) => item.account_id}
+              renderItem={({ item, index }) => (
+                <Pressable
+                  onPress={() => openSheet(item.account_id)}
+                  style={[styles.accountCard, { backgroundColor: cardColors[index % 3] }]}>
+                  <View style={styles.accountDecor} />
+                  <Text style={styles.accountMask}>•••• {item.mask}</Text>
+                  <Text style={styles.accountLabel}>Gastos del mes</Text>
+                  <Text style={styles.accountAmount}>${item.total_expenses.toLocaleString('en-US')}</Text>
+                  <View style={styles.accountPctBadge}>
+                    <Text style={styles.accountPctText}>{item.pct_change >= 0 ? '+' : ''}{item.pct_change}%</Text>
                   </View>
-                </View>
-
-                <View style={styles.gaugeDescription}>
-                  <Text style={styles.cardTitle}>Tranquilidad Asegurada</Text>
-                  <Text style={styles.cardBody}>
-                    Tu liquidez actual cubre tus necesidades esenciales hasta final de quincena sin ajustes.
-                  </Text>
-                </View>
-              </View>
-
-              {/* Habit Detection Card */}
-              <View style={[styles.glassCard, styles.habitCard]}>
-                <Text style={[styles.microStatus, styles.microStatusBottom]}>[AI_ANALYSIS_ACTIVE]</Text>
-
-                <View style={styles.badge}>
-                  <Text style={styles.badgeText}>Hábito Detectado</Text>
-                </View>
-
-                <Text style={styles.habitTitle}>
-                  Detecté {foodOrders} pedidos de comida este mes.
-                </Text>
-
-                <Text style={styles.habitBody}>
-                  Si reducimos los pedidos a domicilio un 25%, recuperamos{' '}
-                  <Text style={styles.highlight}>${potentialSavings.toFixed(2)}</Text> y ganamos 4 días adicionales.
-                </Text>
-
-                <Pressable style={styles.actionButton}>
-                  <Text style={styles.actionButtonText}>Optimizar Hábito</Text>
                 </Pressable>
-              </View>
+              )}
+            />
+
+            <Text style={styles.sectionLabel}>MOVIMIENTOS RECIENTES</Text>
+            <View style={styles.recentCard}>
+              {filteredRecent.map((tx, idx) => {
+                const meta = categoryMap[tx.category] ?? categoryMap.variable;
+                const isExpense = tx.amount > 0;
+                const name = (tx.merchant_name || 'Movimiento').slice(0, 20);
+                return (
+                  <View key={tx.id} style={[styles.txRow, idx === filteredRecent.length - 1 && styles.txRowLast]}>
+                    <View style={[styles.txIconWrap, { backgroundColor: meta.bg }]}>
+                      <Text style={styles.txIcon}>{meta.icon}</Text>
+                    </View>
+                    <View style={styles.txMiddle}>
+                      <Text style={styles.txName}>{name}</Text>
+                      <Text style={styles.txMeta}>{formatRelativeDate(tx.dateISO)} · {meta.label}</Text>
+                    </View>
+                    <Text style={[styles.txAmount, { color: isExpense ? '#EF4444' : '#10B981' }]}>
+                      {isExpense ? '-' : '+'}${Math.abs(tx.amount).toLocaleString('en-US')}
+                    </Text>
+                  </View>
+                );
+              })}
             </View>
-
-
           </View>
+
+          <View style={{ height: tabBarHeight + 24 }} />
         </ScrollView>
+
+        {selectedAccount && (
+          <>
+            <Pressable onPress={closeSheet} style={styles.sheetBackdrop} />
+            <Animated.View style={[styles.bottomSheet, sheetStyle]}>
+              <View style={styles.sheetHandle} />
+              <View style={styles.sheetCardVisual}>
+                <Text style={styles.sheetCardMask}>•••• {selectedAccount.mask}</Text>
+                <Text style={styles.sheetCardAmount}>${selectedAccount.total_expenses.toLocaleString('en-US')}</Text>
+              </View>
+              <Text style={styles.sheetTitle}>Movimientos · {new Date().toLocaleDateString('es-MX', { month: 'long' })}</Text>
+              <FlatList
+                data={selectedAccount.transactions}
+                keyExtractor={(item) => item.id}
+                contentContainerStyle={styles.sheetList}
+                renderItem={({ item }) => {
+                  const meta = categoryMap[item.category] ?? categoryMap.variable;
+                  const isExpense = item.amount > 0;
+                  return (
+                    <View style={styles.txRow}>
+                      <View style={[styles.txIconWrap, { backgroundColor: meta.bg }]}>
+                        <Text style={styles.txIcon}>{meta.icon}</Text>
+                      </View>
+                      <View style={styles.txMiddle}>
+                        <Text style={styles.txName}>{(item.merchant_name || 'Movimiento').slice(0, 20)}</Text>
+                        <Text style={styles.txMeta}>{formatRelativeDate(item.dateISO)} · {meta.label}</Text>
+                      </View>
+                      <Text style={[styles.txAmount, { color: isExpense ? '#EF4444' : '#10B981' }]}>
+                        {isExpense ? '-' : '+'}${Math.abs(item.amount).toLocaleString('en-US')}
+                      </Text>
+                    </View>
+                  );
+                }}
+              />
+            </Animated.View>
+          </>
+        )}
+
       </SafeAreaView>
-    </ThemedView>
+    </View>
   );
 }
 
+// ---------------------------------------------------------------------------
+// Styles
+// ---------------------------------------------------------------------------
 const styles = StyleSheet.create({
   scroll: {
-    paddingBottom: 100,
+    // paddingBottom: Spacing.lg,
+  },
+  root: {
+    flex: 1,
+    // height: 1000,
+  },
+  safe: {
+    // Intentionally left without flex to avoid constraining ScrollView height.
   },
   header: {
-    paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.md,
+    paddingHorizontal: 22,
+    paddingTop: 10,
     paddingBottom: Spacing.lg,
+    height: 270,
   },
-  headerRow: {
+  topRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    marginBottom: 18,
   },
-  titleContainer: {
-    flex: 1,
+  userAvatarWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    overflow: 'hidden',
+    borderWidth: 2,
+    borderColor: "#036666",
   },
-  mainTitle: {
+  userAvatar: {
+    width: '100%',
+    height: '100%',
+  },
+  chatButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255,255,255,0.92)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  chatButtonIcon: {
     fontSize: 18,
-    fontWeight: '800',
-    color: PrismColors.textPrimary,
-    letterSpacing: -0.5,
+    color: '#111827',
   },
-  subtitle: {
-    fontSize: 9,
-    fontFamily: 'monospace',
-    color: PrismColors.textSecondary,
-    opacity: 0.4,
-    marginTop: 2,
-    letterSpacing: 2,
-  },
-  settingsButton: {
-    padding: 8,
-    borderRadius: 12,
-  },
-  heroSection: {
-    paddingHorizontal: Spacing.lg,
-    marginBottom: Spacing.xl,
-  },
-  heroTitle: {
-    fontSize: 32,
-    fontWeight: '800',
-    color: PrismColors.textPrimary,
-    marginBottom: Spacing.sm,
-    letterSpacing: -1,
-  },
-  heroSubtitle: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: PrismColors.textSecondary,
-    lineHeight: 24,
-  },
-  contentGrid: {
-    paddingHorizontal: Spacing.lg,
-    gap: Spacing.lg,
-  },
-  leftColumn: {
-    gap: Spacing.lg,
-  },
-  rightColumn: {
-    gap: Spacing.lg,
-  },
-  glassCard: {
-    backgroundColor: PrismColors.surface,
-    borderRadius: 24,
-    padding: Spacing.xl,
-    borderWidth: 1,
-    borderColor: PrismColors.primaryBorder,
-    shadowColor: PrismColors.primary,
-    shadowOffset: { width: 0, height: 20 },
-    shadowOpacity: 0.08,
-    shadowRadius: 40,
-    elevation: 8,
-    position: 'relative',
-  },
-  microStatus: {
-    position: 'absolute',
-    top: 24,
-    right: 32,
-    fontFamily: 'monospace',
-    fontSize: 8,
-    color: PrismColors.textSecondary,
-    opacity: 0.4,
-  },
-  microStatusBottom: {
-    top: 'auto',
-    bottom: 24,
-  },
-  microStatusLeft: {
-    right: 'auto',
-    left: 48,
-  },
-  gaugeContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    position: 'relative',
-    marginVertical: Spacing.lg,
-  },
-  gaugeSvg: {
-    transform: [{ rotate: '-90deg' }],
-  },
-  gaugeCenter: {
-    position: 'absolute',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  gaugeNumber: {
-    fontSize: 56,
-    fontWeight: '800',
-    color: PrismColors.textPrimary,
-    letterSpacing: -2,
-  },
-  gaugeLabel: {
-    fontSize: 10,
+  welcomeLine: {
+    fontSize: 34,
     fontWeight: '600',
-    color: PrismColors.primary,
-    textTransform: 'uppercase',
-    letterSpacing: 1.2,
-    marginTop: 4,
+    letterSpacing: 0.2,
+    // marginBottom: 2,
   },
-  gaugeDescription: {
-    alignItems: 'center',
-    marginTop: Spacing.lg,
-  },
-  cardTitle: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: PrismColors.textPrimary,
-    marginBottom: Spacing.sm,
-  },
-  cardBody: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: PrismColors.textSecondary,
-    textAlign: 'center',
-    lineHeight: 20,
-    opacity: 0.9,
-    maxWidth: 280,
-  },
-  habitCard: {
-    marginTop: Spacing.lg,
-  },
-  badge: {
-    backgroundColor: PrismColors.neutral,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
-    alignSelf: 'flex-start',
-    borderWidth: 1,
-    borderColor: PrismColors.primaryBorder,
-    marginBottom: Spacing.lg,
-  },
-  badgeText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: PrismColors.textSecondary,
-    textTransform: 'uppercase',
-    letterSpacing: 1.2,
-  },
-  habitTitle: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: PrismColors.textPrimary,
-    marginBottom: Spacing.md,
-    lineHeight: 28,
-  },
-  habitBody: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: PrismColors.textSecondary,
-    lineHeight: 22,
-    marginBottom: Spacing.xl,
-    opacity: 0.9,
-  },
-  highlight: {
-    color: PrismColors.primary,
-    fontWeight: '700',
-    backgroundColor: PrismColors.primaryBorder,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 6,
-  },
-  actionButton: {
-    backgroundColor: PrismColors.surface,
-    borderWidth: 1,
-    borderColor: PrismColors.neutral,
-    paddingVertical: 16,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  actionButtonText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: PrismColors.textPrimary,
-  },
-  alertCard: {
-    // paddingTop: 48,
-  },
-  alertHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: Spacing.xl,
-  },
-  spotifyIcon: {
-    width: 64,
-    height: 64,
-    backgroundColor: PrismColors.surface,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: PrismColors.neutral,
-    alignItems: 'center',
-    justifyContent: 'center',
-    transform: [{ rotate: '-2deg' }],
-    shadowColor: PrismColors.textPrimary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  spotifyIconText: {
-    fontSize: 32,
-    color: PrismColors.tertiary,
-  },
-  criticalBadge: {
-    backgroundColor: PrismColors.neutral,
-    paddingHorizontal: 16,
-    paddingVertical: 6,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: PrismColors.primaryBorder,
-  },
-  criticalBadgeText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: PrismColors.danger,
-    textTransform: 'uppercase',
-    letterSpacing: 1.2,
-  },
-  alertTitle: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: PrismColors.textPrimary,
-    marginBottom: Spacing.xl,
+  nameLine: {
+    fontSize: 34,
     lineHeight: 34,
-    letterSpacing: -0.5,
+    fontWeight: '800',
+    letterSpacing: 0.2,
+    maxWidth: '96%',
+    includeFontPadding: false,
   },
-  protocolSection: {
-    marginBottom: Spacing.xl,
+  chipsRow: {
+    marginVertical: 15,
+    flexDirection: 'row',
+    gap: 10,
   },
-  protocolLabel: {
+  chip: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 999,
+    backgroundColor: '#EAFF39',
+  },
+  chipText: {
+    fontSize: 12,
+    fontWeight: '600',
+    // letterSpacing: 0.2,
+    color: '#000',
+  },
+  lowerSection: {
+    paddingHorizontal: 16,
+    paddingTop: 8,
+  },
+  gaugeCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 18,
+    minHeight: 126,
+    gap: 12,
+  },
+  gaugeLeft: {
+    flexBasis: '42%',
+    maxWidth: 120,
+    minWidth: 96,
+    height: 92,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  gaugeInner: {
+    position: 'absolute',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  gaugeInnerValue: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#111827',
+  },
+  gaugeInnerLabel: {
+    fontSize: 7,
+    fontWeight: '700',
+    color: '#2DD4BF',
+    letterSpacing: 0.8,
+  },
+  gaugeRight: {
+    flex: 1,
+    minWidth: 0,
+    gap: 4,
+  },
+  gaugeRightTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#000000',
+  },
+  gaugeRightSubtitle: {
+    fontSize: 12,
+    color: '#6B7280',
+    lineHeight: 14,
+    marginVertical: 2,
+  },
+  insightBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#FEF9C3',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
+
+    width: '90%',
+  },
+  insightBadgeText: {
+    color: '#854D0E',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  sectionLabel: {
     fontSize: 10,
     fontWeight: '700',
-    color: PrismColors.primary,
+    color: '#6B7280',
     textTransform: 'uppercase',
-    letterSpacing: 1.2,
-    marginBottom: Spacing.lg,
+    marginBottom: 10,
+    letterSpacing: 0.8,
   },
-  protocolList: {
-    gap: Spacing.lg,
+  accountsList: {
+    paddingHorizontal: 0,
+    paddingBottom: 14,
+    gap: ACCOUNT_CARD_GAP,
   },
-  protocolItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.md,
+  accountCard: {
+    minWidth: ACCOUNT_CARD_WIDTH,
+    height: 100,
+    borderRadius: 14,
+    padding: 12,
+    position: 'relative',
   },
-  protocolIcon: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
+  accountDecor: {
+    width: 18,
+    height: 13,
+    borderRadius: 3,
+    backgroundColor: 'rgba(255,255,255,0.25)',
+    marginBottom: 10,
   },
-  protocolComplete: {
-    backgroundColor: PrismColors.neutral,
+  accountMask: {
+    fontSize: 9,
+    color: 'rgba(255,255,255,0.6)',
+    letterSpacing: 2,
+    marginBottom: 8,
   },
-  protocolActive: {
-    backgroundColor: PrismColors.primaryBorder,
+  accountLabel: {
+    fontSize: 9,
+    color: 'rgba(255,255,255,0.6)',
   },
-  checkmark: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: PrismColors.tertiary,
-  },
-  spinner: {
-    fontSize: 12,
-    color: PrismColors.primary,
-  },
-  protocolText: {
-    flex: 1,
-    fontSize: 13,
-    fontWeight: '500',
-    color: PrismColors.textSecondary,
-  },
-  protocolTextActive: {
-    color: PrismColors.textPrimary,
-    fontWeight: '700',
-  },
-  killSwitchButton: {
-    borderRadius: 16,
-    shadowColor: PrismColors.primary,
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.45,
-    shadowRadius: 30,
-    elevation: 8,
-    marginBottom: Spacing.lg,
-  },
-  killSwitchPressable: {
-    paddingVertical: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  killSwitchText: {
+  accountAmount: {
     fontSize: 18,
+    color: '#FFFFFF',
     fontWeight: '800',
-    color: PrismColors.surface,
-    letterSpacing: -0.5,
   },
-  disclaimer: {
-    fontSize: 8,
-    fontFamily: 'monospace',
-    color: PrismColors.textSecondary,
-    opacity: 0.4,
-    textAlign: 'center',
-    textTransform: 'uppercase',
-    letterSpacing: 1.2,
+  accountPctBadge: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
   },
-  miniCardsRow: {
-    flexDirection: 'row',
-    gap: Spacing.md,
+  accountPctText: {
+    fontSize: 9,
+    color: '#FFFFFF',
+    fontWeight: '700',
   },
-  miniCard: {
-    flex: 1,
+  recentCard: {
+    backgroundColor: PrismColors.surface,
+    borderRadius: 16,
+    overflow: 'hidden',
+    marginBottom: 16,
+  },
+  txRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: Spacing.lg,
-    gap: Spacing.md,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderBottomWidth: 0.5,
+    borderBottomColor: '#F3F4F6',
+    gap: 10,
   },
-  miniIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 16,
+  txRowLast: {
+    borderBottomWidth: 0,
+  },
+  txIconWrap: {
+    width: 30,
+    height: 30,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  miniIconGreen: {
-    backgroundColor: PrismColors.neutral,
+  txIcon: {
+    fontSize: 16,
   },
-  miniIconPrimary: {
-    backgroundColor: PrismColors.primaryBorder,
+  txMiddle: {
+    flex: 1,
   },
-  miniIconSymbol: {
-    fontSize: 20,
-  },
-  miniLabel: {
-    fontSize: 8,
-    fontFamily: 'monospace',
-    color: PrismColors.textSecondary,
-    opacity: 0.4,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-    marginBottom: 2,
-  },
-  miniValue: {
-    fontSize: 13,
+  txName: {
+    fontSize: 11,
     fontWeight: '700',
-    color: PrismColors.textPrimary,
-    letterSpacing: -0.3,
+    color: '#111827',
+  },
+  txMeta: {
+    fontSize: 9,
+    color: '#6B7280',
+  },
+  txAmount: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  sheetBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+  },
+  bottomSheet: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    maxHeight: '85%',
+    paddingBottom: 32,
+  },
+  sheetHandle: {
+    width: 36,
+    height: 4,
+    borderRadius: 999,
+    backgroundColor: '#E5E7EB',
+    alignSelf: 'center',
+    marginTop: 10,
+    marginBottom: 12,
+  },
+  sheetCardVisual: {
+    marginHorizontal: 14,
+    borderRadius: 14,
+    height: 90,
+    backgroundColor: '#312E81',
+    padding: 12,
+    justifyContent: 'center',
+  },
+  sheetCardMask: {
+    fontSize: 10,
+    color: 'rgba(255,255,255,0.65)',
+    letterSpacing: 2,
+    marginBottom: 6,
+  },
+  sheetCardAmount: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  sheetTitle: {
+    marginTop: 14,
+    marginHorizontal: 14,
+    marginBottom: 8,
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#6B7280',
+  },
+  sheetList: {
+    paddingHorizontal: 4,
+    paddingBottom: 32,
   },
 });
