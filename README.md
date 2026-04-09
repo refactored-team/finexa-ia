@@ -47,6 +47,14 @@ Arquitectura **cloud-native** en **AWS**: backend **serverless** (API Gateway + 
 
 La solución está pensada **nativa en la nube**: la API pública vive en **AWS** como **compute serverless** (Lambda), delante de **API Gateway**; la app solo orquesta UI y llamadas autenticadas — el “cerebro” operativo y el escalado están en **servicios gestionados**, no en máquinas virtuales mantenidas a mano.
 
+### Diagrama por categorías (infraestructura)
+
+<p align="center">
+  <img src="./docs/Infra-talendland-2026.drawio_f.png" alt="Arquitectura Finexa IA por categorías: entrada, aplicación, almacenamiento, seguridad, monitoreo, IaC y repositorio" width="100%" />
+</p>
+
+Este diagrama organiza los componentes por dominio operativo para lectura rápida de arquitectura: **entrada** (Cognito + API Gateway), **aplicación** (Lambdas `ms-users`, `ms-plaid`, `ms-transactions`, `ai-pipeline`), **almacenamiento** (RDS), **seguridad** (Secrets Manager, CloudTrail, GuardDuty), **monitoreo** (CloudWatch, Budgets) e **IaC/despliegue** (Terraform + ECR).
+
 ### Decisiones (por qué · beneficio · impacto)
 
 | Elección | Resumen |

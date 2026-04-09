@@ -13,9 +13,11 @@ import (
 	"github.com/labstack/echo/v5"
 
 	"finexa-ia/apiresult"
-	"finexa-ia/ms-transactions/internal/auth"
+	"finexa-ia/ms-transactions/internal/aiclient"
 	"finexa-ia/ms-transactions/internal/config"
 	"finexa-ia/ms-transactions/internal/models"
+	"finexa-ia/ms-transactions/internal/persistence"
+	"finexa-ia/ms-transactions/internal/plaidsync"
 )
 
 const (
@@ -24,18 +26,25 @@ const (
 )
 
 type TransactionsHandler struct {
-	db   *sql.DB
-	cfg  *config.App
-	auth *auth.Deps
+	db    *sql.DB
+	cfg   *config.App
+	plaid *plaidsync.Client
+	ai    *aiclient.Client
+	store *persistence.Store
 }
 
-func NewTransactionsHandler(db *sql.DB, cfg *config.App, authDeps *auth.Deps) *TransactionsHandler {
-	return &TransactionsHandler{db: db, cfg: cfg, auth: authDeps}
+func NewTransactionsHandler(db *sql.DB, cfg *config.App) *TransactionsHandler {
+	return &TransactionsHandler{
+		db:    db,
+		cfg:   cfg,
+		plaid: plaidsync.New(cfg),
+		ai:    aiclient.New(cfg.ResolveAIPipelineBaseURL()),
+		store: persistence.New(db),
+	}
 }
 
 func (h *TransactionsHandler) Register(e *echo.Echo) {
-	g := e.Group("/v1/transactions")
-	g.Use(h.auth.Middleware(h.db))
+	g := e.Group("/v1/users/:userId/transactions")
 	g.GET("", h.list)
 	g.GET("/:id", h.getByID)
 	g.GET("/by-transaction-id/:transaction_id", h.getByTransactionID)
@@ -44,6 +53,7 @@ func (h *TransactionsHandler) Register(e *echo.Echo) {
 	g.GET("/resilience-factors", h.listResilienceFactors)
 	g.GET("/cash-flow/latest", h.getLatestCashFlow)
 	g.GET("/pulse/latest", h.getLatestPulse)
+	g.POST("/sync-and-analyze", h.syncAndAnalyze)
 	g.POST("/test-bedrock", h.testBedrock)
 }
 
@@ -64,9 +74,9 @@ func (h *TransactionsHandler) Register(e *echo.Echo) {
 //	@Failure		500			{object}	apiresult.ErrResult
 //	@Router			/v1/transactions [get]
 func (h *TransactionsHandler) list(c *echo.Context) error {
-	uid, ok := authUserID(c)
-	if !ok {
-		return apiresult.RespondError(c, http.StatusUnauthorized, apiresult.CodeUnauthorized, "missing authenticated user", nil)
+	uid, err := h.userIDFromPath(c)
+	if err != nil {
+		return apiresult.RespondError(c, http.StatusBadRequest, apiresult.CodeValidationError, "invalid user id", nil)
 	}
 
 	limit := defaultListLimit
@@ -182,9 +192,9 @@ LIMIT $5 OFFSET $6`
 //	@Failure		500	{object}	apiresult.ErrResult
 //	@Router			/v1/transactions/{id} [get]
 func (h *TransactionsHandler) getByID(c *echo.Context) error {
-	uid, ok := authUserID(c)
-	if !ok {
-		return apiresult.RespondError(c, http.StatusUnauthorized, apiresult.CodeUnauthorized, "missing authenticated user", nil)
+	uid, err := h.userIDFromPath(c)
+	if err != nil {
+		return apiresult.RespondError(c, http.StatusBadRequest, apiresult.CodeValidationError, "invalid user id", nil)
 	}
 	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil || id <= 0 {
@@ -214,9 +224,9 @@ func (h *TransactionsHandler) getByID(c *echo.Context) error {
 //	@Failure		500				{object}	apiresult.ErrResult
 //	@Router			/v1/transactions/by-transaction-id/{transaction_id} [get]
 func (h *TransactionsHandler) getByTransactionID(c *echo.Context) error {
-	uid, ok := authUserID(c)
-	if !ok {
-		return apiresult.RespondError(c, http.StatusUnauthorized, apiresult.CodeUnauthorized, "missing authenticated user", nil)
+	uid, err := h.userIDFromPath(c)
+	if err != nil {
+		return apiresult.RespondError(c, http.StatusBadRequest, apiresult.CodeValidationError, "invalid user id", nil)
 	}
 	txID := strings.TrimSpace(c.Param("transaction_id"))
 	if txID == "" {
@@ -289,9 +299,9 @@ LIMIT 1`, whereCond)
 //	@Failure		500	{object}	apiresult.ErrResult
 //	@Router			/v1/transactions/analysis/latest [get]
 func (h *TransactionsHandler) getLatestAnalysis(c *echo.Context) error {
-	uid, ok := authUserID(c)
-	if !ok {
-		return apiresult.RespondError(c, http.StatusUnauthorized, apiresult.CodeUnauthorized, "missing authenticated user", nil)
+	uid, err := h.userIDFromPath(c)
+	if err != nil {
+		return apiresult.RespondError(c, http.StatusBadRequest, apiresult.CodeValidationError, "invalid user id", nil)
 	}
 	ctx, cancel := context.WithTimeout(c.Request().Context(), 5*time.Second)
 	defer cancel()
@@ -347,9 +357,9 @@ LIMIT 1`
 //	@Failure		500		{object}	apiresult.ErrResult
 //	@Router			/v1/transactions/insights [get]
 func (h *TransactionsHandler) listInsights(c *echo.Context) error {
-	uid, ok := authUserID(c)
-	if !ok {
-		return apiresult.RespondError(c, http.StatusUnauthorized, apiresult.CodeUnauthorized, "missing authenticated user", nil)
+	uid, err := h.userIDFromPath(c)
+	if err != nil {
+		return apiresult.RespondError(c, http.StatusBadRequest, apiresult.CodeValidationError, "invalid user id", nil)
 	}
 
 	limit := defaultListLimit
@@ -436,9 +446,9 @@ LIMIT $2 OFFSET $3`
 //	@Failure		500	{object}	apiresult.ErrResult
 //	@Router			/v1/transactions/resilience-factors [get]
 func (h *TransactionsHandler) listResilienceFactors(c *echo.Context) error {
-	uid, ok := authUserID(c)
-	if !ok {
-		return apiresult.RespondError(c, http.StatusUnauthorized, apiresult.CodeUnauthorized, "missing authenticated user", nil)
+	uid, err := h.userIDFromPath(c)
+	if err != nil {
+		return apiresult.RespondError(c, http.StatusBadRequest, apiresult.CodeValidationError, "invalid user id", nil)
 	}
 	ctx, cancel := context.WithTimeout(c.Request().Context(), 5*time.Second)
 	defer cancel()
@@ -507,9 +517,9 @@ ORDER BY updated_at DESC, id DESC`
 //	@Failure		500	{object}	apiresult.ErrResult
 //	@Router			/v1/transactions/cash-flow/latest [get]
 func (h *TransactionsHandler) getLatestCashFlow(c *echo.Context) error {
-	uid, ok := authUserID(c)
-	if !ok {
-		return apiresult.RespondError(c, http.StatusUnauthorized, apiresult.CodeUnauthorized, "missing authenticated user", nil)
+	uid, err := h.userIDFromPath(c)
+	if err != nil {
+		return apiresult.RespondError(c, http.StatusBadRequest, apiresult.CodeValidationError, "invalid user id", nil)
 	}
 	ctx, cancel := context.WithTimeout(c.Request().Context(), 5*time.Second)
 	defer cancel()
@@ -561,9 +571,9 @@ LIMIT 1`
 //	@Failure		500	{object}	apiresult.ErrResult
 //	@Router			/v1/transactions/pulse/latest [get]
 func (h *TransactionsHandler) getLatestPulse(c *echo.Context) error {
-	uid, ok := authUserID(c)
-	if !ok {
-		return apiresult.RespondError(c, http.StatusUnauthorized, apiresult.CodeUnauthorized, "missing authenticated user", nil)
+	uid, err := h.userIDFromPath(c)
+	if err != nil {
+		return apiresult.RespondError(c, http.StatusBadRequest, apiresult.CodeValidationError, "invalid user id", nil)
 	}
 	ctx, cancel := context.WithTimeout(c.Request().Context(), 5*time.Second)
 	defer cancel()
@@ -665,8 +675,10 @@ func (h *TransactionsHandler) testBedrock(c *echo.Context) error {
 	return c.Stream(http.StatusOK, "application/json", resp.Body)
 }
 
-func authUserID(c *echo.Context) (int64, bool) {
-	v := c.Get(auth.AuthUserIDKey)
-	id, ok := v.(int64)
-	return id, ok
+func (h *TransactionsHandler) userIDFromPath(c *echo.Context) (int64, error) {
+	userID, err := strconv.ParseInt(c.Param("userId"), 10, 64)
+	if err != nil || userID <= 0 {
+		return 0, errors.New("invalid user id")
+	}
+	return userID, nil
 }
