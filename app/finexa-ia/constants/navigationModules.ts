@@ -1,4 +1,4 @@
-import { BarChart3, BookOpen, Compass, Landmark, LayoutDashboard, LucideIcon } from './lucideIcons';
+import { Brain, Compass, Landmark, LayoutDashboard, LucideIcon } from './lucideIcons';
 
 export type NavigationModule = {
   id: string;
@@ -27,15 +27,9 @@ export const NAVIGATION_MODULES: NavigationModule[] = [
     icon: Landmark,
   },
   {
-    id: 'simulation',
-    name: 'Simulación',
-    route: '/(tabs)/simulation',
-    icon: BarChart3,
-  },
-  {
-    id: 'wisdom',
-    name: 'Sabiduría',
-    route: '/(tabs)/wisdom',
-    icon: BookOpen,
+    id: 'intelligence',
+    name: 'Inteligencia',
+    route: '/(tabs)/intelligence',
+    icon: Brain,
   },
 ];
