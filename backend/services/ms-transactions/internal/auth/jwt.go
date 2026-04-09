@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/golang-jwt/jwt/v5"
 	keyfunc "github.com/MicahParks/keyfunc/v3"
+	"github.com/golang-jwt/jwt/v5"
 
 	"finexa-ia/ms-transactions/internal/config"
 )
