@@ -1,14 +1,13 @@
 """
-Finexa AI — Pipeline de clasificación financiera con Amazon Bedrock.
+Finexa AI Pipeline — financial transaction classification & analysis.
 
-Módulos:
-    schemas     — Modelos Pydantic (entrada Plaid, salida Bedrock, UserProfile, ResilienceScore)
-    bedrock     — Cliente boto3 bedrock-runtime con retries/timeouts
-    cache       — Caché de clasificaciones por merchant
-    heuristics  — Reglas heurísticas de fallback
-    classifier  — Paso A: Clasificación JSON→JSON vía Bedrock
-    analyzer    — Paso B: Análisis holístico de comportamiento
-    resilience  — Paso C: Score de Resiliencia Financiera (RF1+RF2 El Escudo)
-    logger      — Logging estructurado JSON para CloudWatch
-    handler     — Lambda handler / orquestador del pipeline
+Layered architecture:
+
+    api/            FastAPI app, routes, request/response models
+    services/       Orchestration — composes domain modules for the API
+    domain/         Pure business logic (classifier, analyzer, resilience, forecaster, …)
+    infrastructure/ External integrations (Bedrock, cache, prompts)
+    core/           Cross-cutting utilities (config, logging)
+    adapters/       Platform entry points (AWS Lambda)
+    main.py         FastAPI entry point (uvicorn target)
 """
