@@ -1,6 +1,8 @@
 import {
   FlatList,
   Image,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -11,7 +13,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import Svg, { Circle, Defs, LinearGradient as SvgLinearGradient, Stop } from 'react-native-svg';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
@@ -88,6 +90,9 @@ const HERO_THEME: Theme = {
   checkmarkBg: '#10B981',
   activeBg: '#F3F5F8',
 };
+const ACCOUNT_CARD_WIDTH = 160;
+const ACCOUNT_CARD_GAP = 10;
+const CARD_WIDTH = ACCOUNT_CARD_WIDTH + ACCOUNT_CARD_GAP;
 
 // ---------------------------------------------------------------------------
 // Data
@@ -136,6 +141,7 @@ const findings: Finding[] = [
 // ---------------------------------------------------------------------------
 export default function SmartStackScreen() {
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [activeCardIndex, setActiveCardIndex] = useState(0);
   const theme = HERO_THEME;
   const tabBarHeight = useBottomTabBarHeight();
   const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
@@ -161,27 +167,27 @@ export default function SmartStackScreen() {
         { id: 't4', merchant_name: 'Nomina', category: 'ingreso', amount: -810, dateISO: new Date(Date.now() - 86400000 * 5).toISOString() },
       ],
     },
-    {
-      account_id: 'acc_2',
-      mask: '7741',
-      name: 'Tarjeta gastos',
-      total_expenses: 890,
-      pct_change: -4,
-      transactions: [
-        { id: 't5', merchant_name: 'PayByPhone', category: 'transporte', amount: 134, dateISO: new Date(Date.now() - 86400000 * 4).toISOString() },
-        { id: 't6', merchant_name: 'Burger Place', category: 'alimentacion', amount: 23, dateISO: new Date(Date.now() - 86400000 * 2).toISOString() },
-      ],
-    },
-    {
-      account_id: 'acc_3',
-      mask: '9910',
-      name: 'Tarjeta secundaria',
-      total_expenses: 420,
-      pct_change: 5,
-      transactions: [
-        { id: 't7', merchant_name: 'Cinepolis', category: 'entretenimiento', amount: 58, dateISO: new Date(Date.now() - 86400000 * 6).toISOString() },
-      ],
-    },
+    // {
+    //   account_id: 'acc_2',
+    //   mask: '7741',
+    //   name: 'Tarjeta gastos',
+    //   total_expenses: 890,
+    //   pct_change: -4,
+    //   transactions: [
+    //     { id: 't5', merchant_name: 'PayByPhone', category: 'transporte', amount: 134, dateISO: new Date(Date.now() - 86400000 * 4).toISOString() },
+    //     { id: 't6', merchant_name: 'Burger Place', category: 'alimentacion', amount: 23, dateISO: new Date(Date.now() - 86400000 * 2).toISOString() },
+    //   ],
+    // },
+    // {
+    //   account_id: 'acc_3',
+    //   mask: '9910',
+    //   name: 'Tarjeta secundaria',
+    //   total_expenses: 420,
+    //   pct_change: 5,
+    //   transactions: [
+    //     { id: 't7', merchant_name: 'Cinepolis', category: 'entretenimiento', amount: 58, dateISO: new Date(Date.now() - 86400000 * 6).toISOString() },
+    //   ],
+    // },
   ];
   const dailySpend = analysis.ant_expense_total / 30;
   const projectedDays = Math.max(0, Math.round(analysis.cash_flow.projected_liquidity / dailySpend));
@@ -195,14 +201,21 @@ export default function SmartStackScreen() {
   const topInsight = `${analysis.insights[0]?.title ?? ''}`;
   const cardColors = ['#312E81', '#3730A3', '#4338CA'];
   const selectedAccount = accounts.find((a) => a.account_id === selectedAccountId) ?? null;
-  const allRecent = useMemo(
+  const visibleAccountId = accounts[activeCardIndex]?.account_id;
+  const filteredRecent = useMemo(
     () =>
       accounts
-        .flatMap((a) => a.transactions)
+        .find((a) => a.account_id === visibleAccountId)
+        ?.transactions?.slice()
         .sort((a, b) => new Date(b.dateISO).getTime() - new Date(a.dateISO).getTime())
-        .slice(0, 8),
-    []
+        .slice(0, 8) ?? [],
+    [accounts, visibleAccountId]
   );
+  const onAccountsScroll = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const rawIndex = Math.round(e.nativeEvent.contentOffset.x / CARD_WIDTH);
+    const clampedIndex = Math.max(0, Math.min(rawIndex, accounts.length - 1));
+    setActiveCardIndex(clampedIndex);
+  }, []);
   const categoryMap: Record<string, { bg: string; icon: string; label: string }> = {
     alimentacion: { bg: '#FEF3C7', icon: '🍽️', label: 'alimentacion' },
     hormiga: { bg: '#FEE2E2', icon: '🐜', label: 'hormiga' },
@@ -333,6 +346,8 @@ export default function SmartStackScreen() {
               horizontal
               nestedScrollEnabled
               showsHorizontalScrollIndicator={false}
+              onScroll={onAccountsScroll}
+              scrollEventThrottle={16}
               contentContainerStyle={styles.accountsList}
               keyExtractor={(item) => item.account_id}
               renderItem={({ item, index }) => (
@@ -352,12 +367,12 @@ export default function SmartStackScreen() {
 
             <Text style={styles.sectionLabel}>MOVIMIENTOS RECIENTES</Text>
             <View style={styles.recentCard}>
-              {allRecent.map((tx, idx) => {
+              {filteredRecent.map((tx, idx) => {
                 const meta = categoryMap[tx.category] ?? categoryMap.variable;
                 const isExpense = tx.amount > 0;
                 const name = (tx.merchant_name || 'Movimiento').slice(0, 20);
                 return (
-                  <View key={tx.id} style={[styles.txRow, idx === allRecent.length - 1 && styles.txRowLast]}>
+                  <View key={tx.id} style={[styles.txRow, idx === filteredRecent.length - 1 && styles.txRowLast]}>
                     <View style={[styles.txIconWrap, { backgroundColor: meta.bg }]}>
                       <Text style={styles.txIcon}>{meta.icon}</Text>
                     </View>
@@ -578,10 +593,10 @@ const styles = StyleSheet.create({
   accountsList: {
     paddingHorizontal: 0,
     paddingBottom: 14,
-    gap: 10,
+    gap: ACCOUNT_CARD_GAP,
   },
   accountCard: {
-    minWidth: 160,
+    minWidth: ACCOUNT_CARD_WIDTH,
     height: 100,
     borderRadius: 14,
     padding: 12,
