@@ -2,13 +2,17 @@
 
 ## Despliegue (MVP)
 
-1. **Build** de la imagen Lambda (contexto `backend/`; `GOWORK=off` en el Dockerfile; cada servicio copia `pkg/apiresult` + su carpeta bajo `services/`):
+1. **Build** de la imagen Lambda:
+   - Servicios Go: contexto `backend/`; `GOWORK=off` en el Dockerfile; cada servicio copia `pkg/apiresult` + su carpeta bajo `services/`.
+   - `ai-pipeline`: contexto `ai-pipeline/`, Dockerfile dedicado `Dockerfile.lambda`.
 
    ```bash
    cd backend
    docker build --platform linux/amd64 -f services/ms-plaid/Dockerfile.lambda -t ms-plaid:lambda .
    docker build --platform linux/amd64 -f services/ms-transactions/Dockerfile.lambda -t ms-transactions:lambda .
    docker build --platform linux/amd64 -f services/ms-users/Dockerfile.lambda -t ms-users:lambda .
+   cd ..
+   docker build --platform linux/amd64 -f ai-pipeline/Dockerfile.lambda -t ai-pipeline:lambda ai-pipeline
    ```
 
    La tabla `users` (Cognito) la posee **ms-users**; **ms-transactions** y ms-plaid comparten la misma `DATABASE_URL`. Orden de migraciones en BD nueva: **ms-users** → **ms-transactions** (tabla `transactions` referencia `users`) → ms-plaid u otros que referencien `users`.
@@ -30,7 +34,7 @@
 
    La Lambda usa `image_tag` (por defecto `latest` en `lambda_http_services`). En producción usa tags inmutables (digest o git sha).
 
-4. **Probar**: `GET https://<api-id>.execute-api.<region>.amazonaws.com/ms-plaid/health` (público). Rutas bajo el mismo prefijo con `Authorization: Bearer <id_token>`.
+4. **Probar**: `GET https://<api-id>.execute-api.<region>.amazonaws.com/ms-plaid/health` (público). Para IA: `GET /ai-pipeline/health`. Rutas bajo el mismo prefijo con `Authorization: Bearer <id_token>`.
 
 ## VPC y RDS
 
@@ -40,7 +44,7 @@ Activa `lambda_attach_to_vpc = true` y rellena `lambda_vpc_security_group_ids` c
 
 El workflow [`.github/workflows/backend-lambda.yml`](../../../.github/workflows/backend-lambda.yml) en la raíz del repo:
 
-- En **PR** y **push** (solo cambios bajo `backend/` o ese workflow): ejecuta `make test-all` y, en PR, un `docker build` de validación por fila del matrix.
+- En **PR** y **push** (cambios bajo `backend/**`, `ai-pipeline/**`, `infra/**` o el workflow): ejecuta `make test-all` y, en PR, un `docker build` de validación por fila del matrix.
 - En **push a `main`**: primero corre `make test-all`. El job de deploy usa el entorno **`aws-lambda-deploy`**: hasta que un revisor apruebe en la UI de Actions, **no** se ejecuta build/push a ECR ni `update-function-code`. Configuración: **Settings → Environments → aws-lambda-deploy → Required reviewers** (añadí al menos una persona o equipo). Si el entorno no tiene revisores requeridos, GitHub no pausa el deploy.
 
 **Repositorio GitHub**
@@ -61,4 +65,4 @@ Permisos mínimos (acotá ARNs cuando puedas):
 
 **Añadir un microservicio**
 
-Cuando des de alta el servicio en `ecr_services` y `lambda_http_services`, añade una fila al `matrix.include` del workflow (`service` + `dockerfile` relativo a `backend/`), igual que `ms-plaid`.
+Cuando des de alta el servicio en `ecr_services` y `lambda_http_services`, añade una fila al `matrix.include` del workflow (`service` + `dockerfile` + `context`). Para servicios fuera de `backend/` (como `ai-pipeline`) el contexto debe apuntar a su carpeta.

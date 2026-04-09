@@ -1,40 +1,46 @@
-# Welcome to your Expo app 👋
+# App móvil — Finexa IA (Expo / React Native)
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Cliente móvil del monorepo. Consume APIs en AWS (API Gateway + Lambdas) con autenticación Cognito.
 
-## Get started
+## Requisitos
 
-1. Install dependencies
+- Node.js + npm
+- Expo CLI (vía `npx expo`)
+- Variables `EXPO_PUBLIC_*` configuradas para tu entorno
 
-   ```bash
-   npm install
-   ```
+## Ejecutar en local
 
-2. Start the app
+```bash
+cd app/finexa-ia
+npm install
+npx expo start
+```
 
-   ```bash
-   npx expo start
-   ```
+## Variables de entorno recomendadas
 
-In the output, you'll find options to open the app in a
+Configura en `.env` (o tu mecanismo de env local) las públicas que use la app, por ejemplo:
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+- `EXPO_PUBLIC_API_BASE_URL` (ej. `https://<api-id>.execute-api.us-east-1.amazonaws.com`)
+- `EXPO_PUBLIC_COGNITO_USER_POOL_ID`
+- `EXPO_PUBLIC_COGNITO_CLIENT_ID`
+- `EXPO_PUBLIC_AWS_REGION`
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction). Lógica y tipos compartidos pueden vivir en **src/** (servicios, store, pantallas modulares, etc.).
+## Rutas backend relevantes
 
-## Learn more
+Sobre `EXPO_PUBLIC_API_BASE_URL`:
 
-To learn more about developing your project with Expo, look at the following resources:
+- `/ms-users/*`
+- `/ms-plaid/*`
+- `/ms-transactions/*`
+- `/ai-pipeline/*` (incluye health en `/ai-pipeline/health`)
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+## Auth (alto nivel)
 
-## Join the community
+- Login/registro con Cognito desde la app.
+- Requests protegidas al API con `Authorization: Bearer <id_token>`.
+- Endpoints `.../health` son útiles para smoke tests sin sesión.
 
-Join our community of developers creating universal apps.
+## Referencias
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+- Infra y outputs: [`../../infra/README.md`](../../infra/README.md)
+- Arquitectura general: [`../../README.md`](../../README.md)

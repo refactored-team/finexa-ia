@@ -1,5 +1,4 @@
 import 'react-native-get-random-values';
-
 import {
   PlusJakartaSans_400Regular,
   PlusJakartaSans_500Medium,
@@ -13,13 +12,13 @@ import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import 'react-native-reanimated';
+import { GestureHandlerRootView } from 'react-native-gesture-handler'; // 👈 add this
 
 import { FinexaDarkTheme, FinexaLightTheme } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { configureAmplify } from '@/lib/amplify/configure';
 
 configureAmplify();
-
 SplashScreen.preventAutoHideAsync();
 
 export const unstable_settings = {
@@ -46,14 +45,16 @@ export default function RootLayout() {
   }
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? FinexaDarkTheme : FinexaLightTheme}>
-      <Stack>
-        <Stack.Screen name="index" options={{ headerShown: false }} />
-        <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-        <Stack.Screen name="(onboarding)" options={{ headerShown: false }} />
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-      </Stack>
-      <StatusBar style="auto" />
-    </ThemeProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <ThemeProvider value={colorScheme === 'dark' ? FinexaDarkTheme : FinexaLightTheme}>
+        <Stack>
+          <Stack.Screen name="index" options={{ headerShown: false }} />
+          <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+          <Stack.Screen name="(onboarding)" options={{ headerShown: false }} />
+          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        </Stack>
+        <StatusBar style="auto" />
+      </ThemeProvider>
+    </GestureHandlerRootView>
   );
 }

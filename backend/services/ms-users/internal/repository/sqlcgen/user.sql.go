@@ -10,6 +10,39 @@ import (
 	"database/sql"
 )
 
+const countUsersFiltered = `-- name: CountUsersFiltered :one
+SELECT count(*)::bigint
+FROM users
+WHERE
+  (($1::boolean IS TRUE) OR deleted_at IS NULL)
+  AND ($2::text IS NULL OR $2::text = '' OR (
+    email IS NOT NULL
+    AND btrim(email) <> ''
+    AND lower(btrim(email)) = lower(btrim($2::text))
+  ))
+  AND ($3::timestamptz IS NULL OR created_at >= $3)
+  AND ($4::timestamptz IS NULL OR created_at <= $4)
+`
+
+type CountUsersFilteredParams struct {
+	IncludeDeleted bool
+	FilterEmail    string
+	CreatedFrom    sql.NullTime
+	CreatedTo      sql.NullTime
+}
+
+func (q *Queries) CountUsersFiltered(ctx context.Context, arg CountUsersFilteredParams) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countUsersFiltered,
+		arg.IncludeDeleted,
+		arg.FilterEmail,
+		arg.CreatedFrom,
+		arg.CreatedTo,
+	)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const deleteUserByID = `-- name: DeleteUserByID :one
 UPDATE users
 SET
@@ -54,14 +87,18 @@ func (q *Queries) GetUserByCognitoSub(ctx context.Context, cognitoSub string) (U
 	return i, err
 }
 
-const getUserByID = `-- name: GetUserByID :one
+const getUserByEmail = `-- name: GetUserByEmail :one
 SELECT id, cognito_sub, email, created_at, updated_at, deleted_at
 FROM users
-WHERE id = $1 AND deleted_at IS NULL
+WHERE deleted_at IS NULL
+  AND email IS NOT NULL
+  AND btrim(email) <> ''
+  AND lower(btrim(email)) = lower(btrim($1))
+LIMIT 1
 `
 
-func (q *Queries) GetUserByID(ctx context.Context, id int64) (User, error) {
-	row := q.db.QueryRowContext(ctx, getUserByID, id)
+func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error) {
+	row := q.db.QueryRowContext(ctx, getUserByEmail, email)
 	var i User
 	err := row.Scan(
 		&i.ID,
@@ -74,15 +111,15 @@ func (q *Queries) GetUserByID(ctx context.Context, id int64) (User, error) {
 	return i, err
 }
 
-const listUsers = `-- name: ListUsers :many
+const listAllActiveUsers = `-- name: ListAllActiveUsers :many
 SELECT id, cognito_sub, email, created_at, updated_at, deleted_at
 FROM users
 WHERE deleted_at IS NULL
 ORDER BY id
 `
 
-func (q *Queries) ListUsers(ctx context.Context) ([]User, error) {
-	rows, err := q.db.QueryContext(ctx, listUsers)
+func (q *Queries) ListAllActiveUsers(ctx context.Context) ([]User, error) {
+	rows, err := q.db.QueryContext(ctx, listAllActiveUsers)
 	if err != nil {
 		return nil, err
 	}
@@ -103,6 +140,155 @@ func (q *Queries) ListUsers(ctx context.Context) ([]User, error) {
 		items = append(items, i)
 	}
 	return items, rows.Err()
+}
+
+const getUserByID = `-- name: GetUserByID :one
+SELECT id, cognito_sub, email, created_at, updated_at, deleted_at
+FROM users
+WHERE id = $1 AND deleted_at IS NULL
+`
+
+func (q *Queries) GetUserByID(ctx context.Context, id int64) (User, error) {
+	row := q.db.QueryRowContext(ctx, getUserByID, id)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.CognitoSub,
+		&i.Email,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+	)
+	return i, err
+}
+
+const hardDeleteUserByID = `-- name: HardDeleteUserByID :one
+DELETE FROM users
+WHERE id = $1
+RETURNING id, cognito_sub, email, created_at, updated_at, deleted_at
+`
+
+func (q *Queries) HardDeleteUserByID(ctx context.Context, id int64) (User, error) {
+	row := q.db.QueryRowContext(ctx, hardDeleteUserByID, id)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.CognitoSub,
+		&i.Email,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+	)
+	return i, err
+}
+
+const listUsersFiltered = `-- name: ListUsersFiltered :many
+SELECT id, cognito_sub, email, created_at, updated_at, deleted_at
+FROM users
+WHERE
+  (($1::boolean IS TRUE) OR deleted_at IS NULL)
+  AND ($2::text IS NULL OR $2::text = '' OR (
+    email IS NOT NULL
+    AND btrim(email) <> ''
+    AND lower(btrim(email)) = lower(btrim($2::text))
+  ))
+  AND ($3::timestamptz IS NULL OR created_at >= $3)
+  AND ($4::timestamptz IS NULL OR created_at <= $4)
+ORDER BY id
+LIMIT $5 OFFSET $6
+`
+
+type ListUsersFilteredParams struct {
+	IncludeDeleted bool
+	FilterEmail    string
+	CreatedFrom    sql.NullTime
+	CreatedTo      sql.NullTime
+	Limit          int32
+	Offset         int32
+}
+
+func (q *Queries) ListUsersFiltered(ctx context.Context, arg ListUsersFilteredParams) ([]User, error) {
+	rows, err := q.db.QueryContext(ctx, listUsersFiltered,
+		arg.IncludeDeleted,
+		arg.FilterEmail,
+		arg.CreatedFrom,
+		arg.CreatedTo,
+		arg.Limit,
+		arg.Offset,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []User
+	for rows.Next() {
+		var i User
+		if err := rows.Scan(
+			&i.ID,
+			&i.CognitoSub,
+			&i.Email,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.DeletedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	return items, rows.Err()
+}
+
+const patchUserEmailByID = `-- name: PatchUserEmailByID :one
+UPDATE users
+SET
+    email = $1,
+    updated_at = now()
+WHERE id = $2
+  AND deleted_at IS NULL
+RETURNING id, cognito_sub, email, created_at, updated_at, deleted_at
+`
+
+type PatchUserEmailByIDParams struct {
+	Email sql.NullString `json:"email"`
+	ID    int64          `json:"id"`
+}
+
+func (q *Queries) PatchUserEmailByID(ctx context.Context, arg PatchUserEmailByIDParams) (User, error) {
+	row := q.db.QueryRowContext(ctx, patchUserEmailByID, arg.Email, arg.ID)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.CognitoSub,
+		&i.Email,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+	)
+	return i, err
+}
+
+const restoreUserByID = `-- name: RestoreUserByID :one
+UPDATE users
+SET
+    deleted_at = NULL,
+    updated_at = now()
+WHERE id = $1
+  AND deleted_at IS NOT NULL
+RETURNING id, cognito_sub, email, created_at, updated_at, deleted_at
+`
+
+func (q *Queries) RestoreUserByID(ctx context.Context, id int64) (User, error) {
+	row := q.db.QueryRowContext(ctx, restoreUserByID, id)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.CognitoSub,
+		&i.Email,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+	)
+	return i, err
 }
 
 const upsertUserByCognitoSub = `-- name: UpsertUserByCognitoSub :one

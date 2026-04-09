@@ -87,8 +87,9 @@ Las Lambdas esperan una imagen en ECR con el tag configurado (`image_tag`, por d
 | Tema | Qué revisar |
 |------|-------------|
 | **Cognito** | `cognito_domain_prefix` único en la región/cuenta; `cognito_callback_urls` y `cognito_logout_urls` alineados con la app (p. ej. Expo / React Native). |
-| **ECR ↔ Lambdas** | Cada clave de `lambda_http_services` debe existir en `ecr_services`; subir imagen con el **mismo tag** que uses en Terraform. |
+| **ECR ↔ Lambdas** | Cada clave de `lambda_http_services` debe existir en `ecr_services`; incluye `ai-pipeline` cuando se despliega IA por HTTP. Subir imagen con el **mismo tag** que uses en Terraform. |
 | **Secrets Manager** | Si `enable_app_secrets` es `true`, completar el JSON del secreto compartido en la consola de AWS tras el primer apply (el módulo ignora cambios posteriores del string en Terraform). Las Lambdas reciben `MICROSERVICES_SECRET_ARN` vía [`locals.tf`](environments/mvp/locals.tf). |
+| **Env vars Lambda** | No definir variables reservadas por AWS (por ejemplo `AWS_REGION`) en `lambda_http_services.environment_variables`; Lambda rechaza el create/update si aparecen. |
 | **RDS** | Con `enable_rds_postgres`, el módulo exige al menos `postgres_allowed_security_group_ids` o `postgres_allowed_cidr_blocks` (si ambos están vacíos, se usa el CIDR de la VPC). Para Lambdas en VPC: `lambda_attach_to_vpc = true`, SGs correctos y **NAT** (o endpoints VPC) para salida a internet (p. ej. Secrets Manager). |
 | **Coste** | NAT Gateway, instancia RDS, retención de backups, alarmas CloudWatch estándar. |
 | **Cuenta / IAM** | Revisar valores por defecto que asuman otra cuenta (p. ej. rol SNS de Cognito en `variables.tf`) si despliegas en otra cuenta AWS. |
@@ -97,7 +98,7 @@ Las Lambdas esperan una imagen en ECR con el tag configurado (`image_tag`, por d
 
 - **SNS**: si configuraste `cloudwatch_alarm_email`, abrir el correo de **Confirm subscription** del topic de alertas.
 - **App cliente**: mapear outputs de Cognito y la URL base del API a variables de entorno públicas (p. ej. `EXPO_PUBLIC_*` en la app).
-- **API**: probar `GET {prefijo}/health` (sin JWT) y rutas bajo `ANY {prefijo}/{proxy+}` con `Authorization: Bearer <token>` de Cognito.
+- **API**: probar `GET {prefijo}/health` (sin JWT) y rutas bajo `ANY {prefijo}/{proxy+}` con `Authorization: Bearer <token>` de Cognito. Ejemplo IA: `GET /ai-pipeline/health`.
 - **CloudWatch**: abrir el dashboard si `enable_cloudwatch_dashboard` está activo (nombre en outputs).
 
 ## Variables y flags (referencia rápida)
@@ -121,4 +122,4 @@ Definidas principalmente en [`environments/mvp/variables.tf`](environments/mvp/v
 
 ## CI/CD
 
-El repo incluye GitHub Actions para backend: tests Go, build Docker en PR y, en **push a `main`**, deploy a ECR + Lambda **tras aprobación manual** (entorno `aws-lambda-deploy`) para **ms-plaid**, **ms-transactions** y **ms-users**. Detalle, secrets y permisos IAM: [`modules/http-api-lambdas/README.md`](modules/http-api-lambdas/README.md) (sección CI/CD). Workflow: [`.github/workflows/backend-lambda.yml`](../.github/workflows/backend-lambda.yml). Tras dar de alta un servicio en Terraform, hacé `terraform apply` y subí la imagen a ECR antes del primer deploy.
+El repo incluye GitHub Actions para backend/lambda: tests Go, build Docker en PR y, en **push a `main`**, deploy a ECR + Lambda **tras aprobación manual** (entorno `aws-lambda-deploy`) para **ms-plaid**, **ms-transactions**, **ms-users** y **ai-pipeline**. El workflow también se dispara con cambios en `infra/**` y `ai-pipeline/**`. Detalle, secrets y permisos IAM: [`modules/http-api-lambdas/README.md`](modules/http-api-lambdas/README.md) (sección CI/CD). Workflow: [`.github/workflows/backend-lambda.yml`](../.github/workflows/backend-lambda.yml). Tras dar de alta un servicio en Terraform, hacé `terraform apply` y subí la imagen a ECR antes del primer deploy.

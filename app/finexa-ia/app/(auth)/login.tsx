@@ -1,5 +1,5 @@
-import { Link, useRouter } from 'expo-router';
 import { Lock, Mail } from '@/constants/lucideIcons';
+import { Link, useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import {
   Alert,
@@ -13,6 +13,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import Svg, { Path } from 'react-native-svg';
 
 import {
   AuthBackground,
@@ -24,10 +25,10 @@ import {
   PasswordVisibilityToggle,
 } from '@/components/auth';
 import { Layout, Spacing, TextStyles } from '@/constants/uiStyles';
+import { useScrollOnlyIfOverflow } from '@/hooks/use-scroll-only-if-overflow';
+import { signInWithEmailPassword } from '@/lib/auth/cognito';
 import { followSignInResult } from '@/lib/auth/followSignInResult';
 import { setLastSignInEmail } from '@/lib/auth/lastSignInContext';
-import { signInWithEmailPassword } from '@/lib/auth/cognito';
-import { useScrollOnlyIfOverflow } from '@/hooks/use-scroll-only-if-overflow';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -89,10 +90,21 @@ export default function LoginScreen() {
 
             <AuthCard>
               <View style={styles.sectionHeader}>
-                <Text style={TextStyles.screenTitle}>Bienvenido de nuevo</Text>
-                <Text style={[TextStyles.caption, styles.subtitle]} numberOfLines={1}>
-                  Iniciá sesión para continuar.
-                </Text>
+                <View style={styles.headerTextContainer}>
+                  <Text style={TextStyles.screenTitle}>Iniciar Sesión</Text>
+                  <Text style={[TextStyles.caption, styles.subtitle]}>
+                    Inicia sesión para continuar.
+                  </Text>
+                </View>
+                <View style={styles.headerIconContainer}>
+                  <Svg width={96} height={96} viewBox="0 0 24 24">
+                    <Path
+                      d="M 12 2 L 20 5 V 12 C 20 17.5 16.5 21 12 22 C 7.5 21 4 17.5 4 12 V 5 Z M 13.25 13.67 A 2.5 2.5 0 1 0 10.75 13.67 L 10 16 H 14 Z"
+                      fill="#E5E5EA"
+                      fillRule="evenodd"
+                    />
+                  </Svg>
+                </View>
               </View>
 
               <View style={Layout.formColumn}>
@@ -155,6 +167,23 @@ const styles = StyleSheet.create({
   },
   sectionHeader: {
     marginBottom: Spacing.xl,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    minHeight: 96,
+  },
+  headerTextContainer: {
+    flex: 1,
+    paddingRight: Spacing.sm,
+    zIndex: 1,
+    paddingTop: Spacing.sm,
+  },
+  headerIconContainer: {
+    position: 'absolute',
+    right: -10,
+    top: -10,
+    zIndex: 0,
+    opacity: 0.9,
   },
   subtitle: {
     marginTop: Spacing.xs,

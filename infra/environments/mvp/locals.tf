@@ -14,6 +14,15 @@ variable "lambda_http_services" {
     environment_variables = optional(map(string))
   }))
   default = {
+    "ai-pipeline" = {
+      route_path_prefix = "/ai-pipeline"
+      memory_size       = 1024
+      timeout           = 120
+      environment_variables = {
+        BEDROCK_REGION   = "us-east-1"
+        SAGEMAKER_REGION = "us-east-1"
+      }
+    }
     "ms-plaid" = {
       route_path_prefix = "/ms-plaid"
     }

@@ -1,5 +1,101 @@
 basePath: /
 definitions:
+  apiresult.ErrResult:
+    properties:
+      error:
+        $ref: '#/definitions/apiresult.ErrorPayload'
+      ok:
+        type: boolean
+    type: object
+  apiresult.ErrorPayload:
+    properties:
+      code:
+        type: string
+      details:
+        additionalProperties: {}
+        type: object
+      message:
+        type: string
+    type: object
+  apiresult.okEnvelope-array_finexa-ia_ms-transactions_internal_models_Insight:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/finexa-ia_ms-transactions_internal_models.Insight'
+        type: array
+      ok:
+        type: boolean
+    type: object
+  apiresult.okEnvelope-array_finexa-ia_ms-transactions_internal_models_ResilienceFactor:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/finexa-ia_ms-transactions_internal_models.ResilienceFactor'
+        type: array
+      ok:
+        type: boolean
+    type: object
+  apiresult.okEnvelope-array_finexa-ia_ms-transactions_internal_models_TransactionListItem:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/finexa-ia_ms-transactions_internal_models.TransactionListItem'
+        type: array
+      ok:
+        type: boolean
+    type: object
+  apiresult.okEnvelope-finexa-ia_ms-transactions_internal_models_CashFlow:
+    properties:
+      data:
+        $ref: '#/definitions/finexa-ia_ms-transactions_internal_models.CashFlow'
+      ok:
+        type: boolean
+    type: object
+  apiresult.okEnvelope-finexa-ia_ms-transactions_internal_models_Pulse:
+    properties:
+      data:
+        $ref: '#/definitions/finexa-ia_ms-transactions_internal_models.Pulse'
+      ok:
+        type: boolean
+    type: object
+  apiresult.okEnvelope-finexa-ia_ms-transactions_internal_models_SyncAnalyzeResponse:
+    properties:
+      data:
+        $ref: '#/definitions/finexa-ia_ms-transactions_internal_models.SyncAnalyzeResponse'
+      ok:
+        type: boolean
+    type: object
+  apiresult.okEnvelope-finexa-ia_ms-transactions_internal_models_TransactionAnalysis:
+    properties:
+      data:
+        $ref: '#/definitions/finexa-ia_ms-transactions_internal_models.TransactionAnalysis'
+      ok:
+        type: boolean
+    type: object
+  apiresult.okEnvelope-finexa-ia_ms-transactions_internal_models_TransactionListItem:
+    properties:
+      data:
+        $ref: '#/definitions/finexa-ia_ms-transactions_internal_models.TransactionListItem'
+      ok:
+        type: boolean
+    type: object
+  finexa-ia_ms-transactions_internal_models.CashFlow:
+    properties:
+      forecast_horizon_days:
+        type: integer
+      impulse_alerts:
+        items:
+          type: integer
+        type: array
+      projected_liquidity:
+        type: number
+      recurring_expenses:
+        items:
+          type: integer
+        type: array
+      updated_at:
+        type: string
+    type: object
   finexa-ia_ms-transactions_internal_models.HealthResponse:
     properties:
       database:
@@ -9,11 +105,126 @@ definitions:
         example: ok
         type: string
     type: object
+  finexa-ia_ms-transactions_internal_models.Insight:
+    properties:
+      affected_category:
+        type: string
+      description:
+        type: string
+      id:
+        type: integer
+      potential_monthly_saving:
+        type: number
+      priority:
+        type: string
+      title:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  finexa-ia_ms-transactions_internal_models.PersistCounts:
+    properties:
+      analysis_snapshots:
+        type: integer
+      cash_flow_snapshots:
+        type: integer
+      insights:
+        type: integer
+      pulse_snapshots:
+        type: integer
+      resilience_factors:
+        type: integer
+      resilience_snapshot:
+        type: integer
+      transactions:
+        type: integer
+    type: object
+  finexa-ia_ms-transactions_internal_models.Pulse:
+    properties:
+      alerta:
+        type: string
+      dias_restantes_mes:
+        type: integer
+      gasto_fijo_mensual:
+        type: number
+      gasto_promedio_diario:
+        type: number
+      gasto_variable_hoy:
+        type: number
+      porcentaje_consumido_mes:
+        type: number
+      presupuesto_libre_diario:
+        type: number
+      reference_date:
+        description: YYYY-MM-DD
+        type: string
+      saldo_actual:
+        type: number
+      updated_at:
+        type: string
+    type: object
+  finexa-ia_ms-transactions_internal_models.ResilienceFactor:
+    properties:
+      descripcion:
+        type: string
+      id:
+        type: integer
+      nombre:
+        type: string
+      peso:
+        type: number
+      score_ponderado:
+        type: number
+      score_raw:
+        type: number
+      updated_at:
+        type: string
+    type: object
+  finexa-ia_ms-transactions_internal_models.SyncAnalyzeRequest:
+    properties:
+      liquidez_threshold:
+        type: number
+      saldo_actual:
+        type: number
+      user_profile:
+        additionalProperties: {}
+        type: object
+    type: object
+  finexa-ia_ms-transactions_internal_models.SyncAnalyzeResponse:
+    properties:
+      classified_count:
+        type: integer
+      parse_errors:
+        type: integer
+      persisted_entities:
+        $ref: '#/definitions/finexa-ia_ms-transactions_internal_models.PersistCounts'
+      run_id:
+        type: integer
+      synced_count:
+        type: integer
+    type: object
+  finexa-ia_ms-transactions_internal_models.TransactionAnalysis:
+    properties:
+      ant_expense_percentage:
+        type: number
+      ant_expense_total:
+        type: number
+      risk_level:
+        type: string
+      summary:
+        type: string
+      updated_at:
+        type: string
+    type: object
   finexa-ia_ms-transactions_internal_models.TransactionListItem:
     properties:
       amount_cents:
         type: integer
+      category:
+        type: string
       currency:
+        type: string
+      deleted_at:
         type: string
       description:
         type: string
@@ -21,8 +232,8 @@ definitions:
         type: integer
       posted_at:
         type: string
-      user_id:
-        type: integer
+      transaction_id:
+        type: string
     type: object
 info:
   contact: {}
@@ -48,13 +259,68 @@ paths:
       summary: Health check
       tags:
       - health
-  /v1/transactions:
+  /v1/users/{userId}/transactions:
     get:
-      description: Lista transacciones (MVP); query user_id opcional
+      description: Listado paginado por userId en path. Soporta filtros por rango
+        de fecha y categoría. Excluye borradas lógicas por defecto.
       parameters:
-      - description: Filtrar por usuario interno
+      - description: ID interno de usuario
+        in: path
+        name: userId
+        required: true
+        type: integer
+      - description: Tamaño de página (default 50, max 200)
         in: query
-        name: user_id
+        name: limit
+        type: integer
+      - description: Offset paginación (default 0)
+        in: query
+        name: offset
+        type: integer
+      - description: RFC3339 inicio (posted_at >= from)
+        in: query
+        name: from
+        type: string
+      - description: RFC3339 fin (posted_at <= to)
+        in: query
+        name: to
+        type: string
+      - description: Filtro por categoría
+        in: query
+        name: category
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apiresult.okEnvelope-array_finexa-ia_ms-transactions_internal_models_TransactionListItem'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apiresult.ErrResult'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apiresult.ErrResult'
+      summary: Listar transacciones por usuario
+      tags:
+      - transactions
+  /v1/users/{userId}/transactions/{id}:
+    get:
+      description: Obtiene una transacción por id interno, aislada por usuario autenticado
+        y excluyendo borradas lógicas.
+      parameters:
+      - description: ID interno de usuario
+        in: path
+        name: userId
+        required: true
+        type: integer
+      - description: ID interno
+        in: path
+        name: id
+        required: true
         type: integer
       produces:
       - application/json
@@ -62,20 +328,280 @@ paths:
         "200":
           description: OK
           schema:
-            items:
-              $ref: '#/definitions/finexa-ia_ms-transactions_internal_models.TransactionListItem'
-            type: array
+            $ref: '#/definitions/apiresult.okEnvelope-finexa-ia_ms-transactions_internal_models_TransactionListItem'
         "400":
-          description: user_id inválido
+          description: Bad Request
           schema:
-            type: string
+            $ref: '#/definitions/apiresult.ErrResult'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/apiresult.ErrResult'
         "500":
           description: Internal Server Error
           schema:
-            type: string
-      summary: Listar transacciones
+            $ref: '#/definitions/apiresult.ErrResult'
+      summary: Detalle por id interno
       tags:
       - transactions
+  /v1/users/{userId}/transactions/analysis/latest:
+    get:
+      parameters:
+      - description: ID interno de usuario
+        in: path
+        name: userId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apiresult.okEnvelope-finexa-ia_ms-transactions_internal_models_TransactionAnalysis'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apiresult.ErrResult'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/apiresult.ErrResult'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apiresult.ErrResult'
+      summary: Último análisis agregado
+      tags:
+      - analysis
+  /v1/users/{userId}/transactions/by-transaction-id/{transaction_id}:
+    get:
+      description: Obtiene una transacción por transaction_id, aislada por usuario
+        autenticado y excluyendo borradas lógicas.
+      parameters:
+      - description: ID interno de usuario
+        in: path
+        name: userId
+        required: true
+        type: integer
+      - description: transaction_id externo
+        in: path
+        name: transaction_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apiresult.okEnvelope-finexa-ia_ms-transactions_internal_models_TransactionListItem'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apiresult.ErrResult'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/apiresult.ErrResult'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apiresult.ErrResult'
+      summary: Detalle por transaction_id
+      tags:
+      - transactions
+  /v1/users/{userId}/transactions/cash-flow/latest:
+    get:
+      parameters:
+      - description: ID interno de usuario
+        in: path
+        name: userId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apiresult.okEnvelope-finexa-ia_ms-transactions_internal_models_CashFlow'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apiresult.ErrResult'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/apiresult.ErrResult'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apiresult.ErrResult'
+      summary: Último cash flow
+      tags:
+      - cashflow
+  /v1/users/{userId}/transactions/insights:
+    get:
+      parameters:
+      - description: ID interno de usuario
+        in: path
+        name: userId
+        required: true
+        type: integer
+      - description: Tamaño de página (default 50, max 200)
+        in: query
+        name: limit
+        type: integer
+      - description: Offset paginación (default 0)
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apiresult.okEnvelope-array_finexa-ia_ms-transactions_internal_models_Insight'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apiresult.ErrResult'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apiresult.ErrResult'
+      summary: Listar insights
+      tags:
+      - analysis
+  /v1/users/{userId}/transactions/pulse/latest:
+    get:
+      parameters:
+      - description: ID interno de usuario
+        in: path
+        name: userId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apiresult.okEnvelope-finexa-ia_ms-transactions_internal_models_Pulse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apiresult.ErrResult'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/apiresult.ErrResult'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apiresult.ErrResult'
+      summary: Último pulse
+      tags:
+      - pulse
+  /v1/users/{userId}/transactions/resilience-factors:
+    get:
+      parameters:
+      - description: ID interno de usuario
+        in: path
+        name: userId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apiresult.okEnvelope-array_finexa-ia_ms-transactions_internal_models_ResilienceFactor'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apiresult.ErrResult'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apiresult.ErrResult'
+      summary: Listar factores de resiliencia
+      tags:
+      - resilience
+  /v1/users/{userId}/transactions/sync-and-analyze:
+    post:
+      consumes:
+      - application/json
+      description: Obtiene transacciones del usuario desde Plaid, llama ai-pipeline
+        /analyze y persiste resultados core + meta.
+      parameters:
+      - description: ID interno de usuario
+        in: path
+        name: userId
+        required: true
+        type: integer
+      - description: Opcionales para /analyze (user_profile, saldo_actual, liquidez_threshold)
+        in: body
+        name: body
+        schema:
+          $ref: '#/definitions/finexa-ia_ms-transactions_internal_models.SyncAnalyzeRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apiresult.okEnvelope-finexa-ia_ms-transactions_internal_models_SyncAnalyzeResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apiresult.ErrResult'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apiresult.ErrResult'
+        "502":
+          description: Bad Gateway
+          schema:
+            $ref: '#/definitions/apiresult.ErrResult'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/apiresult.ErrResult'
+      summary: Sincronizar Plaid + analizar + persistir
+      tags:
+      - transactions
+  /v1/users/{userId}/transactions/test-bedrock:
+    post:
+      description: Hace una llamada simple al ai-pipeline (FastAPI) para probar Bedrock
+      parameters:
+      - description: ID interno de usuario
+        in: path
+        name: userId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apiresult.ErrResult'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apiresult.ErrResult'
+      summary: Probar IA (Bedrock)
+      tags:
+      - ai
 schemes:
 - http
 - https

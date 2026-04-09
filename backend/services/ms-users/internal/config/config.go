@@ -17,6 +17,9 @@ type App struct {
 	HTTPPort    string `json:"http_port"`
 	// HTTPPathPrefix strips this prefix from paths behind API Gateway (e.g. /ms-users).
 	HTTPPathPrefix string `json:"http_path_prefix,omitempty"`
+	// InternalToken enables admin-style operations (list with deleted, restore, hard delete).
+	// Set via MS_USERS_INTERNAL_TOKEN; header X-MS-Users-Internal-Token must match.
+	InternalToken string `json:"internal_token,omitempty"`
 }
 
 // Load resolves configuration from AWS Secrets Manager when AWS_SECRET_ID is set,
@@ -42,6 +45,7 @@ func fromEnv() (*App, error) {
 		DatabaseURL:    dbURL,
 		HTTPPort:       port,
 		HTTPPathPrefix: strings.TrimSpace(os.Getenv("HTTP_PATH_PREFIX")),
+		InternalToken:  strings.TrimSpace(os.Getenv("MS_USERS_INTERNAL_TOKEN")),
 	}, nil
 }
 

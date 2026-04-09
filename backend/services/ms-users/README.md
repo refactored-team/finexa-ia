@@ -11,3 +11,8 @@ API de usuarios internos (`cognito_sub`, `email` opcional). La tabla `users` es 
 ## Lambda
 
 Mismo patrón que ms-plaid: Lambda Web Adapter, `REMOVE_BASE_PATH=/ms-users`, `/ready` para readiness.
+
+## Contexto de plataforma
+
+- `ms-users` comparte API Gateway con `ms-plaid`, `ms-transactions` y `ai-pipeline` (prefijo `/ai-pipeline`).
+- La tabla `users` sigue siendo canónica para relaciones por `user_id` en el resto de servicios.

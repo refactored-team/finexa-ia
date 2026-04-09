@@ -28,6 +28,8 @@ _TAGS: list[dict] = [
         "description": (
             "Endpoints de salud y diagnóstico de la API.\n\n"
             "- `GET /` — Health check ligero, no toca AWS.\n"
+            "- `GET /health` — Health check para API Gateway/Lambda.\n"
+            "- `GET /ready` — Readiness check para Lambda Web Adapter.\n"
             "- `POST /test-bedrock` — Verifica conectividad con Claude vía Bedrock."
         ),
     },
