@@ -9,7 +9,17 @@
       "Bash(./.venv/Scripts/pip.exe install:*)",
       "Bash(./.venv/Scripts/python.exe -c ':*)",
       "Bash(./.venv/Scripts/python.exe -c \"import pytest, httpx; print\\(pytest.__version__, httpx.__version__\\)\")",
-      "Bash(./.venv/Scripts/python.exe -m pytest tests/test_api_smoke.py -v)"
+      "Bash(./.venv/Scripts/python.exe -m pytest tests/test_api_smoke.py -v)",
+      "Bash(./.venv/Scripts/python.exe scripts/export_openapi.py)",
+      "Bash(python -m pytest tests/test_api_smoke.py -x -q)",
+      "Bash(pip install:*)",
+      "Bash(python scripts/export_openapi.py)",
+      "Bash(python:*)",
+      "Bash(gh pr create --base feat/ai-step-b-immediate-actions --head feat/ai-resilience-explanation-structured --title 'feat\\(ai-pipeline\\): explicacion resiliencia estructurada + endpoint action-plan' --body ':*)",
+      "Bash(netstat -ano)",
+      "Bash(curl -s http://localhost:8000/)",
+      "Bash(cmd /c \"mklink /J pipeline ai-pipeline\")",
+      "Bash(PYTHONPATH=/c/Users/victo/finexa-ia python -m uvicorn pipeline.main:app --reload --port 8000)"
     ]
   }
 }
