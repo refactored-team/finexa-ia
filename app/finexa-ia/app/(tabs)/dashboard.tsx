@@ -1,36 +1,120 @@
-import { ArrowUpRight, BookOpen, CheckCircle2, Circle, Plus, TrendingUp, Zap } from '@/constants/lucideIcons';
+import { AlertCircle, ArrowUpRight, BookOpen, Circle, Plus, Sparkles, Target, Wallet } from '@/constants/lucideIcons';
 import { Shadow, Spacing, TextStyles } from '@/constants/uiStyles';
-import { LinearGradient } from 'expo-linear-gradient';
-import React from 'react';
+import React, { useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+import { AuthBackground } from '@/components/auth';
+
+const analysisData = {
+  ant_expense_total: 1046.146,
+  ant_expense_percentage: 15.48,
+  risk_level: "critico",
+  summary: "¡Ojo con esto! Tu gasto total del periodo fue de [~$6,758.93] MXN, pero tus ingresos registrados solo suman $591.48 MXN — eso significa que estás gastando mucho más de lo que entra en tu cuenta. 🚨 Esa diferencia se está cubriendo con un balance previo de [~$7,350.41] MXN, lo cual no es sostenible a largo plazo.\n\nTu categoría más pesada es **alimentación** con [~$11,646.14] MXN en 34 transacciones — incluyendo $797.31 MXN en gastos hormiga solo en comida. Si le sumas los $248.84 MXN de la categoría hormiga directa (Uber Eats, Starbucks, Tropical Smoothie), tienes más de $1,046 MXN que se van en pequeños gastos evitables. Eso es el 15.5% de tu gasto total.\n\nTambién tienes Spotify cobrado 4 veces en el mismo periodo — algo que vale la pena revisar. Lo bueno: tu gasto en entretenimiento y transporte es bastante controlado, y eso habla bien de ti. El reto está en la comida y los gastos hormiga.",
+  insights: [
+    {
+      title: "🚨 Tus gastos superan tus ingresos registrados",
+      description: "Gastaste [~$6,758.93] MXN pero solo registraste $591.48 MXN de ingresos este periodo. Estás jalando de tu balance acumulado ([~$7,350.41] MXN) para cubrir el resto. Si esto sigue así, ese colchón se va a acabar rápido. Revisa si tienes ingresos que no están registrados en la app, y si no, es urgente ajustar tu gasto mensual.",
+      priority: "alta",
+      potential_monthly_saving: 0.0,
+      affected_category: "ingreso"
+    },
+    {
+      title: "🍔 Alimentación fuera de casa: tu gasto más grande",
+      description: "Gastaste [~$11,646.14] MXN en comida en 34 transacciones. Solo en Sweetgreen aparece $810 dos veces (posiblemente duplicado, vale verificarlo). Grubhub sumó $134 y Uber Eats aparece también en la categoría hormiga con $124.34 adicionales. Si cocinas en casa aunque sea 3 días a la semana y reduces los pedidos a domicilio, podrías ahorrar fácilmente entre [~$1,500] y [~$2,000] MXN al mes.",
+      priority: "alta",
+      potential_monthly_saving: 1800.0,
+      affected_category: "alimentacion"
+    },
+    {
+      title: "☕ Gastos hormiga: $1,046 MXN que se van sin que los notes",
+      description: "Entre la categoría hormiga directa y los hormiga detectados en alimentación, tienes $1,046.15 MXN en gastos pequeños y frecuentes: Starbucks ($45.47), Tropical Smoothie Cafe ($69.00), Uber Eats x2 ($124.34), Amazon ($10.02) y otros $797.31 MXN en snacks y compras chicas de comida. Estos gastos se sienten pequeños pero juntos representan el 15.5% de todo lo que gastaste. Reducirlos a la mitad ya te daría $523 MXN extra al mes.",
+      priority: "alta",
+      potential_monthly_saving: 523.0,
+      affected_category: "hormiga"
+    },
+    {
+      title: "🎵 Spotify cobrado 4 veces — ¿duplicado o error?",
+      description: "Spotify aparece 4 veces con el mismo monto de $12.65 MXN cada uno, sumando [~$50.60] MXN. Una suscripción mensual normal debería aparecer solo una vez por periodo. Puede ser un error de cobro, una suscripción duplicada o un periodo de facturación traslapado. Entra a tu cuenta de Spotify y revisa tu historial de pagos — si hay cobros de más, puedes solicitar reembolso directamente con ellos.",
+      priority: "media",
+      potential_monthly_saving: 37.95,
+      affected_category: "suscripcion"
+    },
+    {
+      title: "🅿️ Estacionamiento: $133.56 MXN en un solo pago",
+      description: "PayByPhone registró $133.56 MXN, que es un gasto considerable solo en estacionamiento. Si esto es recurrente, vale la pena explorar opciones de transporte público, carpooling o buscar estacionamientos con mensualidad si vas seguido al mismo lugar. Podrías reducir este gasto hasta en un [~40%] con un poco de planeación.",
+      priority: "baja",
+      potential_monthly_saving: 53.0,
+      affected_category: "transporte"
+    }
+  ]
+};
+
+const InsightCard = ({ insight }: { insight: typeof analysisData.insights[0] }) => {
+  const [expanded, setExpanded] = useState(false);
+  const isHighPriority = insight.priority === 'alta';
+
+  return (
+    <TouchableOpacity
+      style={[styles.insightCard, isHighPriority ? styles.insightCardHigh : null]}
+      onPress={() => setExpanded(!expanded)}
+      activeOpacity={0.8}
+    >
+      <View style={styles.insightHeader}>
+        <View style={styles.insightTitleRow}>
+          {isHighPriority ? (
+            <AlertCircle size={16} color="#DC2626" />
+          ) : insight.priority === 'media' ? (
+            <Target size={16} color="#D97706" />
+          ) : (
+            <Wallet size={16} color="#3B82F6" />
+          )}
+          <Text style={[styles.insightTitle, isHighPriority ? styles.textHigh : null]}>
+            {insight.title}
+          </Text>
+        </View>
+      </View>
+      {expanded && (
+        <View style={styles.insightBody}>
+          <Text style={styles.insightDescription}>{insight.description}</Text>
+          {insight.potential_monthly_saving > 0 && (
+            <View style={styles.savingBadge}>
+              <Sparkles size={12} color="#059669" />
+              <Text style={styles.savingText}>Ahorro potencial: ${insight.potential_monthly_saving.toFixed(2)} MXN/mes</Text>
+            </View>
+          )}
+        </View>
+      )}
+    </TouchableOpacity>
+  );
+};
 
 export default function DashboardScreen() {
   const insets = useSafeAreaInsets();
 
-  return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + Spacing.lg, paddingBottom: insets.bottom + 100 }]}
-      showsVerticalScrollIndicator={false}
-    >
-      {/* Header Center Badge */}
-      <View style={styles.topBadgeContainer}>
-        <View style={styles.topBadgeAvatarPlaceholder} />
-        <View>
-          <Text style={styles.topBadgeTitle}>Mi Centro de</Text>
-          <Text style={styles.topBadgeSubtitle}>Resiliencia</Text>
-        </View>
-        <View style={styles.pointsBadge}>
-          <Text style={styles.pointsBadgeText}>850{'\n'}pts</Text>
-        </View>
-      </View>
+  // Format summary to bold the text wrapped in **
+  const formatText = (text: string) => {
+    const parts = text.split(/(\*\*.*?\*\*)/);
+    return parts.map((part, i) => {
+      if (part.startsWith('**') && part.endsWith('**')) {
+        return <Text key={i} style={{ fontFamily: TextStyles.bodyMedium.fontFamily }}>{part.slice(2, -2)}</Text>;
+      }
+      return part;
+    });
+  };
 
-      {/* Greeting */}
+  return (
+    <AuthBackground showBottomBar>
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + Spacing.lg, paddingBottom: insets.bottom + 100 }]}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Greeting */}
       <View style={styles.greetingSection}>
         <Text style={styles.greetingTitle}>Hola, <Text style={styles.greetingName}>Carlos</Text></Text>
         <Text style={styles.greetingText}>
-          Tu salud financiera muestra una estabilidad notable hoy. He identificado 2 oportunidades para optimizar tus ahorros semanales.
+          He analizado tus últimas transacciones y detecté comportamientos importantes en tus gastos.
         </Text>
       </View>
 
@@ -47,66 +131,40 @@ export default function DashboardScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Score Donut Chart Placeholder */}
-      <View style={styles.scoreSection}>
-        <View style={styles.scoreCircleOuter}>
-          <View style={styles.scoreCircleInner}>
-            <Text style={styles.scoreLabel}>PUNTAJE</Text>
-            <Text style={styles.scoreValue}>82</Text>
-            <Text style={styles.scoreStatus}>Resiliencia Alta</Text>
+      {/* Alerta de Riesgo (Risk Level Card) */}
+      {analysisData.risk_level === 'critico' && (
+        <View style={styles.riskAlertCard}>
+          <View style={styles.riskAlertHeader}>
+            <View style={styles.riskIconWrap}>
+              <AlertCircle size={20} color="#FFFFFF" strokeWidth={2.5} />
+            </View>
+            <Text style={styles.riskAlertTitle}>Riesgo Financiero Crítico</Text>
           </View>
-        </View>
-      </View>
+          <Text style={styles.riskAlertBody}>
+            {formatText(analysisData.summary)}
+          </Text>
 
-      {/* Linea de vida */}
-      <View style={styles.cardWhite}>
-        <View style={styles.cardHeader}>
-          <View>
-            <Text style={styles.cardTitle}>Línea de{'\n'}Vida</Text>
-            <Text style={styles.cardSubtitle}>Flujo de caja{'\n'}proyectado a 30 días</Text>
-          </View>
-          <View style={{ alignItems: 'flex-end' }}>
-            <Text style={styles.cardValueLarge}>$4,250.00</Text>
-            <Text style={styles.cardSubtitleRight}>Balance Actual</Text>
+          <View style={styles.hormigaStatBox}>
+            <View>
+              <Text style={styles.hormigaStatTitle}>Gastos Hormiga</Text>
+              <Text style={styles.hormigaStatValue}>${analysisData.ant_expense_total.toFixed(2)} MXN</Text>
+            </View>
+            <View>
+              <Text style={styles.hormigaStatPercentage}>{analysisData.ant_expense_percentage.toFixed(1)}%</Text>
+              <Text style={styles.hormigaStatSubtitle}>del gasto total</Text>
+            </View>
           </View>
         </View>
+      )}
 
-        <View style={styles.barsContainer}>
-          <View style={[styles.bar, { height: 40, backgroundColor: '#E0E7FF' }]} />
-          <View style={[styles.bar, { height: 45, backgroundColor: '#E0E7FF' }]} />
-          <View style={[styles.bar, { height: 60, backgroundColor: '#C7D2FE' }]} />
-          <View style={[styles.bar, { height: 70, backgroundColor: '#C7D2FE' }]} />
-          <View style={[styles.bar, { height: 65, backgroundColor: '#A5B4FC' }]} />
-          <View style={[styles.bar, { height: 90, backgroundColor: '#818CF8' }]} />
-          <View style={[styles.bar, { height: 110, backgroundColor: '#6366F1' }]} />
-          <View style={[styles.bar, { height: 95, backgroundColor: '#A5B4FC' }]} />
-          <View style={[styles.bar, { height: 120, backgroundColor: '#7DD3FC' }]} />
-          <View style={[styles.bar, { height: 130, backgroundColor: '#38BDF8' }]} />
-          <View style={[styles.bar, { height: 80, backgroundColor: '#C7D2FE' }]} />
-          <View style={[styles.bar, { height: 60, backgroundColor: '#E0E7FF' }]} />
-        </View>
+      {/* Alertas y Oportunidades de Ahorro */}
+      <View style={styles.insightsSection}>
+        <Text style={styles.insightsSectionTitle}>Observaciones de tu Gasto</Text>
+        <Text style={styles.insightsSectionSubtitle}>Toca una alerta para ver más detalles</Text>
 
-        <View style={styles.dateLabels}>
-          <Text style={styles.dateLabelText}>HOY</Text>
-          <Text style={styles.dateLabelText}>15 DE OCT</Text>
-          <Text style={styles.dateLabelText}>30 DE OCT</Text>
-        </View>
-      </View>
-
-      {/* Ahorro Automatico (Green Card) */}
-      <View style={styles.cardGreen}>
-        <View style={styles.greenCardHeader}>
-          <View style={styles.greenIconWrap}>
-            <TrendingUp size={16} color="#FFFFFF" />
-          </View>
-          <View style={styles.greenBadge}>
-            <Text style={styles.greenBadgeText}>ALERTA POSITIVA</Text>
-          </View>
-        </View>
-        <Text style={styles.greenCardTitle}>Ahorro Automático</Text>
-        <Text style={styles.greenCardBody}>
-          Has gastado 12% menos que el promedio de este mes. ¿Deseas mover $150 a tu fondo de emergencia?
-        </Text>
+        {analysisData.insights.map((insight, index) => (
+          <InsightCard key={index} insight={insight} />
+        ))}
       </View>
 
       {/* Finexa Wisdom */}
@@ -118,10 +176,10 @@ export default function DashboardScreen() {
           <Text style={styles.wisdomTitle}>Sabiduría Finexa</Text>
         </View>
         <Text style={styles.wisdomQuote}>
-          "La resiliencia financiera no es cuánto ganas, sino qué tan rápido te recuperas."
+          "Tus decisiones de hoy definen tu libertad de mañana. Un pequeño ajuste en tus gastos diarios tiene un gran impacto mensual."
         </Text>
         <TouchableOpacity style={styles.wisdomLink}>
-          <Text style={styles.wisdomLinkText}>Leer artículo</Text>
+          <Text style={styles.wisdomLinkText}>Leer artículo sobre el gasto hormiga</Text>
           <ArrowUpRight size={12} color="#3B82F6" />
         </TouchableOpacity>
       </View>
@@ -131,43 +189,17 @@ export default function DashboardScreen() {
         <Text style={styles.retosTitle}>Próximos Retos</Text>
 
         <View style={styles.retoRow}>
-          <CheckCircle2 size={20} color="#059669" />
-          <Text style={styles.retoText}>Completar curso: Inversión 101</Text>
+          <Circle size={20} color="#64748B" fill="#64748B" opacity={0.6} />
+          <Text style={styles.retoText}>Reducir gastos en alimentación fuera de casa</Text>
         </View>
         <View style={styles.retoRow}>
           <Circle size={20} color="#64748B" fill="#64748B" opacity={0.6} />
-          <Text style={styles.retoText}>Reducir suscripciones activas</Text>
-        </View>
-        <View style={styles.retoRow}>
-          <Circle size={20} color="#64748B" fill="#64748B" opacity={0.6} />
-          <Text style={styles.retoText}>Meta: Fondo de 3 meses</Text>
+          <Text style={styles.retoText}>Revisar suscripciones activas</Text>
         </View>
       </View>
 
-      {/* Optimizador Finexa AI (Purple Card) */}
-      <LinearGradient colors={['#3B34D1', '#281E9A']} style={styles.cardPurple}>
-        <Text style={styles.purpleTitle}>Optimizador Finexa AI</Text>
-        <Text style={styles.purpleBody}>
-          Nuestro motor de inteligencia ha detectado que puedes reducir tus intereses de tarjeta de crédito en un 4% mediante una consolidación inteligente.
-        </Text>
-        <TouchableOpacity style={styles.purpleBtn}>
-          <Text style={styles.purpleBtnText}>Ver propuesta de {'\n'}consolidación</Text>
-        </TouchableOpacity>
-
-        {/* Laptop Illustration Placeholder */}
-        <View style={styles.laptopPlaceholder}>
-          <View style={styles.laptopScreen}>
-            <TrendingUp size={48} color="#FFFFFF" opacity={0.8} />
-          </View>
-          <View style={styles.laptopBase} />
-        </View>
-
-        <View style={styles.zapBadge}>
-          <Zap size={14} color="#FFFFFF" fill="#FFFFFF" />
-        </View>
-      </LinearGradient>
-
     </ScrollView>
+    </AuthBackground>
   );
 }
 
@@ -204,18 +236,6 @@ const styles = StyleSheet.create({
     color: '#3B82F6',
     lineHeight: 14,
   },
-  pointsBadge: {
-    backgroundColor: '#F1F5F9',
-    borderRadius: 20,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-  },
-  pointsBadgeText: {
-    fontFamily: TextStyles.bodyMedium.fontFamily,
-    fontSize: 10,
-    color: '#3B82F6',
-    textAlign: 'center',
-  },
   greetingSection: {
     marginBottom: Spacing.xl,
   },
@@ -237,7 +257,7 @@ const styles = StyleSheet.create({
   actionRow: {
     flexDirection: 'row',
     gap: Spacing.md,
-    marginBottom: Spacing.xl + Spacing.md,
+    marginBottom: Spacing.xl,
   },
   primaryBtn: {
     flex: 1,
@@ -280,42 +300,154 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#3B82F6',
   },
-  scoreSection: {
-    alignItems: 'center',
-    marginBottom: Spacing.xl + Spacing.lg,
+  riskAlertCard: {
+    backgroundColor: '#FEF2F2',
+    borderRadius: 24,
+    padding: Spacing.xl,
+    marginBottom: Spacing.xl,
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    ...Shadow.card,
+    shadowColor: '#DC2626',
+    shadowOpacity: 0.08,
   },
-  scoreCircleOuter: {
-    width: 180,
-    height: 180,
-    borderRadius: 90,
-    borderWidth: 12,
-    borderColor: '#E0E7FF',
+  riskAlertHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    marginBottom: Spacing.md,
+  },
+  riskIconWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#DC2626',
     alignItems: 'center',
     justifyContent: 'center',
-    borderLeftColor: '#3B34D1', // Simulated progress
-    borderTopColor: '#3B34D1',
-    borderRightColor: '#3B34D1',
   },
-  scoreCircleInner: {
+  riskAlertTitle: {
+    fontFamily: TextStyles.screenTitle.fontFamily,
+    fontSize: 18,
+    color: '#991B1B',
+  },
+  riskAlertBody: {
+    fontFamily: TextStyles.body.fontFamily,
+    fontSize: 13,
+    color: '#7F1D1D',
+    lineHeight: 20,
+    marginBottom: Spacing.lg,
+  },
+  hormigaStatBox: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: Spacing.md,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#FCA5A5',
+  },
+  hormigaStatTitle: {
+    fontFamily: TextStyles.caption.fontFamily,
+    fontSize: 11,
+    color: '#991B1B',
+    marginBottom: 2,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  hormigaStatValue: {
+    fontFamily: TextStyles.bodyMedium.fontFamily,
+    fontSize: 18,
+    color: '#7F1D1D',
+  },
+  hormigaStatPercentage: {
+    fontFamily: TextStyles.screenTitle.fontFamily,
+    fontSize: 22,
+    color: '#DC2626',
+    textAlign: 'right',
+  },
+  hormigaStatSubtitle: {
+    fontFamily: TextStyles.caption.fontFamily,
+    fontSize: 10,
+    color: '#991B1B',
+    textAlign: 'right',
+  },
+  insightsSection: {
+    marginBottom: Spacing.xl,
+  },
+  insightsSectionTitle: {
+    fontFamily: TextStyles.screenTitle.fontFamily,
+    fontSize: 20,
+    color: '#1E293B',
+    marginBottom: 4,
+  },
+  insightsSectionSubtitle: {
+    fontFamily: TextStyles.body.fontFamily,
+    fontSize: 13,
+    color: '#64748B',
+    marginBottom: Spacing.lg,
+  },
+  insightCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: Spacing.md,
+    marginBottom: Spacing.sm,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  insightCardHigh: {
+    borderColor: '#FECACA',
+    backgroundColor: '#FFFAFA',
+  },
+  insightHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
   },
-  scoreLabel: {
-    fontFamily: TextStyles.labelUppercase.fontFamily,
-    fontSize: 10,
-    letterSpacing: 1.5,
-    color: '#64748B',
-    marginBottom: 2,
+  insightTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    flex: 1,
+    paddingRight: Spacing.sm,
   },
-  scoreValue: {
-    fontFamily: TextStyles.screenTitle.fontFamily,
-    fontSize: 54,
-    color: '#1E293B',
-    lineHeight: 60,
+  insightTitle: {
+    fontFamily: TextStyles.bodyMedium.fontFamily,
+    fontSize: 14,
+    color: '#334155',
+    flexShrink: 1,
+    lineHeight: 20,
   },
-  scoreStatus: {
+  textHigh: {
+    color: '#991B1B',
+  },
+  insightBody: {
+    marginTop: Spacing.md,
+    paddingTop: Spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
+  },
+  insightDescription: {
+    fontFamily: TextStyles.body.fontFamily,
+    fontSize: 13,
+    color: '#475569',
+    lineHeight: 20,
+    marginBottom: Spacing.md,
+  },
+  savingBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    backgroundColor: '#D1FAE5',
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 6,
+    borderRadius: 8,
+    gap: 6,
+  },
+  savingText: {
     fontFamily: TextStyles.bodyMedium.fontFamily,
     fontSize: 12,
-    color: '#059669',
+    color: '#065F46',
   },
   cardWhite: {
     backgroundColor: '#FFFFFF',
@@ -324,98 +456,6 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.lg,
     ...Shadow.card,
     shadowOpacity: 0.04,
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: Spacing.xl,
-  },
-  cardTitle: {
-    fontFamily: TextStyles.bodyMedium.fontFamily,
-    fontSize: 16,
-    color: '#1E293B',
-    lineHeight: 20,
-    marginBottom: 4,
-  },
-  cardSubtitle: {
-    fontFamily: TextStyles.caption.fontFamily,
-    fontSize: 11,
-    color: '#64748B',
-  },
-  cardValueLarge: {
-    fontFamily: TextStyles.bodyMedium.fontFamily,
-    fontSize: 16,
-    color: '#3B34D1',
-    marginBottom: 4,
-  },
-  cardSubtitleRight: {
-    fontFamily: TextStyles.caption.fontFamily,
-    fontSize: 10,
-    color: '#64748B',
-  },
-  barsContainer: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    justifyContent: 'space-between',
-    height: 130,
-    marginBottom: Spacing.lg,
-  },
-  bar: {
-    width: 14,
-    borderRadius: 4,
-    backgroundColor: '#C7D2FE',
-  },
-  dateLabels: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  dateLabelText: {
-    fontFamily: TextStyles.caption.fontFamily,
-    fontSize: 9,
-    color: '#94A3B8',
-  },
-  cardGreen: {
-    backgroundColor: '#D1FAE5',
-    borderRadius: 24,
-    padding: Spacing.xl,
-    marginBottom: Spacing.lg,
-  },
-  greenCardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.md,
-    marginBottom: Spacing.sm,
-  },
-  greenIconWrap: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#059669',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  greenBadge: {
-    backgroundColor: '#6EE7B7',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 4,
-  },
-  greenBadgeText: {
-    fontFamily: TextStyles.labelUppercase.fontFamily,
-    fontSize: 9,
-    color: '#065F46',
-  },
-  greenCardTitle: {
-    fontFamily: TextStyles.bodyMedium.fontFamily,
-    fontSize: 14,
-    color: '#064E3B',
-    marginBottom: Spacing.xs,
-  },
-  greenCardBody: {
-    fontFamily: TextStyles.body.fontFamily,
-    fontSize: 12,
-    color: '#065F46',
-    lineHeight: 18,
   },
   wisdomHeader: {
     flexDirection: 'row',
@@ -474,79 +514,6 @@ const styles = StyleSheet.create({
     fontFamily: TextStyles.bodyMedium.fontFamily,
     fontSize: 13,
     color: '#334155',
-  },
-  cardPurple: {
-    borderRadius: 24,
-    padding: Spacing.xl,
-    paddingBottom: Spacing.xxl + 40,
-    marginBottom: Spacing.xl,
-    position: 'relative',
-    overflow: 'hidden',
-  },
-  purpleTitle: {
-    fontFamily: TextStyles.bodyMedium.fontFamily,
-    fontSize: 16,
-    color: '#FFFFFF',
-    marginBottom: Spacing.sm,
-  },
-  purpleBody: {
-    fontFamily: TextStyles.body.fontFamily,
-    fontSize: 13,
-    color: '#E0E7FF',
-    lineHeight: 20,
-    marginBottom: Spacing.lg,
-  },
-  purpleBtn: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    paddingVertical: Spacing.md,
-    paddingHorizontal: Spacing.lg,
-    alignSelf: 'flex-start',
-    zIndex: 2,
-  },
-  purpleBtnText: {
-    fontFamily: TextStyles.bodyMedium.fontFamily,
-    fontSize: 13,
-    color: '#3B34D1',
-    textAlign: 'center',
-  },
-  laptopPlaceholder: {
-    position: 'absolute',
-    bottom: -15,
-    right: -20,
-    width: 140,
-    height: 110,
-    opacity: 0.8,
-    alignItems: 'center',
-    justifyContent: 'flex-end',
-  },
-  laptopScreen: {
-    width: 110,
-    height: 80,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    borderTopLeftRadius: 8,
-    borderTopRightRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  laptopBase: {
-    width: 140,
-    height: 12,
-    backgroundColor: '#1E293B',
-    borderTopLeftRadius: 4,
-    borderTopRightRadius: 4,
-    borderBottomLeftRadius: 10,
-    borderBottomRightRadius: 10,
-  },
-  zapBadge: {
-    position: 'absolute',
-    bottom: 24,
-    right: 24,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    alignItems: 'center',
-    justifyContent: 'center',
   }
 });
+

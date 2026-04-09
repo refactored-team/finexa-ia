@@ -1,18 +1,15 @@
-import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import {
-  ActivityIndicator,
   Alert,
   Platform,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   TurboModuleRegistry,
   useWindowDimensions,
-  View,
+  View
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -47,20 +44,16 @@ function logPlaidLinkExit(linkExit: LinkExit) {
 
 import {
   ArrowRight,
-  CheckCircle2,
-  Circle,
   Landmark,
   Lock,
   ShieldCheck
 } from '@/constants/lucideIcons';
-import { PrismColors } from '@/constants/theme';
 import { Radius, Shadow, Spacing, TextStyles } from '@/constants/uiStyles';
 import {
   getExpoGoDevBuildInstructions,
   isAmplifyAuthConfigured,
   isExpoGo,
 } from '@/lib/amplify/configure';
-import { signOutUser } from '@/lib/auth/cognito';
 import { getInternalUserIdFromSession } from '@/src/services/api/users/usersService';
 
 export default function LinkBankScreen() {
@@ -69,7 +62,6 @@ export default function LinkBankScreen() {
   const router = useRouter();
 
   const [isLinking, setIsLinking] = useState(false);
-  const [signingOut, setSigningOut] = useState(false);
 
   const clientIsExpoGo = useMemo(() => isExpoGo(), []);
 
@@ -93,25 +85,6 @@ export default function LinkBankScreen() {
       cancelled = true;
     };
   }, [router]);
-
-  async function handleSignOut() {
-    if (signingOut) return;
-    setSigningOut(true);
-    try {
-      if (!isAmplifyAuthConfigured()) {
-        router.replace('/login');
-        return;
-      }
-      const result = await signOutUser();
-      if (!result.ok) {
-        Alert.alert('Cerrar sesión', result.message);
-        return;
-      }
-      router.replace('/login');
-    } finally {
-      setSigningOut(false);
-    }
-  }
 
   function showDevBuildHelp() {
     const d = getExpoGoDevBuildInstructions();
@@ -203,15 +176,6 @@ export default function LinkBankScreen() {
 
   return (
     <AuthBackground showBottomBar>
-      {/* HEADER */}
-      <View style={[styles.header, { paddingTop }]}>
-        <View style={styles.headerLeft}>
-          <Pressable onPress={handleSignOut} style={styles.signOutBtn} hitSlop={10}>
-            {signingOut ? <ActivityIndicator size="small" color={PrismColors.primary} /> : <Text style={styles.signOutText}>Cerrar sesión</Text>}
-          </Pressable>
-        </View>
-      </View>
-
       <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 80 }]} showsVerticalScrollIndicator={false}>
 
         {clientIsExpoGo && (
@@ -225,7 +189,7 @@ export default function LinkBankScreen() {
           <View style={styles.heroIconWrapper}>
             <Landmark size={32} color="#042F2E" strokeWidth={2} />
           </View>
-          <Text style={styles.heroTitle}>Aún no nos {'\n'}conocemos bien.</Text>
+          <Text style={styles.heroTitle}>Aún no nos {'\n'} conocemos bien.</Text>
           <Text style={styles.heroSubtitle}>
             Comparte tus movimientos {'\n'}
             conmigo para empezar a construir {'\n'}
@@ -233,52 +197,8 @@ export default function LinkBankScreen() {
           </Text>
         </View>
 
-        {/* PASO 01 */}
         <View style={styles.cardWhite}>
-          <Text style={styles.stepLabelGreen}>PASO 01</Text>
-          <Text style={styles.cardTitle}>Conexión Bancaria{'\n'}Segura</Text>
-          <Text style={styles.cardDesc}>
-            Utilizamos Plaid para conectar tus cuentas de forma cifrada. Nosotros nunca vemos tus credenciales de acceso.
-          </Text>
-          <LinearGradient
-            colors={['#1F2937', '#111827']}
-            style={styles.vaultIllustration}
-          >
-            <Lock size={48} color="#4ADE80" strokeWidth={1} style={{ opacity: 0.8 }} />
-            <View style={styles.vaultBadge}>
-              <ShieldCheck size={14} color="#059669" />
-              <Text style={styles.vaultBadgeText}>Cifrado de grado bancario</Text>
-            </View>
-          </LinearGradient>
-        </View>
-
-        {/* PASO 02 */}
-        <View style={styles.cardBlue}>
-          <Text style={styles.stepLabelBlue}>PASO 02</Text>
-          <Text style={styles.cardTitleWhite}>Tú tienes el control</Text>
-          <Text style={styles.cardDescWhite}>
-            Elige exactamente qué cuentas quieres sincronizar y qué información deseas compartir con tu coach AI.
-          </Text>
-          <View style={styles.cardOptions}>
-            <View style={styles.optionRowActive}>
-              <CheckCircle2 size={20} color="#3B82F6" fill="#FFFFFF" />
-              <Text style={styles.optionTextActive}>Cuenta Corriente</Text>
-            </View>
-            <View style={styles.optionRowActive}>
-              <CheckCircle2 size={20} color="#3B82F6" fill="#FFFFFF" />
-              <Text style={styles.optionTextActive}>Ahorros & Fondos</Text>
-            </View>
-            <View style={styles.optionRowInactive}>
-              <Circle size={20} color="#818CF8" />
-              <Text style={styles.optionTextInactive}>Tarjetas de Crédito</Text>
-            </View>
-          </View>
-        </View>
-
-        {/* PASO 03 */}
-        <View style={styles.cardWhite}>
-          <Text style={styles.stepLabelBlue2}>PASO 03</Text>
-          <Text style={styles.cardTitle}>Análisis{'\n'}Predictivo</Text>
+          <Text style={styles.cardTitle}>Análisis Predictivo</Text>
           <Text style={styles.cardDesc}>
             Una vez conectados, Finexa analiza tus patrones de gasto para generar un mapa de salud financiera personalizado en menos de 60 segundos.
           </Text>
@@ -294,27 +214,6 @@ export default function LinkBankScreen() {
             </Text>
             {!isLinking && <ArrowRight size={20} color="#FFFFFF" />}
           </TouchableOpacity>
-
-          {/* Chart Illustration */}
-          <View style={styles.chartIllustration}>
-            <View style={styles.chartHeader}>
-              <Text style={styles.chartTitle}>Predicción{'\n'}Mensual</Text>
-              <Text style={styles.chartValue}>+12%{'\n'}ahorro</Text>
-            </View>
-            <View style={styles.barsContainer}>
-              <View style={[styles.bar, { height: 40, backgroundColor: '#C7D2FE' }]} />
-              <View style={[styles.bar, { height: 60, backgroundColor: '#C7D2FE' }]} />
-              <View style={[styles.bar, { height: 30, backgroundColor: '#C7D2FE' }]} />
-              <View style={[styles.bar, { height: 90, backgroundColor: '#4F46E5' }]} />
-              <View style={[styles.bar, { height: 50, backgroundColor: '#C7D2FE' }]} />
-            </View>
-            <View style={styles.chartLabels}>
-              <Text style={styles.chartLabelText}>Sem 1</Text>
-              <Text style={styles.chartLabelText}>Sem 2</Text>
-              <Text style={styles.chartLabelText}>Sem 3</Text>
-              <Text style={styles.chartLabelText}>Sem 4</Text>
-            </View>
-          </View>
         </View>
 
         {/* Footer info */}
@@ -338,26 +237,6 @@ export default function LinkBankScreen() {
 }
 
 const styles = StyleSheet.create({
-  header: {
-    paddingHorizontal: Spacing.xl,
-    paddingBottom: Spacing.md,
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    alignItems: 'center',
-    backgroundColor: '#F8FAFC',
-  },
-  headerLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  signOutBtn: {
-    padding: Spacing.sm,
-  },
-  signOutText: {
-    fontFamily: TextStyles.bodyMedium.fontFamily,
-    fontSize: 14,
-    color: PrismColors.textSecondary,
-  },
   scrollContent: {
     paddingHorizontal: Spacing.lg,
     paddingTop: Spacing.xl,

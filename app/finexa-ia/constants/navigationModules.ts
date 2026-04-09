@@ -1,4 +1,4 @@
-import { BarChart3, BookOpen, LayoutDashboard, LucideIcon, Wallet } from './lucideIcons';
+import { BarChart3, BookOpen, Landmark, LayoutDashboard, LucideIcon } from './lucideIcons';
 
 export type NavigationModule = {
   id: string;
@@ -15,6 +15,12 @@ export const NAVIGATION_MODULES: NavigationModule[] = [
     icon: LayoutDashboard,
   },
   {
+    id: 'link-bank',
+    name: 'Bancos',
+    route: '/(onboarding)/link-bank',
+    icon: Landmark,
+  },
+  {
     id: 'simulation',
     name: 'Simulación',
     route: '/(tabs)/simulation',
@@ -25,11 +31,5 @@ export const NAVIGATION_MODULES: NavigationModule[] = [
     name: 'Sabiduría',
     route: '/(tabs)/wisdom',
     icon: BookOpen,
-  },
-  {
-    id: 'vault',
-    name: 'Bóveda',
-    route: '/(tabs)/vault',
-    icon: Wallet,
   },
 ];

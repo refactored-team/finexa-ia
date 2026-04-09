@@ -14,7 +14,9 @@ export default function CustomBottomBar() {
   return (
     <View style={[styles.container, { paddingBottom: insets.bottom || 20 }]}>
       {NAVIGATION_MODULES.map((module) => {
-        const isActive = pathname === module.route || pathname.startsWith(module.route);
+        // Expo Router's usePathname() omits route groups like (tabs)
+        const cleanRoute = module.route.replace(/\/\([^)]+\)/g, '');
+        const isActive = pathname === cleanRoute || (cleanRoute !== '/' && pathname.startsWith(`${cleanRoute}/`));
 
         return (
           <TouchableOpacity
@@ -72,10 +74,11 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 12,
     borderRadius: 20,
-    minWidth: 70, // Asegura un ancho uniforme para el fondo activo
+    minWidth: 70,
   },
   activeTab: {
-    backgroundColor: '#3E34F3', // Ajustando al azul/morado visible en el diseño
+    backgroundColor: '#3E34F3',
+    borderRadius: 20,
   },
   tabText: {
     marginTop: 6,
