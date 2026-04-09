@@ -5,27 +5,18 @@ import {
   Text,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useState, useEffect } from 'react';
-import { GestureDetector, Gesture } from 'react-native-gesture-handler';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withSpring,
-  withTiming,
-  runOnJS,
-} from 'react-native-reanimated';
-import { SharedValue } from 'react-native-reanimated';
-
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useState } from 'react';
 
 import { PrismColors } from '@/constants/theme';
 import { Spacing } from '@/constants/uiStyles';
+import SmartStack, { Finding, Theme } from '@/components/SmartStack';
 
 // ---------------------------------------------------------------------------
 // Themes
 // ---------------------------------------------------------------------------
-const THEMES = {
+const THEMES: Record<string, Theme> = {
   light: {
     id: 'light',
     name: 'Light',
@@ -79,14 +70,28 @@ const THEMES = {
 
 type ThemeKey = keyof typeof THEMES;
 
+const HERO_THEME: Theme = {
+  id: 'hero',
+  name: 'Hero',
+  backgroundColor: '#000000',
+  cardBackground: PrismColors.surface,
+  textPrimary: '#FFFFFF',
+  textSecondary: 'rgba(255,255,255,0.72)',
+  accentColor: '#D7FF2F',
+  badgeGradient: [PrismColors.primary, PrismColors.tertiary],
+  checkmarkBg: '#10B981',
+  activeBg: '#F59E0B',
+};
+
 // ---------------------------------------------------------------------------
 // Data
 // ---------------------------------------------------------------------------
-const findings = [
+const findings: Finding[] = [
   {
     id: '1',
     title: 'Spotify se cobró 4 veces este mes',
     icon: '💡',
+    cardColor: '#006C5F',
     steps: [
       { text: 'Ya revisé tus cargos', completed: true, active: false },
       { text: 'Tengo la documentación lista', completed: true, active: false },
@@ -97,6 +102,7 @@ const findings = [
     id: '2',
     title: 'HBO Max - Suscripción sin uso',
     icon: '📺',
+    cardColor: PrismColors.tertiary,
     steps: [
       { text: 'No has abierto la app en 90 días', completed: true, active: false },
       { text: 'Puedes ahorrar $129/mes', completed: true, active: false },
@@ -107,6 +113,7 @@ const findings = [
     id: '3',
     title: 'Uber Eats - Cargo duplicado',
     icon: '🍔',
+    cardColor: PrismColors.secondary,
     steps: [
       { text: 'Detecté un cargo doble de $342', completed: true, active: false },
       { text: 'Ya contacté a soporte', completed: true, active: false },
@@ -116,270 +123,64 @@ const findings = [
 ];
 
 // ---------------------------------------------------------------------------
-// Card
-// ---------------------------------------------------------------------------
-type Finding = typeof findings[0];
-type Theme = typeof THEMES[ThemeKey];
-
-interface StackCardProps {
-  finding: Finding;
-  offset: number;
-  isActive: boolean;
-  translateY: SharedValue<number>;
-  theme: Theme;
-}
-
-function StackCard({ finding, offset, isActive, translateY, theme }: StackCardProps) {
-  const animatedStyle = useAnimatedStyle(() => {
-    if (isActive) {
-      return {
-        transform: [{ translateY: translateY.value }, { scale: 1 }],
-        opacity: 1,
-        zIndex: 10,
-      };
-    }
-    return {
-      transform: [
-        { translateY: offset * 14 },
-        { scale: 1 - offset * 0.05 },
-      ],
-      opacity: offset === 1 ? 0.6 : 0.3,
-      zIndex: 10 - offset,
-    };
-  });
-
-  const isGradient = theme.cardBackground === 'gradient';
-
-  const cardInner = (
-    <>
-      <LinearGradient
-        colors={theme.badgeGradient}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 0 }}
-        style={styles.badge}>
-        <Text style={[styles.badgeText, { color: theme.textPrimary }]}>
-          {finding.icon} Detectado
-        </Text>
-      </LinearGradient>
-
-      <Text style={[styles.findingTitle, { color: theme.textPrimary }]}>
-        {finding.title}
-      </Text>
-
-      <View style={styles.stepsList}>
-        {finding.steps.map((step, idx) => (
-          <View key={idx} style={styles.stepItem}>
-            <View style={[
-              styles.stepIcon,
-              step.completed && { backgroundColor: theme.checkmarkBg },
-              step.active && { backgroundColor: theme.activeBg },
-            ]}>
-              <Text style={styles.stepIconText}>
-                {step.completed ? '✓' : '○'}
-              </Text>
-            </View>
-            <Text style={[
-              styles.stepText,
-              { color: theme.textSecondary },
-              step.active && { color: theme.textPrimary, fontWeight: '700' },
-            ]}>
-              {step.text}
-            </Text>
-          </View>
-        ))}
-      </View>
-
-      <LinearGradient
-        colors={[PrismColors.primary, PrismColors.secondary]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.ctaButton}>
-        <Pressable style={styles.ctaPressable}>
-          <Text style={styles.ctaText}>Resolver juntos</Text>
-        </Pressable>
-      </LinearGradient>
-    </>
-  );
-
-  if (isGradient && 'cardGradientColors' in theme) {
-    return (
-      <Animated.View style={[styles.stackCard, animatedStyle]}>
-        <LinearGradient
-          colors={(theme as any).cardGradientColors}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={StyleSheet.absoluteFillObject}
-        />
-        {cardInner}
-      </Animated.View>
-    );
-  }
-
-  return (
-    <Animated.View style={[
-      styles.stackCard,
-      { backgroundColor: theme.cardBackground as string },
-      animatedStyle,
-    ]}>
-      {cardInner}
-    </Animated.View>
-  );
-}
-
-// ---------------------------------------------------------------------------
 // Screen
 // ---------------------------------------------------------------------------
 export default function SmartStackScreen() {
-  const [activeTheme, setActiveTheme] = useState<ThemeKey>('light');
   const [currentIndex, setCurrentIndex] = useState(0);
-  const theme = THEMES[activeTheme];
-
-  // currentIndexSV lives on UI thread — worklet always reads fresh value,
-  // no stale closure bug.
-  const translateY = useSharedValue(0);
-  const currentIndexSV = useSharedValue(0);
-
-  // Keep shared value in sync with React state
-  useEffect(() => {
-    currentIndexSV.value = currentIndex;
-    // Reset position immediately (no animation) so new card starts at 0
-    translateY.value = 0;
-  }, [currentIndex]);
-
-  const panGesture = Gesture.Pan()
-    .activeOffsetY([-10, 10])
-    .failOffsetX([-15, 15])
-    .onUpdate((e) => {
-      translateY.value = e.translationY;
-    })
-    .onEnd((e) => {
-      'worklet';
-      const idx = currentIndexSV.value;
-      const total = findings.length;
-
-      if (e.translationY < -50 && idx < total - 1) {
-        translateY.value = withTiming(-500, { duration: 200 });
-        runOnJS(setCurrentIndex)(idx + 1);
-      } else if (e.translationY > 50 && idx > 0) {
-        translateY.value = withTiming(500, { duration: 200 });
-        runOnJS(setCurrentIndex)(idx - 1);
-      } else {
-        translateY.value = withSpring(0, { damping: 18, stiffness: 200 });
-      }
-    });
+  const theme = HERO_THEME;
+  const pageBackground = '#F3F5F8';
 
   return (
-    <View style={{ flex: 1 }}>
-      <SafeAreaView style={[styles.safe, { backgroundColor: theme.backgroundColor }]}>
-
-        {/* Theme picker */}
-        <View style={[styles.themePicker, { backgroundColor: theme.backgroundColor }]}>
-          <Text style={[styles.themeLabel, { color: theme.textSecondary }]}>
-            Esquema de colores:
-          </Text>
-          <View style={styles.themeButtons}>
-            {(Object.keys(THEMES) as ThemeKey[]).map((key) => (
-              <Pressable
-                key={key}
-                onPress={() => setActiveTheme(key)}
-                style={[
-                  styles.themeButton,
-                  {
-                    borderColor: activeTheme === key
-                      ? theme.accentColor
-                      : theme.textSecondary,
-                  },
-                ]}>
-                <Text style={[
-                  styles.themeButtonText,
-                  {
-                    color: activeTheme === key
-                      ? theme.textPrimary
-                      : theme.textSecondary,
-                    fontWeight: activeTheme === key ? '700' : '500',
-                  },
-                ]}>
-                  {THEMES[key].name}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
-        </View>
+    <View style={[styles.root, { backgroundColor: '#E5E7EB' }]}>
+      <SafeAreaView edges={['top']} style={{ backgroundColor: '#6495FF' }} />
+      <SafeAreaView edges={['left', 'right', 'bottom']} style={[styles.safe, { backgroundColor: '#F1F4F9' }]}>
 
         {/* Header */}
-        <View style={styles.header}>
-          <View style={styles.avatarContainer}>
-            <Image
-              source={require('@/assets/images/finexa-i.png')}
-              style={styles.avatar}
-              resizeMode="contain"
-            />
+        <LinearGradient
+          colors={['#6495FF', '#2463EB']}
+          start={{ x: 0.5, y: 0.005 }}
+          end={{ x: 0.5, y: .8 }}
+          style={styles.header}>
+          <View style={styles.topRow}>
+            <View style={styles.userAvatarWrap}>
+              <Image
+                source={require('@/assets/images/finexa-i.png')}
+                style={styles.userAvatar}
+                resizeMode="cover"
+              />
+            </View>
+
+            <View style={styles.chatButton}>
+              <Text style={styles.chatButtonIcon}>💬</Text>
+            </View>
           </View>
-          <Text style={[styles.greeting, { color: theme.textPrimary }]}>
-            Hola, analicé tus movimientos
+
+          <Text style={[styles.welcomeLine, { color: theme.textPrimary }]}>
+            Hola,
           </Text>
-          <Text style={[styles.subGreeting, { color: theme.textSecondary }]}>
-            Encontré {findings.length} cosas que deberías revisar
+          <Text style={[styles.nameLine, { color: theme.accentColor }]}>
+            Ivano Ermakov
           </Text>
-        </View>
+          <Text style={[styles.welcomeLine, { color: theme.textPrimary, fontSize: 20 }]}>
+            encontré esto por ti
+          </Text>
+          {/* <View style={styles.chipsRow}>
+            <View style={styles.chip}>
+              <Text style={styles.chipText}>GRAPHIC DESIGNER</Text>
+            </View>
+            <View style={styles.chip}>
+              <Text style={styles.chipText}>FREELANCE</Text>
+            </View>
+          </View> */}
+        </LinearGradient>
 
         {/* Smart Stack */}
-        <View style={styles.stackWrapper}>
-          <View style={styles.stackContainer}>
-
-            {/* Background cards — peek behind active */}
-            {findings.map((finding, index) => {
-              const offset = index - currentIndex;
-              if (offset <= 0 || offset > 2) return null;
-              return (
-                <StackCard
-                  key={finding.id}
-                  finding={finding}
-                  offset={offset}
-                  isActive={false}
-                  translateY={translateY}
-                  theme={theme}
-                />
-              );
-            })}
-
-            {/* Active card */}
-            <GestureDetector gesture={panGesture}>
-              <StackCard
-                key={`active-${currentIndex}`}
-                finding={findings[currentIndex]}
-                offset={0}
-                isActive={true}
-                translateY={translateY}
-                theme={theme}
-              />
-            </GestureDetector>
-
-          </View>
-
-          {/* Pagination dots — active one is wider */}
-          <View style={styles.dots}>
-            {findings.map((_, index) => (
-              <View
-                key={index}
-                style={[
-                  styles.dot,
-                  {
-                    backgroundColor: index === currentIndex
-                      ? theme.accentColor
-                      : theme.textSecondary,
-                    opacity: index === currentIndex ? 1 : 0.3,
-                    width: index === currentIndex ? 18 : 6,
-                  },
-                ]}
-              />
-            ))}
-          </View>
-
-          <Text style={[styles.swipeHint, { color: theme.textSecondary }]}>
-            Desliza arriba o abajo para ver más
-          </Text>
-        </View>
+        <SmartStack
+          findings={findings}
+          theme={theme}
+          currentIndex={currentIndex}
+          onIndexChange={setCurrentIndex}
+        />
 
       </SafeAreaView>
     </View>
@@ -390,157 +191,74 @@ export default function SmartStackScreen() {
 // Styles
 // ---------------------------------------------------------------------------
 const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+  },
   safe: {
     flex: 1,
   },
-  themePicker: {
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(100,116,139,0.2)',
-  },
-  themeLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    marginBottom: Spacing.sm,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  themeButtons: {
-    flexDirection: 'row',
-    gap: Spacing.sm,
-  },
-  themeButton: {
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    borderRadius: 20,
-    borderWidth: 1.5,
-  },
-  themeButtonText: {
-    fontSize: 13,
-  },
   header: {
-    paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.lg,
-    paddingBottom: Spacing.md,
+    paddingHorizontal: 22,
+    paddingTop: 10,
+    paddingBottom: Spacing.lg,
+    height: 270,
+  },
+  topRow: {
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 18,
   },
-  avatarContainer: {
-    width: 72,
-    height: 72,
-    marginBottom: Spacing.sm,
+  userAvatarWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    overflow: 'hidden',
+    borderWidth: 2,
+    borderColor: 'rgba(215,255,47,0.85)',
   },
-  avatar: {
+  userAvatar: {
     width: '100%',
     height: '100%',
   },
-  greeting: {
-    fontSize: 24,
-    fontWeight: '700',
-    marginBottom: 4,
-    textAlign: 'center',
-  },
-  subGreeting: {
-    fontSize: 15,
-    fontWeight: '500',
-    textAlign: 'center',
-  },
-  stackWrapper: {
-    flex: 1,
-    paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.md,
+  chatButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255,255,255,0.92)',
     alignItems: 'center',
-  },
-  stackContainer: {
-    width: '100%',
-    height: 380,
-    position: 'relative',
-  },
-  stackCard: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 360,
-    borderRadius: 24,
-    padding: Spacing.xl,
-    overflow: 'hidden',
-  },
-  dots: {
-    flexDirection: 'row',
     justifyContent: 'center',
-    alignItems: 'center',
-    gap: 6,
-    marginTop: Spacing.md,
   },
-  dot: {
-    height: 6,
-    borderRadius: 3,
+  chatButtonIcon: {
+    fontSize: 18,
+    color: '#111827',
   },
-  swipeHint: {
-    textAlign: 'center',
-    fontSize: 12,
-    marginTop: Spacing.sm,
-    opacity: 0.6,
+  welcomeLine: {
+    fontSize: 34,
+    fontWeight: '600',
+    letterSpacing: 0.2,
+    // marginBottom: 2,
   },
-  badge: {
-    alignSelf: 'flex-start',
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.xs,
-    borderRadius: 12,
-    marginBottom: Spacing.md,
+  nameLine: {
+    fontSize: 34,
+    fontWeight: '800',
+    letterSpacing: 0.2,
+    // marginBottom: 14,
   },
-  badgeText: {
+  chipsRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  chip: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 999,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+  },
+  chipText: {
     fontSize: 12,
     fontWeight: '700',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  findingTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    marginBottom: Spacing.lg,
-    lineHeight: 26,
-  },
-  stepsList: {
-    gap: Spacing.md,
-    marginBottom: Spacing.xl,
-  },
-  stepItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.md,
-  },
-  stepIcon: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  stepIconText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: PrismColors.surface,
-  },
-  stepText: {
-    flex: 1,
-    fontSize: 14,
-    fontWeight: '500',
-    lineHeight: 20,
-  },
-  ctaButton: {
-    borderRadius: 16,
-    overflow: 'hidden',
-  },
-  ctaPressable: {
-    paddingVertical: Spacing.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  ctaText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: PrismColors.surface,
+    letterSpacing: 0.8,
+    color: 'rgba(255,255,255,0.75)',
   },
 });
