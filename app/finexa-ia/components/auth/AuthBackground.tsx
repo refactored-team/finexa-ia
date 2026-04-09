@@ -1,12 +1,10 @@
-import { useState, type ReactNode } from 'react';
-import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { type ReactNode, useState } from 'react';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { ChevronDown, User } from '@/constants/lucideIcons';
 import { PrismColors } from '@/constants/theme';
 import { Layout, Spacing, TextStyles } from '@/constants/uiStyles';
-import { isAmplifyAuthConfigured } from '@/lib/amplify/configure';
-import { signOutUser } from '@/lib/auth/cognito';
-import { router } from 'expo-router';
+import { useSignOut } from '@/lib/auth/useSignOut';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import CustomBottomBar from '../navigation/CustomBottomBar';
 
@@ -17,30 +15,15 @@ type AuthBackgroundProps = {
 };
 
 export function AuthBackground({ children, showBottomBar = false, showHeader = false }: AuthBackgroundProps) {
-  const [signingOut, setSigningOut] = useState(false);
+  const { signingOut, signOut } = useSignOut();
   const [menuOpen, setMenuOpen] = useState(false);
 
   const insets = useSafeAreaInsets();
   const paddingTop = insets.top || Spacing.md;
 
-  async function handleSignOut() {
-    if (signingOut) return;
+  function handleProfileSignOut() {
     setMenuOpen(false);
-    setSigningOut(true);
-    try {
-      if (!isAmplifyAuthConfigured()) {
-        router.replace('/login');
-        return;
-      }
-      const result = await signOutUser();
-      if (!result.ok) {
-        Alert.alert('Cerrar sesión', result.message);
-        return;
-      }
-      router.replace('/login');
-    } finally {
-      setSigningOut(false);
-    }
+    void signOut();
   }
 
   return (
@@ -62,7 +45,7 @@ export function AuthBackground({ children, showBottomBar = false, showHeader = f
 
             {menuOpen && (
               <View style={styles.dropdownMenu}>
-                <Pressable onPress={handleSignOut} style={styles.menuItem} hitSlop={8}>
+                <Pressable onPress={handleProfileSignOut} style={styles.menuItem} hitSlop={8}>
                   {signingOut ? (
                     <ActivityIndicator size="small" color={PrismColors.primary} />
                   ) : (

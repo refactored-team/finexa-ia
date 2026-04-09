@@ -1,5 +1,4 @@
 import {
-  Alert,
   FlatList,
   Image,
   NativeScrollEvent,
@@ -11,7 +10,6 @@ import {
   View,
   Dimensions,
 } from 'react-native';
-import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -23,8 +21,7 @@ import { PrismColors } from '@/constants/theme';
 import { Spacing } from '@/constants/uiStyles';
 import SmartStack, { Finding, Theme } from '@/components/SmartStack';
 import { AuthBackground } from '@/components/auth/AuthBackground';
-import { isAmplifyAuthConfigured } from '@/lib/amplify/configure';
-import { signOutUser } from '@/lib/auth/cognito';
+import { useSignOut } from '@/lib/auth/useSignOut';
 import apiClient from '@/src/services/api/apiClient';
 
 // ---------------------------------------------------------------------------
@@ -187,12 +184,11 @@ const fallbackFindings: Finding[] = [
 // Screen
 // ---------------------------------------------------------------------------
 export default function SmartStackScreen() {
-  const router = useRouter();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [activeCardIndex, setActiveCardIndex] = useState(0);
-  const [signingOut, setSigningOut] = useState(false);
   const theme = HERO_THEME;
   const tabBarHeight = useBottomTabBarHeight();
+  const { signingOut, signOut } = useSignOut();
   const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
   const screenHeight = Dimensions.get('window').height;
   const sheetY = useSharedValue(screenHeight);
@@ -370,25 +366,6 @@ export default function SmartStackScreen() {
     transform: [{ translateY: sheetY.value }],
   }));
 
-  async function handleSignOut() {
-    if (signingOut) return;
-    setSigningOut(true);
-    try {
-      if (!isAmplifyAuthConfigured()) {
-        router.replace('/login');
-        return;
-      }
-      const result = await signOutUser();
-      if (!result.ok) {
-        Alert.alert('Cerrar sesión', result.message);
-        return;
-      }
-      router.replace('/login');
-    } finally {
-      setSigningOut(false);
-    }
-  }
-
   return (
     <AuthBackground showBottomBar showHeader={false}>
       <View style={[styles.root, { backgroundColor: '#E5E7EB' }]}>
@@ -415,7 +392,13 @@ export default function SmartStackScreen() {
                   />
                 </View>
 
-                <Pressable onPress={handleSignOut} style={styles.logoutButton} disabled={signingOut}>
+                <Pressable
+                  onPress={signOut}
+                  style={styles.logoutButton}
+                  disabled={signingOut}
+                  hitSlop={10}
+                  accessibilityRole="button"
+                  accessibilityLabel="Cerrar sesión">
                   <Text style={styles.logoutButtonText}>{signingOut ? 'Cerrando...' : 'Cerrar sesión'}</Text>
                 </Pressable>
               </View>

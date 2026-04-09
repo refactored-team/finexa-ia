@@ -175,7 +175,7 @@ export default function LinkBankScreen() {
   const paddingTop = insets.top || Spacing.md;
 
   return (
-    <AuthBackground showHeader>
+    <AuthBackground showHeader showBottomBar={false}>
       <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 80 }]} showsVerticalScrollIndicator={false}>
 
         {clientIsExpoGo && (
