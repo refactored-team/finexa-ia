@@ -22,14 +22,14 @@ import (
 //	@Tags			transactions
 //	@Accept			json
 //	@Produce		json
+//	@Param			userId	path		int							true	"ID interno de usuario"
 //	@Param			body	body		models.SyncAnalyzeRequest	false	"Opcionales para /analyze (user_profile, saldo_actual, liquidez_threshold)"
 //	@Success		200		{object}	apiresult.okEnvelope[models.SyncAnalyzeResponse]
 //	@Failure		400		{object}	apiresult.ErrResult
-//	@Failure		401		{object}	apiresult.ErrResult
 //	@Failure		502		{object}	apiresult.ErrResult
 //	@Failure		503		{object}	apiresult.ErrResult
 //	@Failure		500		{object}	apiresult.ErrResult
-//	@Router			/v1/transactions/sync-and-analyze [post]
+//	@Router			/v1/users/{userId}/transactions/sync-and-analyze [post]
 func (h *TransactionsHandler) syncAndAnalyze(c *echo.Context) error {
 	uid, err := h.userIDFromPath(c)
 	if err != nil {

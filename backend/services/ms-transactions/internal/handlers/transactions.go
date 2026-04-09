@@ -57,12 +57,13 @@ func (h *TransactionsHandler) Register(e *echo.Echo) {
 	g.POST("/test-bedrock", h.testBedrock)
 }
 
-// list returns paginated transactions for the authenticated user only.
+// list returns paginated transactions for the path user only.
 //
-//	@Summary		Listar transacciones del usuario autenticado
-//	@Description	Listado paginado por usuario autenticado. Soporta filtros por rango de fecha y categoría. Excluye borradas lógicas por defecto.
+//	@Summary		Listar transacciones por usuario
+//	@Description	Listado paginado por userId en path. Soporta filtros por rango de fecha y categoría. Excluye borradas lógicas por defecto.
 //	@Tags			transactions
 //	@Produce		json
+//	@Param			userId		path		int		true	"ID interno de usuario"
 //	@Param			limit		query		int		false	"Tamaño de página (default 50, max 200)"
 //	@Param			offset		query		int		false	"Offset paginación (default 0)"
 //	@Param			from		query		string	false	"RFC3339 inicio (posted_at >= from)"
@@ -70,9 +71,8 @@ func (h *TransactionsHandler) Register(e *echo.Echo) {
 //	@Param			category	query		string	false	"Filtro por categoría"
 //	@Success		200			{object}	apiresult.okEnvelope[[]models.TransactionListItem]
 //	@Failure		400			{object}	apiresult.ErrResult
-//	@Failure		401			{object}	apiresult.ErrResult
 //	@Failure		500			{object}	apiresult.ErrResult
-//	@Router			/v1/transactions [get]
+//	@Router			/v1/users/{userId}/transactions [get]
 func (h *TransactionsHandler) list(c *echo.Context) error {
 	uid, err := h.userIDFromPath(c)
 	if err != nil {
@@ -178,19 +178,19 @@ LIMIT $5 OFFSET $6`
 	return apiresult.RespondOK(c, http.StatusOK, out)
 }
 
-// getByID returns one transaction by internal ID for the authenticated user only.
+// getByID returns one transaction by internal ID for the path user only.
 //
 //	@Summary		Detalle por id interno
 //	@Description	Obtiene una transacción por id interno, aislada por usuario autenticado y excluyendo borradas lógicas.
 //	@Tags			transactions
 //	@Produce		json
+//	@Param			userId	path		int	true	"ID interno de usuario"
 //	@Param			id	path		int	true	"ID interno"
 //	@Success		200	{object}	apiresult.okEnvelope[models.TransactionListItem]
 //	@Failure		400	{object}	apiresult.ErrResult
-//	@Failure		401	{object}	apiresult.ErrResult
 //	@Failure		404	{object}	apiresult.ErrResult
 //	@Failure		500	{object}	apiresult.ErrResult
-//	@Router			/v1/transactions/{id} [get]
+//	@Router			/v1/users/{userId}/transactions/{id} [get]
 func (h *TransactionsHandler) getByID(c *echo.Context) error {
 	uid, err := h.userIDFromPath(c)
 	if err != nil {
@@ -210,19 +210,19 @@ func (h *TransactionsHandler) getByID(c *echo.Context) error {
 	return apiresult.RespondOK(c, http.StatusOK, it)
 }
 
-// getByTransactionID returns one transaction by external transaction_id for the authenticated user only.
+// getByTransactionID returns one transaction by external transaction_id for the path user only.
 //
 //	@Summary		Detalle por transaction_id
 //	@Description	Obtiene una transacción por transaction_id, aislada por usuario autenticado y excluyendo borradas lógicas.
 //	@Tags			transactions
 //	@Produce		json
+//	@Param			userId			path		int		true	"ID interno de usuario"
 //	@Param			transaction_id	path		string	true	"transaction_id externo"
 //	@Success		200				{object}	apiresult.okEnvelope[models.TransactionListItem]
 //	@Failure		400				{object}	apiresult.ErrResult
-//	@Failure		401				{object}	apiresult.ErrResult
 //	@Failure		404				{object}	apiresult.ErrResult
 //	@Failure		500				{object}	apiresult.ErrResult
-//	@Router			/v1/transactions/by-transaction-id/{transaction_id} [get]
+//	@Router			/v1/users/{userId}/transactions/by-transaction-id/{transaction_id} [get]
 func (h *TransactionsHandler) getByTransactionID(c *echo.Context) error {
 	uid, err := h.userIDFromPath(c)
 	if err != nil {
@@ -288,16 +288,17 @@ LIMIT 1`, whereCond)
 	return it, nil
 }
 
-// getLatestAnalysis returns latest transaction_analysis snapshot for authenticated user.
+// getLatestAnalysis returns latest transaction_analysis snapshot for the path user.
 //
 //	@Summary		Último análisis agregado
 //	@Tags			analysis
 //	@Produce		json
+//	@Param			userId	path		int	true	"ID interno de usuario"
 //	@Success		200	{object}	apiresult.okEnvelope[models.TransactionAnalysis]
-//	@Failure		401	{object}	apiresult.ErrResult
+//	@Failure		400	{object}	apiresult.ErrResult
 //	@Failure		404	{object}	apiresult.ErrResult
 //	@Failure		500	{object}	apiresult.ErrResult
-//	@Router			/v1/transactions/analysis/latest [get]
+//	@Router			/v1/users/{userId}/transactions/analysis/latest [get]
 func (h *TransactionsHandler) getLatestAnalysis(c *echo.Context) error {
 	uid, err := h.userIDFromPath(c)
 	if err != nil {
@@ -344,18 +345,18 @@ LIMIT 1`
 	return apiresult.RespondOK(c, http.StatusOK, out)
 }
 
-// listInsights returns insights list for authenticated user (paginated).
+// listInsights returns insights list for the path user (paginated).
 //
 //	@Summary		Listar insights
 //	@Tags			analysis
 //	@Produce		json
+//	@Param			userId	path	int	true	"ID interno de usuario"
 //	@Param			limit	query	int	false	"Tamaño de página (default 50, max 200)"
 //	@Param			offset	query	int	false	"Offset paginación (default 0)"
 //	@Success		200		{object}	apiresult.okEnvelope[[]models.Insight]
 //	@Failure		400		{object}	apiresult.ErrResult
-//	@Failure		401		{object}	apiresult.ErrResult
 //	@Failure		500		{object}	apiresult.ErrResult
-//	@Router			/v1/transactions/insights [get]
+//	@Router			/v1/users/{userId}/transactions/insights [get]
 func (h *TransactionsHandler) listInsights(c *echo.Context) error {
 	uid, err := h.userIDFromPath(c)
 	if err != nil {
@@ -436,15 +437,16 @@ LIMIT $2 OFFSET $3`
 	return apiresult.RespondOK(c, http.StatusOK, out)
 }
 
-// listResilienceFactors returns resilience_factors rows for authenticated user.
+// listResilienceFactors returns resilience_factors rows for the path user.
 //
 //	@Summary		Listar factores de resiliencia
 //	@Tags			resilience
 //	@Produce		json
+//	@Param			userId	path		int	true	"ID interno de usuario"
 //	@Success		200	{object}	apiresult.okEnvelope[[]models.ResilienceFactor]
-//	@Failure		401	{object}	apiresult.ErrResult
+//	@Failure		400	{object}	apiresult.ErrResult
 //	@Failure		500	{object}	apiresult.ErrResult
-//	@Router			/v1/transactions/resilience-factors [get]
+//	@Router			/v1/users/{userId}/transactions/resilience-factors [get]
 func (h *TransactionsHandler) listResilienceFactors(c *echo.Context) error {
 	uid, err := h.userIDFromPath(c)
 	if err != nil {
@@ -506,16 +508,17 @@ ORDER BY updated_at DESC, id DESC`
 	return apiresult.RespondOK(c, http.StatusOK, out)
 }
 
-// getLatestCashFlow returns latest cash_flow snapshot for authenticated user.
+// getLatestCashFlow returns latest cash_flow snapshot for the path user.
 //
 //	@Summary		Último cash flow
 //	@Tags			cashflow
 //	@Produce		json
+//	@Param			userId	path		int	true	"ID interno de usuario"
 //	@Success		200	{object}	apiresult.okEnvelope[models.CashFlow]
-//	@Failure		401	{object}	apiresult.ErrResult
+//	@Failure		400	{object}	apiresult.ErrResult
 //	@Failure		404	{object}	apiresult.ErrResult
 //	@Failure		500	{object}	apiresult.ErrResult
-//	@Router			/v1/transactions/cash-flow/latest [get]
+//	@Router			/v1/users/{userId}/transactions/cash-flow/latest [get]
 func (h *TransactionsHandler) getLatestCashFlow(c *echo.Context) error {
 	uid, err := h.userIDFromPath(c)
 	if err != nil {
@@ -560,16 +563,17 @@ LIMIT 1`
 	return apiresult.RespondOK(c, http.StatusOK, out)
 }
 
-// getLatestPulse returns latest pulse snapshot for authenticated user.
+// getLatestPulse returns latest pulse snapshot for the path user.
 //
 //	@Summary		Último pulse
 //	@Tags			pulse
 //	@Produce		json
+//	@Param			userId	path		int	true	"ID interno de usuario"
 //	@Success		200	{object}	apiresult.okEnvelope[models.Pulse]
-//	@Failure		401	{object}	apiresult.ErrResult
+//	@Failure		400	{object}	apiresult.ErrResult
 //	@Failure		404	{object}	apiresult.ErrResult
 //	@Failure		500	{object}	apiresult.ErrResult
-//	@Router			/v1/transactions/pulse/latest [get]
+//	@Router			/v1/users/{userId}/transactions/pulse/latest [get]
 func (h *TransactionsHandler) getLatestPulse(c *echo.Context) error {
 	uid, err := h.userIDFromPath(c)
 	if err != nil {
@@ -648,9 +652,11 @@ LIMIT 1`
 //	@Description	Hace una llamada simple al ai-pipeline (FastAPI) para probar Bedrock
 //	@Tags			ai
 //	@Produce		json
+//	@Param			userId	path		int	true	"ID interno de usuario"
 //	@Success		200	{object}	map[string]interface{}
+//	@Failure		400	{object}	apiresult.ErrResult
 //	@Failure		500	{object}	apiresult.ErrResult
-//	@Router			/v1/transactions/test-bedrock [post]
+//	@Router			/v1/users/{userId}/transactions/test-bedrock [post]
 func (h *TransactionsHandler) testBedrock(c *echo.Context) error {
 	ctx, cancel := context.WithTimeout(c.Request().Context(), 15*time.Second)
 	defer cancel()
