@@ -68,7 +68,7 @@ def test_openapi_schema_has_routes(client: TestClient):
     response = client.get("/openapi.json")
     assert response.status_code == 200
     paths = response.json()["paths"]
-    for route in ("/", "/classify", "/analyze", "/cashflow", "/whatif", "/test-bedrock", "/insights/action-plan"):
+    for route in ("/", "/classify", "/analyze", "/cashflow", "/whatif", "/test-bedrock", "/insights/action-plan", "/survival-mode"):
         assert route in paths, f"missing route {route}"
 
 
@@ -150,6 +150,26 @@ def test_action_plan_endpoint(client: TestClient, monkeypatch: pytest.MonkeyPatc
     assert body["ok"] is True
     assert len(body["data"]["plan"]["pasos"]) == 2
     assert body["data"]["plan"]["es_accion_inmediata"] is True
+
+
+def test_survival_mode_endpoint(client: TestClient, patched_classify):
+    payload = {
+        "transactions": [
+            {"transaction_id": "tx_001", "amount": 179.0, "name": "NETFLIX.COM", "merchant_name": "Netflix", "date": "2026-03-01"},
+            {"transaction_id": "tx_002", "amount": 85.0, "name": "OXXO INSURGENTES", "merchant_name": "OXXO", "date": "2026-03-08"},
+            {"transaction_id": "tx_003", "amount": 9200.0, "name": "RENTA DEPTO", "date": "2026-03-02"},
+            {"transaction_id": "tx_004", "amount": -28500.0, "name": "NOMINA ACME CORP", "date": "2026-03-01"},
+        ]
+    }
+    response = client.post("/survival-mode", json=payload)
+    assert response.status_code == 200
+    body = response.json()
+    assert body["ok"] is True
+    survival = body["data"]["survival"]
+    assert "ahorro_mensual_proyectado" in survival
+    assert "runway_supervivencia_meses" in survival
+    assert "categorias" in survival
+    assert survival["ahorro_total_periodo"] >= 0
 
 
 def test_cashflow_endpoint(client: TestClient, patched_classify):

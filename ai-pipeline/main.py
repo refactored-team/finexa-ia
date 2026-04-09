@@ -74,6 +74,16 @@ _TAGS: list[dict] = [
             "cancelar una suscripción, sustituir un gasto hormiga, configurar ahorro automático, etc."
         ),
     },
+    {
+        "name": "Supervivencia",
+        "description": (
+            "**Modo Supervivencia** — Simula el escenario de recorte brusco: ¿qué pasa si el "
+            "usuario elimina todos los gastos hormiga, suscripciones, entretenimiento y variables "
+            "y se queda solo con renta, comida, salud y transporte? "
+            "Devuelve ahorro mensual proyectado, runway, balance y desglose por categoría. "
+            "Sin Bedrock — cálculo puro."
+        ),
+    },
 ]
 
 # ─────────────────────────────────────────────────────────────
