@@ -25,6 +25,8 @@ from pipeline.domain.models.plaid import (
 )
 from pipeline.domain.models.pulse import DailyPulse
 from pipeline.domain.models.resilience import (
+    ResilienceExplanation,
+    ResilienceExplanationSection,
     ResilienceFactorDetail,
     ResilienceScore,
     UserProfile,
@@ -45,6 +47,8 @@ __all__ = [
     "BehavioralAnalysisResult",
     "SpendingInsight",
     # resilience
+    "ResilienceExplanation",
+    "ResilienceExplanationSection",
     "ResilienceFactorDetail",
     "ResilienceScore",
     "UserProfile",

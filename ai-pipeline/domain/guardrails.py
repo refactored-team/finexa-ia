@@ -7,7 +7,7 @@ Si el LLM inventa un número, lo marca con [~valor] y lo registra.
 
 Aplica a:
   - BehavioralAnalysisResult.summary e insights
-  - ResilienceScore.explicacion_llm
+  - ResilienceScore.explicacion_llm (headline, resumen, cada sección)
   - WhatIfResult.analisis_diferencial
 """
 
@@ -21,6 +21,7 @@ from pipeline.domain.models import (
     BehavioralAnalysisResult,
     EnrichedTransaction,
     FinexaCategory,
+    ResilienceExplanation,
     ResilienceScore,
 )
 
@@ -221,7 +222,7 @@ def sanitize_explanation(
     fact_pool: set[float],
     context: str = "explanation",
 ) -> str:
-    """Aplica guardrails a una explicación en texto libre (resiliencia, what-if)."""
+    """Aplica guardrails a una explicación en texto libre (what-if)."""
     clean, unverified = verify_text(text, fact_pool)
 
     if unverified:
@@ -241,3 +242,51 @@ def sanitize_explanation(
         )
 
     return clean
+
+
+def sanitize_resilience_explanation(
+    explanation: ResilienceExplanation,
+    fact_pool: set[float],
+) -> ResilienceExplanation:
+    """Aplica guardrails a la explicación estructurada del Score de Resiliencia."""
+    all_unverified: list[float] = []
+
+    clean_headline, uv = verify_text(explanation.headline, fact_pool)
+    all_unverified.extend(uv)
+
+    clean_resumen, uv = verify_text(explanation.resumen, fact_pool)
+    all_unverified.extend(uv)
+
+    clean_secciones = []
+    for seccion in explanation.secciones:
+        clean_titulo, uv_t = verify_text(seccion.titulo, fact_pool)
+        clean_diag, uv_d = verify_text(seccion.diagnostico, fact_pool)
+        clean_accion, uv_a = verify_text(seccion.accion, fact_pool)
+        all_unverified.extend(uv_t + uv_d + uv_a)
+        clean_secciones.append(seccion.model_copy(update={
+            "titulo": clean_titulo,
+            "diagnostico": clean_diag,
+            "accion": clean_accion,
+        }))
+
+    if all_unverified:
+        logger.warning(
+            "guardrail_hallucinations_detected",
+            extra={
+                "context": "resilience_explanation",
+                "count": len(all_unverified),
+                "values": all_unverified[:10],
+                "step": "guardrails",
+            },
+        )
+    else:
+        logger.info(
+            "guardrail_all_values_verified",
+            extra={"context": "resilience_explanation", "step": "guardrails"},
+        )
+
+    return explanation.model_copy(update={
+        "headline": clean_headline,
+        "resumen": clean_resumen,
+        "secciones": clean_secciones,
+    })
