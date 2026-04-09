@@ -1,16 +1,19 @@
 import {
+  FlatList,
   Image,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
   View,
+  Dimensions,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import Svg, { Circle, Defs, LinearGradient as SvgLinearGradient, Stop } from 'react-native-svg';
+import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
 import { PrismColors } from '@/constants/theme';
 import { Spacing } from '@/constants/uiStyles';
@@ -135,13 +138,100 @@ export default function SmartStackScreen() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const theme = HERO_THEME;
   const tabBarHeight = useBottomTabBarHeight();
-  const [oxygenDays] = useState(14);
-  const [foodOrders] = useState(34);
-  const [potentialSavings] = useState(608.82);
-
-  const gaugeProgress = (oxygenDays / 30) * 100;
-  const circumference = 2 * Math.PI * 100;
-  const strokeDashoffset = circumference - (gaugeProgress / 100) * circumference;
+  const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
+  const screenHeight = Dimensions.get('window').height;
+  const sheetY = useSharedValue(screenHeight);
+  const analysis = {
+    resilience: { score_total: 14 },
+    cash_flow: { projected_liquidity: 1400 },
+    ant_expense_total: 2100,
+    insights: [{ title: 'Gastos hormiga altos en delivery y cafes' }],
+  };
+  const accounts = [
+    {
+      account_id: 'acc_1',
+      mask: '5382',
+      name: 'Tarjeta principal',
+      total_expenses: 1650,
+      pct_change: 12,
+      transactions: [
+        { id: 't1', merchant_name: 'Starbucks', category: 'hormiga', amount: 45, dateISO: new Date().toISOString() },
+        { id: 't2', merchant_name: 'Spotify', category: 'suscripcion', amount: 13, dateISO: new Date(Date.now() - 86400000).toISOString() },
+        { id: 't3', merchant_name: 'Uber Eats', category: 'hormiga', amount: 72, dateISO: new Date(Date.now() - 86400000 * 3).toISOString() },
+        { id: 't4', merchant_name: 'Nomina', category: 'ingreso', amount: -810, dateISO: new Date(Date.now() - 86400000 * 5).toISOString() },
+      ],
+    },
+    {
+      account_id: 'acc_2',
+      mask: '7741',
+      name: 'Tarjeta gastos',
+      total_expenses: 890,
+      pct_change: -4,
+      transactions: [
+        { id: 't5', merchant_name: 'PayByPhone', category: 'transporte', amount: 134, dateISO: new Date(Date.now() - 86400000 * 4).toISOString() },
+        { id: 't6', merchant_name: 'Burger Place', category: 'alimentacion', amount: 23, dateISO: new Date(Date.now() - 86400000 * 2).toISOString() },
+      ],
+    },
+    {
+      account_id: 'acc_3',
+      mask: '9910',
+      name: 'Tarjeta secundaria',
+      total_expenses: 420,
+      pct_change: 5,
+      transactions: [
+        { id: 't7', merchant_name: 'Cinepolis', category: 'entretenimiento', amount: 58, dateISO: new Date(Date.now() - 86400000 * 6).toISOString() },
+      ],
+    },
+  ];
+  const dailySpend = analysis.ant_expense_total / 30;
+  const projectedDays = Math.max(0, Math.round(analysis.cash_flow.projected_liquidity / dailySpend));
+  const projectedDate = new Date(Date.now() + projectedDays * 86400000).toLocaleDateString('es-MX', {
+    day: 'numeric',
+    month: 'short',
+  });
+  const gaugeProgress = analysis.resilience.score_total / 100;
+  const circumference = 2 * Math.PI * 32;
+  const strokeDashoffset = circumference - gaugeProgress * circumference;
+  const topInsight = `${analysis.insights[0]?.title ?? ''}`.slice(0, 30);
+  const cardColors = ['#312E81', '#3730A3', '#4338CA'];
+  const selectedAccount = accounts.find((a) => a.account_id === selectedAccountId) ?? null;
+  const allRecent = useMemo(
+    () =>
+      accounts
+        .flatMap((a) => a.transactions)
+        .sort((a, b) => new Date(b.dateISO).getTime() - new Date(a.dateISO).getTime())
+        .slice(0, 8),
+    []
+  );
+  const categoryMap: Record<string, { bg: string; icon: string; label: string }> = {
+    alimentacion: { bg: '#FEF3C7', icon: '🍽️', label: 'alimentacion' },
+    hormiga: { bg: '#FEE2E2', icon: '🐜', label: 'hormiga' },
+    fijo: { bg: '#EDE9FE', icon: '🔒', label: 'fijo' },
+    transporte: { bg: '#E0F2FE', icon: '🚗', label: 'transporte' },
+    entretenimiento: { bg: '#F3E8FF', icon: '🎮', label: 'entretenimiento' },
+    suscripcion: { bg: '#EDE9FE', icon: '🎵', label: 'suscripcion' },
+    ingreso: { bg: '#DCFCE7', icon: '💰', label: 'ingreso' },
+    variable: { bg: '#F1F5F9', icon: '🔀', label: 'variable' },
+    transferencia: { bg: '#F1F5F9', icon: '↔️', label: 'transferencia' },
+  };
+  const formatRelativeDate = (iso: string) => {
+    const d = new Date(iso);
+    const diff = Math.floor((Date.now() - d.getTime()) / 86400000);
+    if (diff <= 0) return 'Hoy';
+    if (diff === 1) return 'Ayer';
+    return `Hace ${diff} dias`;
+  };
+  const openSheet = (id: string) => {
+    setSelectedAccountId(id);
+    sheetY.value = withTiming(screenHeight * 0.25, { duration: 250 });
+  };
+  const closeSheet = () => {
+    sheetY.value = withTiming(screenHeight, { duration: 220 });
+    setTimeout(() => setSelectedAccountId(null), 230);
+  };
+  const sheetStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: sheetY.value }],
+  }));
 
   return (
     <View style={[styles.root, { backgroundColor: '#E5E7EB' }]}>
@@ -204,78 +294,125 @@ export default function SmartStackScreen() {
             onIndexChange={setCurrentIndex}
           />
 
-          <View style={styles.leftColumn}>
-            <View style={styles.glassCard}>
-              {/* <Text style={styles.microStatus}>[DATA_SYNC: OK]</Text> */}
-
-              <View style={styles.gaugeContainer}>
-                <Svg width={240} height={240} style={styles.gaugeSvg}>
-                  <Defs>
-                    <SvgLinearGradient id="gaugeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                      <Stop offset="0%" stopColor={PrismColors.primary} />
-                      <Stop offset="100%" stopColor={PrismColors.tertiary} />
-                    </SvgLinearGradient>
-                  </Defs>
+          <View style={styles.lowerSection}>
+            <View style={styles.gaugeCard}>
+              <View style={styles.gaugeLeft}>
+                <Svg width={64} height={64}>
+                  <Circle cx="32" cy="32" r="32" stroke="#E5E7EB" strokeWidth="6" fill="transparent" />
                   <Circle
-                    cx="120"
-                    cy="120"
-                    r="100"
-                    stroke={PrismColors.neutral}
-                    strokeWidth="6"
-                    fill="transparent"
-                  />
-                  <Circle
-                    cx="120"
-                    cy="120"
-                    r="100"
-                    stroke="url(#gaugeGradient)"
+                    cx="32"
+                    cy="32"
+                    r="32"
+                    stroke="#2DD4BF"
                     strokeWidth="6"
                     fill="transparent"
                     strokeDasharray={circumference}
                     strokeDashoffset={strokeDashoffset}
                     strokeLinecap="round"
-                    rotation="0"
-                    origin="120, 120"
+                    rotation="-90"
+                    origin="32, 32"
                   />
                 </Svg>
-                <View style={styles.gaugeCenter}>
-                  <Text style={styles.gaugeNumber}>{oxygenDays}</Text>
-                  <Text style={styles.gaugeLabel}>Dias de Oxigeno</Text>
+                <View style={styles.gaugeInner}>
+                  <Text style={styles.gaugeInnerValue}>{analysis.resilience.score_total}</Text>
+                  <Text style={styles.gaugeInnerLabel}>DIAS</Text>
                 </View>
               </View>
-
-              <View style={styles.gaugeDescription}>
-                <Text style={styles.cardTitle}>Tranquilidad Asegurada</Text>
-                <Text style={styles.cardBody}>
-                  Tu liquidez actual cubre tus necesidades esenciales hasta final de quincena sin ajustes.
-                </Text>
+              <View style={styles.gaugeRight}>
+                <Text style={styles.gaugeRightTitle}>Dias de oxigeno</Text>
+                <Text style={styles.gaugeRightSubtitle}>Tu dinero alcanza hasta el {projectedDate}</Text>
+                <View style={styles.insightBadge}>
+                  <Text style={styles.insightBadgeText}>{topInsight}</Text>
+                </View>
               </View>
             </View>
 
-            {/* <View style={[styles.glassCard, styles.habitCard]}>
-              <Text style={[styles.microStatus, styles.microStatusBottom]}>[AI_ANALYSIS_ACTIVE]</Text>
+            <Text style={styles.sectionLabel}>TUS CUENTAS</Text>
+            <FlatList
+              data={accounts}
+              horizontal
+              nestedScrollEnabled
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.accountsList}
+              keyExtractor={(item) => item.account_id}
+              renderItem={({ item, index }) => (
+                <Pressable
+                  onPress={() => openSheet(item.account_id)}
+                  style={[styles.accountCard, { backgroundColor: cardColors[index % 3] }]}>
+                  <View style={styles.accountDecor} />
+                  <Text style={styles.accountMask}>•••• {item.mask}</Text>
+                  <Text style={styles.accountLabel}>Gastos del mes</Text>
+                  <Text style={styles.accountAmount}>${item.total_expenses.toLocaleString('en-US')}</Text>
+                  <View style={styles.accountPctBadge}>
+                    <Text style={styles.accountPctText}>{item.pct_change >= 0 ? '+' : ''}{item.pct_change}%</Text>
+                  </View>
+                </Pressable>
+              )}
+            />
 
-              <View style={styles.badge}>
-                <Text style={styles.badgeText}>Habito Detectado</Text>
-              </View>
-
-              <Text style={styles.habitTitle}>
-                Detecte {foodOrders} pedidos de comida este mes.
-              </Text>
-
-              <Text style={styles.habitBody}>
-                Si reducimos los pedidos a domicilio un 25%, recuperamos{' '}
-                <Text style={styles.highlight}>${potentialSavings.toFixed(2)}</Text> y ganamos 4 dias adicionales.
-              </Text>
-
-              <Pressable style={styles.actionButton}>
-                <Text style={styles.actionButtonText}>Optimizar Habito</Text>
-              </Pressable>
-            </View> */}
+            <Text style={styles.sectionLabel}>MOVIMIENTOS RECIENTES</Text>
+            <View style={styles.recentCard}>
+              {allRecent.map((tx, idx) => {
+                const meta = categoryMap[tx.category] ?? categoryMap.variable;
+                const isExpense = tx.amount > 0;
+                const name = (tx.merchant_name || 'Movimiento').slice(0, 20);
+                return (
+                  <View key={tx.id} style={[styles.txRow, idx === allRecent.length - 1 && styles.txRowLast]}>
+                    <View style={[styles.txIconWrap, { backgroundColor: meta.bg }]}>
+                      <Text style={styles.txIcon}>{meta.icon}</Text>
+                    </View>
+                    <View style={styles.txMiddle}>
+                      <Text style={styles.txName}>{name}</Text>
+                      <Text style={styles.txMeta}>{formatRelativeDate(tx.dateISO)} · {meta.label}</Text>
+                    </View>
+                    <Text style={[styles.txAmount, { color: isExpense ? '#EF4444' : '#10B981' }]}>
+                      {isExpense ? '-' : '+'}${Math.abs(tx.amount).toLocaleString('en-US')}
+                    </Text>
+                  </View>
+                );
+              })}
+            </View>
           </View>
 
-          {/* <View style={{ height: tabBarHeight + 220 }} /> */}
+          <View style={{ height: tabBarHeight + 24 }} />
         </ScrollView>
+
+        {selectedAccount && (
+          <>
+            <Pressable onPress={closeSheet} style={styles.sheetBackdrop} />
+            <Animated.View style={[styles.bottomSheet, sheetStyle]}>
+              <View style={styles.sheetHandle} />
+              <View style={styles.sheetCardVisual}>
+                <Text style={styles.sheetCardMask}>•••• {selectedAccount.mask}</Text>
+                <Text style={styles.sheetCardAmount}>${selectedAccount.total_expenses.toLocaleString('en-US')}</Text>
+              </View>
+              <Text style={styles.sheetTitle}>Movimientos · {new Date().toLocaleDateString('es-MX', { month: 'long' })}</Text>
+              <FlatList
+                data={selectedAccount.transactions}
+                keyExtractor={(item) => item.id}
+                contentContainerStyle={styles.sheetList}
+                renderItem={({ item }) => {
+                  const meta = categoryMap[item.category] ?? categoryMap.variable;
+                  const isExpense = item.amount > 0;
+                  return (
+                    <View style={styles.txRow}>
+                      <View style={[styles.txIconWrap, { backgroundColor: meta.bg }]}>
+                        <Text style={styles.txIcon}>{meta.icon}</Text>
+                      </View>
+                      <View style={styles.txMiddle}>
+                        <Text style={styles.txName}>{(item.merchant_name || 'Movimiento').slice(0, 20)}</Text>
+                        <Text style={styles.txMeta}>{formatRelativeDate(item.dateISO)} · {meta.label}</Text>
+                      </View>
+                      <Text style={[styles.txAmount, { color: isExpense ? '#EF4444' : '#10B981' }]}>
+                        {isExpense ? '-' : '+'}${Math.abs(item.amount).toLocaleString('en-US')}
+                      </Text>
+                    </View>
+                  );
+                }}
+              />
+            </Animated.View>
+          </>
+        )}
 
       </SafeAreaView>
     </View>
@@ -363,139 +500,222 @@ const styles = StyleSheet.create({
     // letterSpacing: 0.2,
     color: '#000',
   },
-  leftColumn: {
-    gap: Spacing.lg,
-    paddingHorizontal: Spacing.lg,
-    marginTop: 10,
-    paddingBottom: Spacing.xl,
+  lowerSection: {
+    paddingHorizontal: 16,
+    paddingTop: 8,
   },
-  glassCard: {
-    backgroundColor: PrismColors.surface,
-    borderRadius: 24,
-    padding: Spacing.xl,
-    borderWidth: 1,
-    borderColor: PrismColors.primaryBorder,
-    shadowColor: PrismColors.primary,
-    shadowOffset: { width: 0, height: 20 },
-    shadowOpacity: 0.08,
-    shadowRadius: 40,
-    elevation: 8,
-    position: 'relative',
-  },
-  // microStatus: {
-  //   position: 'absolute',
-  //   top: 24,
-  //   right: 32,
-  //   fontSize: 8,
-  //   color: PrismColors.textSecondary,
-  //   opacity: 0.4,
-  // },
-  // microStatusBottom: {
-  //   top: 'auto',
-  //   bottom: 24,
-  // },
-  gaugeContainer: {
+  gaugeCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 10,
+    flexDirection: 'row',
     alignItems: 'center',
+    marginBottom: 18,
+  },
+  gaugeLeft: {
+    width: 75,
+    height: 75,
+    marginRight: 12,
     justifyContent: 'center',
-    position: 'relative',
-    // marginVertical: Spacing.lg,
+    alignItems: 'center',
   },
-  gaugeSvg: {
-    transform: [{ rotate: '-90deg' }],
-  },
-  gaugeCenter: {
+  gaugeInner: {
     position: 'absolute',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  gaugeNumber: {
-    fontSize: 56,
+  gaugeInnerValue: {
+    fontSize: 15,
     fontWeight: '800',
-    color: PrismColors.textPrimary,
-    letterSpacing: -2,
+    color: '#111827',
   },
-  gaugeLabel: {
+  gaugeInnerLabel: {
+    fontSize: 7,
+    fontWeight: '700',
+    color: '#2DD4BF',
+    letterSpacing: 0.8,
+  },
+  gaugeRight: {
+    flex: 1,
+    gap: 4,
+    // height: 75,
+
+  },
+  gaugeRightTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#000000',
+  },
+  gaugeRightSubtitle: {
+    fontSize: 10,
+    color: '#6B7280',
+    lineHeight: 14,
+  },
+  insightBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#FEF9C3',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
+  },
+  insightBadgeText: {
+    color: '#854D0E',
     fontSize: 10,
     fontWeight: '600',
-    color: PrismColors.primary,
-    textTransform: 'uppercase',
-    letterSpacing: 1.2,
-    marginTop: 4,
   },
-  gaugeDescription: {
-    alignItems: 'center',
-    marginTop: Spacing.lg,
-  },
-  cardTitle: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: PrismColors.textPrimary,
-    marginBottom: Spacing.sm,
-  },
-  cardBody: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: PrismColors.textSecondary,
-    textAlign: 'center',
-    lineHeight: 20,
-    opacity: 0.9,
-    maxWidth: 280,
-  },
-  habitCard: {
-    marginTop: Spacing.lg,
-  },
-  badge: {
-    backgroundColor: PrismColors.neutral,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
-    alignSelf: 'flex-start',
-    borderWidth: 1,
-    borderColor: PrismColors.primaryBorder,
-    marginBottom: Spacing.lg,
-  },
-  badgeText: {
+  sectionLabel: {
     fontSize: 10,
     fontWeight: '700',
-    color: PrismColors.textSecondary,
+    color: '#6B7280',
     textTransform: 'uppercase',
-    letterSpacing: 1.2,
+    marginBottom: 10,
+    letterSpacing: 0.8,
   },
-  habitTitle: {
-    fontSize: 22,
+  accountsList: {
+    paddingHorizontal: 0,
+    paddingBottom: 14,
+    gap: 10,
+  },
+  accountCard: {
+    minWidth: 160,
+    height: 100,
+    borderRadius: 14,
+    padding: 12,
+    position: 'relative',
+  },
+  accountDecor: {
+    width: 18,
+    height: 13,
+    borderRadius: 3,
+    backgroundColor: 'rgba(255,255,255,0.25)',
+    marginBottom: 10,
+  },
+  accountMask: {
+    fontSize: 9,
+    color: 'rgba(255,255,255,0.6)',
+    letterSpacing: 2,
+    marginBottom: 8,
+  },
+  accountLabel: {
+    fontSize: 9,
+    color: 'rgba(255,255,255,0.6)',
+  },
+  accountAmount: {
+    fontSize: 18,
+    color: '#FFFFFF',
+    fontWeight: '800',
+  },
+  accountPctBadge: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  accountPctText: {
+    fontSize: 9,
+    color: '#FFFFFF',
     fontWeight: '700',
-    color: PrismColors.textPrimary,
-    marginBottom: Spacing.md,
-    lineHeight: 28,
   },
-  habitBody: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: PrismColors.textSecondary,
-    lineHeight: 22,
-    marginBottom: Spacing.xl,
-    opacity: 0.9,
-  },
-  highlight: {
-    color: PrismColors.primary,
-    fontWeight: '700',
-    backgroundColor: PrismColors.primaryBorder,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 6,
-  },
-  actionButton: {
+  recentCard: {
     backgroundColor: PrismColors.surface,
-    borderWidth: 1,
-    borderColor: PrismColors.neutral,
-    paddingVertical: 16,
     borderRadius: 16,
+    overflow: 'hidden',
+    marginBottom: 16,
+  },
+  txRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderBottomWidth: 0.5,
+    borderBottomColor: '#F3F4F6',
+    gap: 10,
+  },
+  txRowLast: {
+    borderBottomWidth: 0,
+  },
+  txIconWrap: {
+    width: 30,
+    height: 30,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  actionButtonText: {
-    fontSize: 14,
+  txIcon: {
+    fontSize: 16,
+  },
+  txMiddle: {
+    flex: 1,
+  },
+  txName: {
+    fontSize: 11,
     fontWeight: '700',
-    color: PrismColors.textPrimary,
+    color: '#111827',
+  },
+  txMeta: {
+    fontSize: 9,
+    color: '#6B7280',
+  },
+  txAmount: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  sheetBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+  },
+  bottomSheet: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: -20,
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    maxHeight: '85%',
+    paddingBottom: 32,
+  },
+  sheetHandle: {
+    width: 36,
+    height: 4,
+    borderRadius: 999,
+    backgroundColor: '#E5E7EB',
+    alignSelf: 'center',
+    marginTop: 10,
+    marginBottom: 12,
+  },
+  sheetCardVisual: {
+    marginHorizontal: 14,
+    borderRadius: 14,
+    height: 90,
+    backgroundColor: '#312E81',
+    padding: 12,
+    justifyContent: 'center',
+  },
+  sheetCardMask: {
+    fontSize: 10,
+    color: 'rgba(255,255,255,0.65)',
+    letterSpacing: 2,
+    marginBottom: 6,
+  },
+  sheetCardAmount: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  sheetTitle: {
+    marginTop: 14,
+    marginHorizontal: 14,
+    marginBottom: 8,
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#6B7280',
+  },
+  sheetList: {
+    paddingHorizontal: 4,
+    paddingBottom: 32,
   },
 });
