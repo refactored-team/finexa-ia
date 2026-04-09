@@ -25,6 +25,7 @@ import (
 
 	_ "finexa-ia/ms-transactions/docs"
 
+	"finexa-ia/ms-transactions/internal/auth"
 	"finexa-ia/ms-transactions/internal/config"
 	"finexa-ia/ms-transactions/internal/handlers"
 	pkgdb "finexa-ia/ms-transactions/pkg/db"
@@ -35,6 +36,7 @@ func main() {
 		fx.Provide(
 			config.Load,
 			provideDB,
+			provideAuthDeps,
 			handlers.NewHealthHandler,
 			handlers.NewTransactionsHandler,
 			newEcho,
@@ -64,6 +66,20 @@ func provideDB(lc fx.Lifecycle, cfg *config.App) (*sql.DB, error) {
 		},
 	})
 	return db, nil
+}
+
+func provideAuthDeps(lc fx.Lifecycle, cfg *config.App) (*auth.Deps, error) {
+	d, err := auth.NewDeps(cfg)
+	if err != nil {
+		return nil, err
+	}
+	lc.Append(fx.Hook{
+		OnStop: func(ctx context.Context) error {
+			d.Close()
+			return nil
+		},
+	})
+	return d, nil
 }
 
 func registerRoutes(
