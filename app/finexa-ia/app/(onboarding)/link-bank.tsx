@@ -75,7 +75,7 @@ export default function LinkBankScreen() {
         const id = await getInternalUserIdFromSession();
         const { linked } = await plaidService.getPlaidLinkStatus(String(id));
         if (!cancelled && linked) {
-          router.replace('/(tabs)/dashboard');
+          router.replace('/(tabs)/explore');
         }
       } catch {
         /* permanece en link-bank */
@@ -154,7 +154,7 @@ export default function LinkBankScreen() {
         onSuccess: async (success: LinkSuccess) => {
           try {
             await plaidService.exchangePublicToken(internalUserId, success.publicToken);
-            router.replace('/(tabs)/dashboard');
+            router.replace('/(tabs)/explore');
           } catch (error) {
             Alert.alert('Error', 'No se pudo guardar la conexión.');
           } finally {
