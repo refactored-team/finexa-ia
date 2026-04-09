@@ -168,6 +168,14 @@ def sanitize_analysis(
         clean_desc, uv_desc = verify_text(insight.description, fact_pool)
         all_unverified.extend(uv_desc)
 
+        clean_steps: Optional[list[str]] = None
+        if insight.action_steps:
+            clean_steps = []
+            for step in insight.action_steps:
+                clean_step, uv_step = verify_text(step, fact_pool)
+                all_unverified.extend(uv_step)
+                clean_steps.append(clean_step)
+
         if insight.potential_monthly_saving > 0 and not _is_verified(
             insight.potential_monthly_saving, fact_pool
         ):
@@ -181,7 +189,10 @@ def sanitize_analysis(
                 },
             )
 
-        clean_insights.append(insight.model_copy(update={"description": clean_desc}))
+        update_fields: dict = {"description": clean_desc}
+        if clean_steps is not None:
+            update_fields["action_steps"] = clean_steps
+        clean_insights.append(insight.model_copy(update=update_fields))
 
     if all_unverified:
         logger.warning(

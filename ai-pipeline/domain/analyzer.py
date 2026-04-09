@@ -129,27 +129,39 @@ def _fallback_analysis(
     insights = []
     if ant_total > 0:
         insights.append(SpendingInsight(
-            title="Gastos hormiga detectados",
+            title="Reduce tus gastos hormiga esta semana",
             description=(
                 f"Tienes ${ant_total:.2f} en gastos pequeños y frecuentes este periodo. "
-                "Reducir la mitad te ahorraría significativamente al mes."
+                "Reducirlos a la mitad te daría un ahorro mensual notable."
             ),
             priority="alta" if ant_pct > 15 else "media",
-            potential_monthly_saving=ant_total * 0.5,
+            potential_monthly_saving=round(ant_total * 0.5, 2),
             affected_category=FinexaCategory.HORMIGA,
+            is_immediate_action=False,
+            action_steps=[
+                "Identifica 2 gastos hormiga que puedas evitar esta semana",
+                "Prepara un sustituto casero (café, snacks) antes de salir",
+                f"Meta: bajar a la mitad (~${ant_total * 0.5:.0f}/mes)",
+            ],
         ))
 
     subs = summary.get("categories", {}).get("suscripcion", {})
     if subs.get("count", 0) >= 3:
         insights.append(SpendingInsight(
-            title="Múltiples suscripciones activas",
+            title="Cancela suscripciones que no uses",
             description=(
-                f"Tienes {subs['count']} suscripciones por ${subs['total']:.2f}. "
-                "Revisa si realmente usas todas."
+                f"Tienes {subs['count']} suscripciones activas por ${subs['total']:.2f}. "
+                "Revisa cuál puedes dar de baja hoy mismo."
             ),
-            priority="media",
-            potential_monthly_saving=subs["total"] * 0.3,
+            priority="alta",
+            potential_monthly_saving=round(subs["total"] * 0.3, 2),
             affected_category=FinexaCategory.SUSCRIPCION,
+            is_immediate_action=True,
+            action_steps=[
+                "Abre la app o web de cada servicio recurrente",
+                "Entra a 'Mi cuenta' → 'Suscripción' → 'Cancelar'",
+                "Confirma la cancelación (tu acceso sigue hasta fin del ciclo)",
+            ],
         ))
 
     if not insights:
@@ -159,6 +171,7 @@ def _fallback_analysis(
             priority="baja",
             potential_monthly_saving=0.0,
             affected_category=FinexaCategory.VARIABLE,
+            is_immediate_action=False,
         ))
 
     return BehavioralAnalysisResult(
