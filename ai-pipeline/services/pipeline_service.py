@@ -21,7 +21,7 @@ from pipeline.domain.forecaster import run_cash_flow_analysis
 from pipeline.domain.guardrails import (
     build_fact_pool,
     sanitize_analysis,
-    sanitize_explanation,
+    sanitize_resilience_explanation,
 )
 from pipeline.domain.models import (
     BehavioralAnalysisResult,
@@ -134,8 +134,8 @@ async def run_pipeline(
         if analysis:
             analysis = sanitize_analysis(analysis, fact_pool)
         if resilience and resilience.explicacion_llm:
-            resilience.explicacion_llm = sanitize_explanation(
-                resilience.explicacion_llm, fact_pool, context="resilience_explanation"
+            resilience.explicacion_llm = sanitize_resilience_explanation(
+                resilience.explicacion_llm, fact_pool
             )
 
     # ── Step D: Cash flow + alerts (sync, no Bedrock) ───────

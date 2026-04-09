@@ -1401,6 +1401,77 @@
         "title": "RecurringExpense",
         "description": "Gasto recurrente detectado: mismo comercio, monto ±15%, periodicidad consistente."
       },
+      "ResilienceExplanation": {
+        "properties": {
+          "headline": {
+            "type": "string",
+            "maxLength": 140,
+            "title": "Headline",
+            "description": "Titular principal en una sola frase, en segunda persona, resumiendo el estado general (ej. 'Estable con potencial de crecer')."
+          },
+          "resumen": {
+            "type": "string",
+            "maxLength": 400,
+            "title": "Resumen",
+            "description": "Síntesis breve (1-2 frases) del estado financiero global. Sirve como intro antes de las secciones por factor."
+          },
+          "secciones": {
+            "items": {
+              "$ref": "#/components/schemas/ResilienceExplanationSection"
+            },
+            "type": "array",
+            "maxItems": 3,
+            "minItems": 1,
+            "title": "Secciones",
+            "description": "Entre 1 y 3 secciones, una por cada factor más impactante. Ordenadas por impacto descendente."
+          }
+        },
+        "type": "object",
+        "required": [
+          "headline",
+          "resumen",
+          "secciones"
+        ],
+        "title": "ResilienceExplanation",
+        "description": "Explicación estructurada del Score de Resiliencia para uso en UI."
+      },
+      "ResilienceExplanationSection": {
+        "properties": {
+          "factor": {
+            "type": "string",
+            "pattern": "^(ratio_ahorro_ingreso|control_fijos|frecuencia_hormiga|variabilidad_ingresos|runway)$",
+            "title": "Factor",
+            "description": "Identificador del factor evaluado en esta sección (coincide con ResilienceFactorDetail.nombre)."
+          },
+          "titulo": {
+            "type": "string",
+            "maxLength": 120,
+            "title": "Titulo",
+            "description": "Encabezado corto del diagnóstico, en tono descriptivo (ej. 'Tus ingresos tienen más movimiento del esperado'). Sin markdown."
+          },
+          "diagnostico": {
+            "type": "string",
+            "maxLength": 800,
+            "title": "Diagnostico",
+            "description": "Párrafo que explica qué mide este factor, qué valor tiene el usuario y qué significa en términos concretos. Sin markdown ni viñetas."
+          },
+          "accion": {
+            "type": "string",
+            "maxLength": 400,
+            "title": "Accion",
+            "description": "Una acción concreta, medible y realizable en los próximos 30 días. Empieza con un verbo imperativo."
+          }
+        },
+        "type": "object",
+        "required": [
+          "factor",
+          "titulo",
+          "diagnostico",
+          "accion"
+        ],
+        "title": "ResilienceExplanationSection",
+        "description": "Un bloque de la explicación: diagnóstico + acción concreta para un factor."
+      },
       "ResilienceFactorDetail": {
         "properties": {
           "nombre": {
@@ -1483,14 +1554,13 @@
           "explicacion_llm": {
             "anyOf": [
               {
-                "type": "string"
+                "$ref": "#/components/schemas/ResilienceExplanation"
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Explicacion Llm",
-            "description": "Explicación en lenguaje natural generada por Bedrock sobre los 3 factores más impactantes"
+            "description": "Explicación estructurada generada por Bedrock sobre los factores más impactantes: headline, resumen y 1-3 secciones por factor."
           }
         },
         "type": "object",
