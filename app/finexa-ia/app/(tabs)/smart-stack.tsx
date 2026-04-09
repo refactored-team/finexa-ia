@@ -80,7 +80,7 @@ const HERO_THEME: Theme = {
   accentColor: '#D7FF2F',
   badgeGradient: [PrismColors.primary, PrismColors.tertiary],
   checkmarkBg: '#10B981',
-  activeBg: '#F59E0B',
+  activeBg: '#F3F5F8',
 };
 
 // ---------------------------------------------------------------------------
@@ -89,9 +89,10 @@ const HERO_THEME: Theme = {
 const findings: Finding[] = [
   {
     id: '1',
-    title: 'Spotify se cobró 4 veces este mes',
+    title: 'Spotify y Youtube Music contratados',
     icon: '💡',
-    cardColor: '#006C5F',
+    cardColor: '#312E81',
+    buttonColor: '#4F46E5',
     steps: [
       { text: 'Ya revisé tus cargos', completed: true, active: false },
       { text: 'Tengo la documentación lista', completed: true, active: false },
@@ -102,7 +103,8 @@ const findings: Finding[] = [
     id: '2',
     title: 'HBO Max - Suscripción sin uso',
     icon: '📺',
-    cardColor: PrismColors.tertiary,
+    cardColor: '#3730A3',
+    buttonColor: '#4F46E5',
     steps: [
       { text: 'No has abierto la app en 90 días', completed: true, active: false },
       { text: 'Puedes ahorrar $129/mes', completed: true, active: false },
@@ -113,7 +115,8 @@ const findings: Finding[] = [
     id: '3',
     title: 'Uber Eats - Cargo duplicado',
     icon: '🍔',
-    cardColor: PrismColors.secondary,
+    cardColor: '#4338CA',
+    buttonColor: '#6366F1',
     steps: [
       { text: 'Detecté un cargo doble de $342', completed: true, active: false },
       { text: 'Ya contacté a soporte', completed: true, active: false },
@@ -132,14 +135,14 @@ export default function SmartStackScreen() {
 
   return (
     <View style={[styles.root, { backgroundColor: '#E5E7EB' }]}>
-      <SafeAreaView edges={['top']} style={{ backgroundColor: '#6495FF' }} />
+      <SafeAreaView edges={['top']} style={{ backgroundColor: '#C3E9E9' }} />
       <SafeAreaView edges={['left', 'right', 'bottom']} style={[styles.safe, { backgroundColor: '#F1F4F9' }]}>
 
         {/* Header */}
         <LinearGradient
-          colors={['#6495FF', '#2463EB']}
-          start={{ x: 0.5, y: 0.005 }}
-          end={{ x: 0.5, y: .8 }}
+          colors={['#C3E9E9', '#F6FBFB']}
+          start={{ x: 0.5, y: 1 }}
+          end={{ x: 0.5, y: 2 }}
           style={styles.header}>
           <View style={styles.topRow}>
             <View style={styles.userAvatarWrap}>
@@ -155,23 +158,27 @@ export default function SmartStackScreen() {
             </View>
           </View>
 
-          <Text style={[styles.welcomeLine, { color: theme.textPrimary }]}>
-            Hola,
+          <Text
+            numberOfLines={1}
+            ellipsizeMode="tail"
+            allowFontScaling={false}
+            style={[styles.welcomeLine, { color: '#000' }]}>
+            Hola,{'\u00A0'}
+            <Text style={[styles.nameLine, { color: '#036666' }]}>
+              Ivano{'\u00A0'}Ermakov
+            </Text>
           </Text>
-          <Text style={[styles.nameLine, { color: theme.accentColor }]}>
-            Ivano Ermakov
-          </Text>
-          <Text style={[styles.welcomeLine, { color: theme.textPrimary, fontSize: 20 }]}>
+          <Text style={[styles.welcomeLine, { color: "#000", fontSize: 20 }]}>
             encontré esto por ti
           </Text>
-          {/* <View style={styles.chipsRow}>
+          <View style={styles.chipsRow}>
             <View style={styles.chip}>
-              <Text style={styles.chipText}>GRAPHIC DESIGNER</Text>
+              <Text style={styles.chipText}>Nivel estable</Text>
             </View>
             <View style={styles.chip}>
-              <Text style={styles.chipText}>FREELANCE</Text>
+              <Text style={styles.chipText}>Gastos hormiga altos</Text>
             </View>
-          </View> */}
+          </View>
         </LinearGradient>
 
         {/* Smart Stack */}
@@ -215,7 +222,7 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     overflow: 'hidden',
     borderWidth: 2,
-    borderColor: 'rgba(215,255,47,0.85)',
+    borderColor: "#036666",
   },
   userAvatar: {
     width: '100%',
@@ -241,11 +248,14 @@ const styles = StyleSheet.create({
   },
   nameLine: {
     fontSize: 34,
+    lineHeight: 34,
     fontWeight: '800',
     letterSpacing: 0.2,
-    // marginBottom: 14,
+    maxWidth: '96%',
+    includeFontPadding: false,
   },
   chipsRow: {
+    marginVertical: 15,
     flexDirection: 'row',
     gap: 10,
   },
@@ -253,12 +263,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 999,
-    backgroundColor: 'rgba(255,255,255,0.12)',
+    backgroundColor: '#EAFF39',
   },
   chipText: {
     fontSize: 12,
-    fontWeight: '700',
-    letterSpacing: 0.8,
-    color: 'rgba(255,255,255,0.75)',
+    fontWeight: '600',
+    // letterSpacing: 0.2,
+    color: '#000',
   },
 });

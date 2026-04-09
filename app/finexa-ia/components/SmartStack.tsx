@@ -5,7 +5,7 @@ import {
   View,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { GestureDetector, Gesture } from 'react-native-gesture-handler';
 import Animated, {
   useSharedValue,
@@ -16,7 +16,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { SharedValue } from 'react-native-reanimated';
 
-import { PrismColors } from '@/constants/theme';
+import { Colors, PrismColors } from '@/constants/theme';
 import { Spacing } from '@/constants/uiStyles';
 
 // ---------------------------------------------------------------------------
@@ -27,6 +27,7 @@ export interface Finding {
   title: string;
   icon: string;
   cardColor?: string;
+  buttonColor?: string;
   steps: Array<{
     text: string;
     completed: boolean;
@@ -67,6 +68,8 @@ interface SmartStackProps {
 // Card Component
 // ---------------------------------------------------------------------------
 function StackCard({ finding, offset, isActive, translateY, theme }: StackCardProps) {
+  const [stepsCollapsed, setStepsCollapsed] = useState(true);
+
   const animatedStyle = useAnimatedStyle(() => {
     if (isActive) {
       return {
@@ -86,15 +89,16 @@ function StackCard({ finding, offset, isActive, translateY, theme }: StackCardPr
   });
 
   const isGradient = theme.cardBackground === 'gradient';
+  const ctaButtonColor = finding.buttonColor ?? PrismColors.primary;
 
   const cardInner = (
     <>
       <LinearGradient
-        colors={theme.badgeGradient}
+        colors={['#EAFF39', '#D7FF2E']}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 0 }}
         style={styles.badge}>
-        <Text style={[styles.badgeText, { color: theme.textPrimary }]}>
+        <Text style={[styles.badgeText, { color: PrismColors.textPrimary }]}>
           Detectado
           {/* {finding.icon} Detectado */}
         </Text>
@@ -104,36 +108,49 @@ function StackCard({ finding, offset, isActive, translateY, theme }: StackCardPr
         {finding.title}
       </Text>
 
-      <View style={styles.stepsList}>
-        {finding.steps.map((step, idx) => (
-          <View key={idx} style={styles.stepItem}>
-            <View style={[
-              styles.stepIcon,
-              step.completed && { backgroundColor: theme.checkmarkBg },
-              step.active && { backgroundColor: theme.activeBg },
-            ]}>
-              <Text style={styles.stepIconText}>
-                {step.completed ? '✓' : '○'}
+      <Pressable
+        onPress={() => setStepsCollapsed((prev) => !prev)}
+        style={styles.stepsCollapseTrigger}>
+        <Text style={[styles.stepsCollapseText, { color: theme.textSecondary }]}>
+          Pasos que seguimos para decir esto
+        </Text>
+        <Text style={[styles.stepsCollapseChevron, { color: theme.textSecondary }]}>
+          {stepsCollapsed ? '▾' : '▴'}
+        </Text>
+      </Pressable>
+
+      {!stepsCollapsed && (
+        <View style={styles.stepsList}>
+          {finding.steps.map((step, idx) => (
+            <View key={idx} style={styles.stepItem}>
+              <View style={[
+                styles.stepIcon,
+                step.completed && { backgroundColor: theme.checkmarkBg },
+                step.active && { backgroundColor: theme.activeBg },
+              ]}>
+                <Text style={styles.stepIconText}>
+                  {step.completed ? '✓' : '○'}
+                </Text>
+              </View>
+              <Text style={[
+                styles.stepText,
+                { color: theme.textSecondary },
+                step.active && { color: theme.textPrimary, fontWeight: '700' },
+              ]}>
+                {step.text}
               </Text>
             </View>
-            <Text style={[
-              styles.stepText,
-              { color: theme.textSecondary },
-              step.active && { color: theme.textPrimary, fontWeight: '700' },
-            ]}>
-              {step.text}
-            </Text>
-          </View>
-        ))}
-      </View>
+          ))}
+        </View>
+      )}
 
       <LinearGradient
-        colors={[PrismColors.primary, PrismColors.secondary]}
+        colors={[ctaButtonColor, ctaButtonColor]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={styles.ctaButton}>
         <Pressable style={styles.ctaPressable}>
-          <Text style={styles.ctaText}>Aplicar ajuste</Text>
+          <Text style={styles.ctaText}>Ver estrategia</Text>
         </Pressable>
       </LinearGradient>
     </>
@@ -251,8 +268,8 @@ export default function SmartStack({
               styles.dot,
               {
                 backgroundColor: index === currentIndex
-                  ? theme.accentColor
-                  : theme.textSecondary,
+                  ? Colors.light.text
+                  : "#000",
                 opacity: index === currentIndex ? 1 : 0.3,
                 width: index === currentIndex ? 18 : 6,
               },
@@ -261,7 +278,7 @@ export default function SmartStack({
         ))}
       </View>
 
-      <Text style={[styles.swipeHint, { color: theme.textSecondary }]}>
+      <Text style={[styles.swipeHint, { color: "#000" }]}>
         Desliza arriba o abajo para ver más
       </Text>
     </View>
@@ -277,11 +294,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.lg,
     paddingTop: Spacing.md,
     alignItems: 'center',
-    marginTop: -70,
+    marginTop: -85,
   },
   stackContainer: {
     width: '100%',
-    height: 300,
+    height: 200,
     position: 'relative',
   },
   stackCard: {
@@ -289,9 +306,10 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
-    height: 300,
+    height: 'auto',
     borderRadius: 24,
-    padding: Spacing.xl,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
     overflow: 'hidden',
 
   },
@@ -300,7 +318,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     gap: 6,
-    marginTop: Spacing.md,
+    // marginTop: 30,
   },
   dot: {
     height: 6,
@@ -311,30 +329,47 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginTop: Spacing.sm,
     opacity: 0.6,
+    color: "#000",
   },
   badge: {
     alignSelf: 'flex-start',
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.xs,
-    borderRadius: 12,
-    marginBottom: Spacing.md,
+    borderRadius: 11.5,
+    marginBottom: 5,
   },
   badgeText: {
     fontSize: 12,
     fontWeight: '700',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
+
+    // textTransform: 'uppercase',
+    letterSpacing: -0.5,
   },
   findingTitle: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '700',
-    marginBottom: Spacing.lg,
+    // marginBottom: Spacing.lg,
     lineHeight: 26,
 
   },
   stepsList: {
     gap: Spacing.md,
     marginBottom: Spacing.xl,
+  },
+  stepsCollapseTrigger: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: Spacing.md,
+    paddingVertical: Spacing.xs,
+  },
+  stepsCollapseText: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  stepsCollapseChevron: {
+    fontSize: 14,
+    fontWeight: '700',
   },
   stepItem: {
     flexDirection: 'row',
@@ -361,8 +396,9 @@ const styles = StyleSheet.create({
     color: PrismColors.textPrimary,
   },
   ctaButton: {
-    borderRadius: 16,
+    borderRadius: 11.5,
     overflow: 'hidden',
+    paddingVertical: Spacing.xs,
   },
   ctaPressable: {
     paddingVertical: Spacing.md,
