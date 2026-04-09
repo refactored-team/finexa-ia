@@ -17,7 +17,7 @@ export function useResilienceFactors() {
         const data = await getResilienceFactors(userId);
         setFactors(data);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Unknown error');
+        setError(err instanceof Error ? err.message : 'Error desconocido');
       } finally {
         setLoading(false);
       }

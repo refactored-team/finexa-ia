@@ -4,21 +4,34 @@ import { ShieldCheck, Sparkles } from 'lucide-react-native';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-export default function ConfidenceScore({ score = 93 }: { score?: number }) {
+export type ConfidenceScoreProps = {
+  antExpensePercentage?: number;
+  riskLevel?: string;
+  summary?: string;
+};
+
+export default function ConfidenceScore({
+  antExpensePercentage,
+  riskLevel,
+  summary,
+}: ConfidenceScoreProps) {
+  const displayScore = antExpensePercentage != null ? `${antExpensePercentage}%` : '—';
+
   return (
     <View style={styles.container}>
-      <Text style={styles.statusMicro}>[DATA_SYNC: OK]</Text>
-
       {/* Accent Top Left */}
       <View style={[styles.prismAccent, styles.prismAccentTl]} />
 
       <View style={styles.header}>
         <View>
-          <Text style={styles.label}>Confidence Score</Text>
+          <Text style={styles.label}>Puntaje de Confianza</Text>
           <View style={styles.scoreRow}>
-            <Text style={styles.scoreText}>{score}%</Text>
+            <Text style={styles.scoreText}>{displayScore}</Text>
             <ShieldCheck size={20} color={PrismColors.tertiary} fill={PrismColors.tertiary + '30'} />
           </View>
+          {riskLevel != null && (
+            <Text style={styles.riskLabel}>Riesgo: {riskLevel}</Text>
+          )}
         </View>
 
         <View style={styles.iconWrap}>
@@ -26,9 +39,9 @@ export default function ConfidenceScore({ score = 93 }: { score?: number }) {
         </View>
       </View>
 
-      <Text style={styles.footerLabel}>
-        [ENGINE: BEDROCK_FINEXA_V1 | PLAID_VERIFIED]
-      </Text>
+      {summary != null && (
+        <Text style={styles.summaryText}>{summary}</Text>
+      )}
 
       {/* Accent Bottom Right */}
       <View style={[styles.prismAccent, styles.prismAccentBr]} />
@@ -123,5 +136,19 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
     color: 'rgba(30, 41, 59, 0.4)',
     textTransform: 'uppercase',
+  },
+  riskLabel: {
+    fontFamily: TextStyles.caption.fontFamily,
+    fontSize: 10,
+    letterSpacing: 0.5,
+    color: 'rgba(30, 41, 59, 0.6)',
+    marginTop: 4,
+    textTransform: 'capitalize',
+  },
+  summaryText: {
+    fontFamily: TextStyles.bodyMedium.fontFamily,
+    fontSize: 12,
+    lineHeight: 18,
+    color: 'rgba(30, 41, 59, 0.7)',
   },
 });

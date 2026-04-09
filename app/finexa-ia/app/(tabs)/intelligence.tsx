@@ -1,10 +1,10 @@
 import { AuthBackground } from '@/components/auth';
 import { PrismColors } from '@/constants/theme';
 import { Radius, Shadow, Spacing, TextStyles } from '@/constants/uiStyles';
-import { LinearGradient } from 'expo-linear-gradient';
 import React from 'react';
-import { Image, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, View, ActivityIndicator, Text, Pressable } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useIntelligenceData } from '@/src/hooks/useIntelligenceData';
 
 // Importing sub-components
 import AsymmetricAnalytics from '@/components/intelligence/AsymmetricAnalytics';
@@ -15,70 +15,89 @@ import SmallExpensesCard from '@/components/intelligence/SmallExpensesCard';
 
 export default function IntelligenceScreen() {
   const insets = useSafeAreaInsets();
+  const { analysis, insights, resilienceFactors, cashFlow, pulse, loading, error, refetch } = useIntelligenceData();
+
+  const antExpensePercentage = analysis?.ant_expense_percentage ?? 0;
+  const riskLevel = analysis?.risk_level;
+  const summary = analysis?.summary;
+
+  const antExpenseTotal = analysis?.ant_expense_total || 0;
+
+  const resilienceLiquidity = cashFlow?.projected_liquidity || 0;
+  const resiliencePercentage = Math.max(
+    0,
+    Math.min(100, resilienceFactors.reduce((acc, factor) => acc + (factor.score_ponderado || 0), 0) * 100)
+  );
+
+  const fixedCostsTotal = pulse?.gasto_fijo_mensual || 0;
+  const fixedCostsRatio = pulse?.porcentaje_consumido_mes || 0;
+
+  const projectionLiquidityStr =
+    cashFlow?.projected_liquidity != null
+      ? `$${cashFlow.projected_liquidity.toLocaleString('en-US')}`
+      : '$0';
 
   return (
     <AuthBackground showBottomBar>
       <ScrollView
         style={styles.container}
-        contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + Spacing.lg, paddingBottom: insets.bottom + 120 }]}
+        contentContainerStyle={[styles.scrollContent, { paddingTop: Spacing.xl }]}
         showsVerticalScrollIndicator={false}
       >
 
-        {/* Header Hero / Insight */}
-        <View style={styles.heroSection}>
-          <View style={styles.heroLayout}>
-            {/* AI Character */}
-            <View style={styles.imageContainer}>
-              {/* Optional data connection line effect */}
-              <View style={styles.dataLine} />
-              <Image
-                source={{ uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBL9xMl3qGfMHtJytPdzuf1FjL69weRAhcFSlzN-YLMWFbgdZ0tu73Pp-rNOckDrltA61xfPeHA1LUqufqpiCzVk-ADHus-Zo9rKzp-OpD9ZpdYQ7650-z4V_5tGTzzYmKOfIdNriB0mFm2gHplXGm_eBwk0hHb8-y0vtK7CZMs15ItYZxy3-SbwlGKIJ-dO212saxbPdLcXXdZOvaTCrompj5Y0L3OLZkI8v-qjRVOa_IFH2ODKaVSa1e4G02QIYECtl0fz5d8V6ka' }}
-                style={styles.heroImage}
-                resizeMode="contain"
+        {loading ? (
+          <ActivityIndicator size="large" color={PrismColors.primary} style={{ marginVertical: Spacing.xl }} />
+        ) : error ? (
+          <View style={styles.errorCard}>
+            <Text style={styles.errorTitle}>No se pudo cargar Inteligencia</Text>
+            <Text style={styles.errorText}>{error}</Text>
+            <Pressable onPress={refetch} style={styles.retryButton}>
+              <Text style={styles.retryText}>Reintentar</Text>
+            </Pressable>
+          </View>
+        ) : (
+          <>
+            {/* DNA Metrics Grid */}
+            <View style={styles.gridSection}>
+              <View style={styles.colContainer}>
+                <ConfidenceScore
+                  antExpensePercentage={antExpensePercentage}
+                  riskLevel={riskLevel}
+                  summary={summary}
+                />
+              </View>
+              <View style={styles.colContainer}>
+                <ResilienceWidget
+                  liquidity={resilienceLiquidity}
+                  percentage={Math.round(resiliencePercentage)}
+                />
+              </View>
+            </View>
+
+            {/* Detail Cards */}
+            <View style={styles.sectionMargin}>
+              <SmallExpensesCard
+                total={antExpenseTotal}
+                items={insights ?? []}
               />
             </View>
 
-            {/* AI Insight Bubble */}
-            <LinearGradient
-              colors={['#4f46e5', '#3525cd']}
-              style={styles.vibrantGradient}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-            >
-              <Text style={styles.statusMicroLight}>[AI_ANALYSIS_ACTIVE]</Text>
-              <Text style={styles.insightText}>
-                ¡Vas muy bien! Ahorraste el{' '}
-                <Text style={styles.insightHighlight}>45%</Text>{' '}
-                de tu ingreso este periodo. Eres una ahorradora sólida con pequeños puntos de fuga.
-              </Text>
-              <View style={[styles.prismAccent, styles.prismAccentBr]} />
-            </LinearGradient>
-          </View>
-        </View>
+            <View style={styles.sectionMargin}>
+              <FixedCostsCard
+                total={fixedCostsTotal}
+                ratio={fixedCostsRatio}
+                items={cashFlow?.recurring_expenses ?? []}
+              />
+            </View>
 
-        {/* DNA Metrics Grid */}
-        <View style={styles.gridSection}>
-          <View style={styles.colContainer}>
-            <ConfidenceScore />
-          </View>
-          <View style={styles.colContainer}>
-            <ResilienceWidget />
-          </View>
-        </View>
-
-        {/* Detail Cards */}
-        <View style={styles.sectionMargin}>
-          <SmallExpensesCard />
-        </View>
-
-        <View style={styles.sectionMargin}>
-          <FixedCostsCard />
-        </View>
-
-        {/* Charts & Analytics */}
-        <View style={styles.sectionMargin}>
-          <AsymmetricAnalytics />
-        </View>
+            {/* Charts & Analytics */}
+            <View style={styles.sectionMargin}>
+              <AsymmetricAnalytics
+                projection={projectionLiquidityStr}
+              />
+            </View>
+          </>
+        )}
 
       </ScrollView>
     </AuthBackground>
@@ -180,5 +199,38 @@ const styles = StyleSheet.create({
   },
   sectionMargin: {
     marginBottom: Spacing.lg,
+  },
+  errorCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: Spacing.lg,
+    gap: Spacing.sm,
+    borderWidth: 1,
+    borderColor: 'rgba(185, 28, 28, 0.2)',
+    marginBottom: Spacing.lg,
+  },
+  errorTitle: {
+    color: PrismColors.textPrimary,
+    fontWeight: '700',
+    fontSize: 16,
+  },
+  errorText: {
+    color: PrismColors.textSecondary,
+    fontSize: 13,
+    lineHeight: 20,
+  },
+  retryButton: {
+    alignSelf: 'flex-start',
+    backgroundColor: PrismColors.primary,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    borderRadius: 8,
+  },
+  retryText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+    fontSize: 12,
+    letterSpacing: 0.3,
+    textTransform: 'uppercase',
   },
 });

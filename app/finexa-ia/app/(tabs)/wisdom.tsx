@@ -4,7 +4,7 @@ import { View, Text, StyleSheet } from 'react-native';
 export default function WisdomScreen() {
   return (
     <View style={styles.container}>
-      <Text>Wisdom Screen Placeholder</Text>
+      <Text>Pantalla de Sabiduria (pendiente)</Text>
     </View>
   );
 }

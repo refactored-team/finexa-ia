@@ -1,18 +1,19 @@
 import { PrismColors } from '@/constants/theme';
 import { Radius, Shadow, Spacing, TextStyles } from '@/constants/uiStyles';
-import { Coffee, Film, Utensils } from 'lucide-react-native';
+import { Coffee, Film, Utensils, AlertTriangle } from 'lucide-react-native';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import type { Insight } from '@/src/types/transactions';
 
 export default function SmallExpensesCard({
-  total = 929.0,
+  total = 0,
+  items = [],
 }: {
   total?: number;
+  items?: Insight[];
 }) {
   return (
     <View style={styles.container}>
-      <Text style={styles.statusMicro}>[LEAK_DETECTOR: RUNNING]</Text>
-
       <View style={styles.header}>
         <View>
           <Text style={styles.title}>Gasto Hormiga</Text>
@@ -24,47 +25,48 @@ export default function SmallExpensesCard({
       </View>
 
       <View style={styles.listContainer}>
-        {/* Item 1 */}
-        <View style={styles.listItem}>
-          <View style={styles.itemLeft}>
-            <View style={[styles.iconWrap, { backgroundColor: '#FFF7ED', borderColor: '#FFEDD5' }]}>
-              <Utensils size={18} color="#F97316" />
-            </View>
-            <View>
-              <Text style={styles.itemName}>Uber Eats</Text>
-              <Text style={styles.itemTime}>hace 2h</Text>
-            </View>
-          </View>
-          <Text style={styles.itemAmount}>$340</Text>
-        </View>
+        {items.map((item, index) => {
+          // Dynamic icon selection mostly based on affected_category or title mapping
+          let IconComp = Utensils;
+          let iconColor = '#F97316';
+          let bgColor = '#FFF7ED';
+          let borderColor = '#FFEDD5';
+          
+          const cat = (item.affected_category || item.title || '').toLowerCase();
+          if (cat.includes('coffee') || cat.includes('cafe') || cat.includes('starbucks')) {
+             IconComp = Coffee;
+             iconColor = '#22C55E';
+             bgColor = '#F0FDF4';
+             borderColor = '#DCFCE7';
+          } else if (cat.includes('film') || cat.includes('cine') || cat.includes('movie')) {
+             IconComp = Film;
+             iconColor = '#3B82F6';
+             bgColor = '#EFF6FF';
+             borderColor = '#DBEAFE';
+          } else if (!cat.includes('food') && !cat.includes('eats') && !cat.includes('uber')) {
+             IconComp = AlertTriangle;
+             iconColor = PrismColors.danger;
+             bgColor = 'rgba(185, 28, 28, 0.05)';
+             borderColor = 'rgba(185, 28, 28, 0.2)';
+          }
 
-        {/* Item 2 */}
-        <View style={styles.listItem}>
-          <View style={styles.itemLeft}>
-            <View style={[styles.iconWrap, { backgroundColor: '#EFF6FF', borderColor: '#DBEAFE' }]}>
-              <Film size={18} color="#3B82F6" />
+          return (
+            <View key={item.id || index} style={styles.listItem}>
+              <View style={styles.itemLeft}>
+                <View style={[styles.iconWrap, { backgroundColor: bgColor, borderColor: borderColor }]}>
+                  <IconComp size={18} color={iconColor} />
+                </View>
+                <View>
+                  <Text style={styles.itemName}>{item.title}</Text>
+                  <Text style={styles.itemTime}>
+                    {item.priority ? `Prioridad: ${item.priority}` : 'Hace poco'}
+                  </Text>
+                </View>
+              </View>
+              <Text style={styles.itemAmount}>${item.potential_monthly_saving}</Text>
             </View>
-            <View>
-              <Text style={styles.itemName}>Cinépolis</Text>
-              <Text style={styles.itemTime}>ayer</Text>
-            </View>
-          </View>
-          <Text style={styles.itemAmount}>$320</Text>
-        </View>
-
-        {/* Item 3 */}
-        <View style={styles.listItem}>
-          <View style={styles.itemLeft}>
-            <View style={[styles.iconWrap, { backgroundColor: '#F0FDF4', borderColor: '#DCFCE7' }]}>
-              <Coffee size={18} color="#22C55E" />
-            </View>
-            <View>
-              <Text style={styles.itemName}>Starbucks</Text>
-              <Text style={styles.itemTime}>08:15 am</Text>
-            </View>
-          </View>
-          <Text style={styles.itemAmount}>$115</Text>
-        </View>
+          );
+        })}
       </View>
 
       {/* Accent Bottom Right */}
