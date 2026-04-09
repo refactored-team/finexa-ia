@@ -17,70 +17,49 @@ export default function IntelligenceScreen() {
   const insets = useSafeAreaInsets();
 
   return (
-    <AuthBackground showBottomBar>
-      <ScrollView
-        style={styles.container}
-        contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + Spacing.lg, paddingBottom: insets.bottom + 120 }]}
-        showsVerticalScrollIndicator={false}
-      >
+    <AuthBackground showBottomBar showHeader={false}>
+      <View style={styles.container}>
+        <LinearGradient
+          colors={['#C3E9E9', '#F6FBFB']}
+          start={{ x: 0.5, y: 1 }}
+          end={{ x: 0.5, y: 2 }}
+          style={[styles.heroBackground, { height: insets.top + 220 }]}
+        />
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + Spacing.lg + 110, paddingBottom: insets.bottom + 120 }]}
+          showsVerticalScrollIndicator={false}
+        >
 
-        {/* Header Hero / Insight */}
-        <View style={styles.heroSection}>
-          <View style={styles.heroLayout}>
-            {/* AI Character */}
-            <View style={styles.imageContainer}>
-              {/* Optional data connection line effect */}
-              <View style={styles.dataLine} />
-              <Image
-                source={{ uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBL9xMl3qGfMHtJytPdzuf1FjL69weRAhcFSlzN-YLMWFbgdZ0tu73Pp-rNOckDrltA61xfPeHA1LUqufqpiCzVk-ADHus-Zo9rKzp-OpD9ZpdYQ7650-z4V_5tGTzzYmKOfIdNriB0mFm2gHplXGm_eBwk0hHb8-y0vtK7CZMs15ItYZxy3-SbwlGKIJ-dO212saxbPdLcXXdZOvaTCrompj5Y0L3OLZkI8v-qjRVOa_IFH2ODKaVSa1e4G02QIYECtl0fz5d8V6ka' }}
-                style={styles.heroImage}
-                resizeMode="contain"
-              />
+          {/* Header Hero / Insight */}
+
+
+          {/* DNA Metrics Grid */}
+          <View style={styles.gridSection}>
+            <View style={styles.colContainer}>
+              <ConfidenceScore />
             </View>
-
-            {/* AI Insight Bubble */}
-            <LinearGradient
-              colors={['#4f46e5', '#3525cd']}
-              style={styles.vibrantGradient}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-            >
-              <Text style={styles.statusMicroLight}>[AI_ANALYSIS_ACTIVE]</Text>
-              <Text style={styles.insightText}>
-                ¡Vas muy bien! Ahorraste el{' '}
-                <Text style={styles.insightHighlight}>45%</Text>{' '}
-                de tu ingreso este periodo. Eres una ahorradora sólida con pequeños puntos de fuga.
-              </Text>
-              <View style={[styles.prismAccent, styles.prismAccentBr]} />
-            </LinearGradient>
+            <View style={styles.colContainer}>
+              <ResilienceWidget />
+            </View>
           </View>
-        </View>
 
-        {/* DNA Metrics Grid */}
-        <View style={styles.gridSection}>
-          <View style={styles.colContainer}>
-            <ConfidenceScore />
+          {/* Detail Cards */}
+          <View style={styles.sectionMargin}>
+            <SmallExpensesCard />
           </View>
-          <View style={styles.colContainer}>
-            <ResilienceWidget />
+
+          <View style={styles.sectionMargin}>
+            <FixedCostsCard />
           </View>
-        </View>
 
-        {/* Detail Cards */}
-        <View style={styles.sectionMargin}>
-          <SmallExpensesCard />
-        </View>
+          {/* Charts & Analytics */}
+          <View style={styles.sectionMargin}>
+            <AsymmetricAnalytics />
+          </View>
 
-        <View style={styles.sectionMargin}>
-          <FixedCostsCard />
-        </View>
-
-        {/* Charts & Analytics */}
-        <View style={styles.sectionMargin}>
-          <AsymmetricAnalytics />
-        </View>
-
-      </ScrollView>
+        </ScrollView>
+      </View>
     </AuthBackground>
   );
 }
@@ -88,9 +67,21 @@ export default function IntelligenceScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#F1F4F9',
+  },
+  heroBackground: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 240,
+  },
+  scrollView: {
+    flex: 1,
   },
   scrollContent: {
     paddingHorizontal: Spacing.lg,
+    marginTop: -90
   },
   heroSection: {
     marginBottom: Spacing.xl,

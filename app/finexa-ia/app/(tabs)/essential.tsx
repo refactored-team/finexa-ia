@@ -184,10 +184,11 @@ export default function EssentialRoute() {
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: '#F0F4F8',
+    backgroundColor: '#1E1B2E',
   },
   scrollContent: {
     flexGrow: 1,
+    backgroundColor: '#F0F4F8',
   },
   header: {
     backgroundColor: '#1E1B2E',
