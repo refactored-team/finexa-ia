@@ -43,6 +43,7 @@ const docTemplate = `{
         },
         "/v1/users": {
             "get": {
+                "description": "Paginación: limit (default 50, max 200), offset. Filtros: email (exacto, case-insensitive), created_from, created_to (RFC3339). include_deleted=true requiere token interno.",
                 "produces": [
                     "application/json"
                 ],
@@ -50,11 +51,61 @@ const docTemplate = `{
                     "users"
                 ],
                 "summary": "Listar usuarios",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Límite (default 50, max 200)",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Offset",
+                        "name": "offset",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filtrar por email exacto (case-insensitive)",
+                        "name": "email",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Inicio rango created_at (RFC3339)",
+                        "name": "created_from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Fin rango created_at (RFC3339)",
+                        "name": "created_to",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Incluir soft-deleted (requiere X-MS-Users-Internal-Token)",
+                        "name": "include_deleted",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/finexa-ia_ms-users_internal_models.UserListOKResult"
+                            "$ref": "#/definitions/finexa-ia_ms-users_internal_models.UserListPageOKResult"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apiresult.ErrResult"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/apiresult.ErrResult"
                         }
                     },
                     "500": {
@@ -101,6 +152,38 @@ const docTemplate = `{
                             "$ref": "#/definitions/apiresult.ErrResult"
                         }
                     },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/apiresult.ErrResult"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apiresult.ErrResult"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/users/all": {
+            "get": {
+                "description": "Misma forma que antes: { ok, data: []User }. Solo filas con deleted_at IS NULL.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Listar todos los usuarios activos",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/finexa-ia_ms-users_internal_models.UserListOKResult"
+                        }
+                    },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
@@ -124,6 +207,52 @@ const docTemplate = `{
                         "type": "string",
                         "description": "Sub del JWT Cognito",
                         "name": "cognito_sub",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/finexa-ia_ms-users_internal_models.UserOKResult"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apiresult.ErrResult"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/apiresult.ErrResult"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apiresult.ErrResult"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/users/by-email": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Obtener usuario por email",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Email",
+                        "name": "email",
                         "in": "query",
                         "required": true
                     }
@@ -249,6 +378,12 @@ const docTemplate = `{
                             "$ref": "#/definitions/apiresult.ErrResult"
                         }
                     },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/apiresult.ErrResult"
+                        }
+                    },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
@@ -289,6 +424,178 @@ const docTemplate = `{
                     },
                     "404": {
                         "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/apiresult.ErrResult"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apiresult.ErrResult"
+                        }
+                    }
+                }
+            },
+            "patch": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Actualizar email (PATCH)",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID interno",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Cuerpo (email null para borrar)",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/finexa-ia_ms-users_internal_models.PatchUserEmailRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/finexa-ia_ms-users_internal_models.UserOKResult"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apiresult.ErrResult"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/apiresult.ErrResult"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/apiresult.ErrResult"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apiresult.ErrResult"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/users/{id}/hard": {
+            "delete": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Eliminar usuario permanentemente",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID interno",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/finexa-ia_ms-users_internal_models.UserOKResult"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apiresult.ErrResult"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/apiresult.ErrResult"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/apiresult.ErrResult"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apiresult.ErrResult"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/users/{id}/restore": {
+            "post": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Restaurar usuario (soft-delete)",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID interno",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/finexa-ia_ms-users_internal_models.UserOKResult"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apiresult.ErrResult"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/apiresult.ErrResult"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/apiresult.ErrResult"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
                         "schema": {
                             "$ref": "#/definitions/apiresult.ErrResult"
                         }
@@ -344,6 +651,15 @@ const docTemplate = `{
                 }
             }
         },
+        "finexa-ia_ms-users_internal_models.PatchUserEmailRequest": {
+            "type": "object",
+            "properties": {
+                "email": {
+                    "type": "string",
+                    "example": "jane@example.com"
+                }
+            }
+        },
         "finexa-ia_ms-users_internal_models.UpdateUserRequest": {
             "type": "object",
             "properties": {
@@ -379,6 +695,9 @@ const docTemplate = `{
                 "created_at": {
                     "type": "string"
                 },
+                "deleted_at": {
+                    "type": "string"
+                },
                 "email": {
                     "type": "string"
                 },
@@ -398,6 +717,37 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/finexa-ia_ms-users_internal_models.User"
                     }
+                },
+                "ok": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "finexa-ia_ms-users_internal_models.UserListPage": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/finexa-ia_ms-users_internal_models.User"
+                    }
+                },
+                "limit": {
+                    "type": "integer"
+                },
+                "offset": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                }
+            }
+        },
+        "finexa-ia_ms-users_internal_models.UserListPageOKResult": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/finexa-ia_ms-users_internal_models.UserListPage"
                 },
                 "ok": {
                     "type": "boolean"
