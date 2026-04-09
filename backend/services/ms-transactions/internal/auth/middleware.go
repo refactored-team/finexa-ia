@@ -32,10 +32,7 @@ func (d *Deps) Middleware(db *sql.DB) echo.MiddlewareFunc {
 			if s := strings.TrimSpace(d.App.DevCognitoSub); s != "" {
 				sub = s
 			} else {
-				s, err := ParseBearerCognitoSub(ctx, d.App, d.Keyfn, c.Request().Header.Get("Authorization"))
-				if errors.Is(err, ErrAuthNotConfigured) {
-					return apiresult.RespondError(c, http.StatusServiceUnavailable, apiresult.CodeServiceUnavailable, err.Error(), nil)
-				}
+				s, err := ParseBearerCognitoSub(c.Request().Header.Get("Authorization"))
 				if errors.Is(err, ErrMissingAuthorization) {
 					return apiresult.RespondError(c, http.StatusUnauthorized, apiresult.CodeUnauthorized, err.Error(), nil)
 				}

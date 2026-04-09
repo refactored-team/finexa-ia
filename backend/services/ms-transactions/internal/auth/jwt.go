@@ -1,31 +1,22 @@
 package auth
 
 import (
-	"context"
+	"encoding/base64"
+	"encoding/json"
 	"errors"
-	"fmt"
 	"strings"
 
-	keyfunc "github.com/MicahParks/keyfunc/v3"
 	"github.com/golang-jwt/jwt/v5"
-
-	"finexa-ia/ms-transactions/internal/config"
 )
 
 var (
 	ErrMissingAuthorization = errors.New("missing bearer token")
 	ErrInvalidToken         = errors.New("invalid or expired token")
-	ErrAuthNotConfigured    = errors.New("cognito jwt validation is not configured")
 )
 
-// ParseBearerCognitoSub valida un JWT de Cognito y devuelve el claim sub (sin modo dev).
-func ParseBearerCognitoSub(ctx context.Context, app *config.App, kf keyfunc.Keyfunc, authorizationHeader string) (string, error) {
-	if kf == nil {
-		return "", ErrAuthNotConfigured
-	}
-	if app == nil || app.CognitoUserPoolID == "" || app.CognitoRegion == "" {
-		return "", ErrAuthNotConfigured
-	}
+// ParseBearerCognitoSub extrae el claim sub desde el bearer token sin validar firma.
+// La validación del JWT se delega a API Gateway authorizer.
+func ParseBearerCognitoSub(authorizationHeader string) (string, error) {
 	raw := strings.TrimSpace(authorizationHeader)
 	if raw == "" {
 		return "", ErrMissingAuthorization
@@ -39,54 +30,32 @@ func ParseBearerCognitoSub(ctx context.Context, app *config.App, kf keyfunc.Keyf
 		return "", ErrMissingAuthorization
 	}
 
-	expectedIss := fmt.Sprintf(
-		"https://cognito-idp.%s.amazonaws.com/%s",
-		strings.TrimSpace(app.CognitoRegion),
-		strings.TrimSpace(app.CognitoUserPoolID),
-	)
-	parser := jwt.NewParser(
-		jwt.WithValidMethods([]string{"RS256"}),
-		jwt.WithIssuer(expectedIss),
-	)
+	parser := jwt.NewParser(jwt.WithoutClaimsValidation())
 	claims := &cognitoClaims{}
-	_, err := parser.ParseWithClaims(tokenStr, claims, kf.KeyfuncCtx(ctx))
+	_, _, err := parser.ParseUnverified(tokenStr, claims)
 	if err != nil {
-		return "", fmt.Errorf("%w: %v", ErrInvalidToken, err)
-	}
-	if claims.Subject == "" {
 		return "", ErrInvalidToken
 	}
-
-	clientID := strings.TrimSpace(app.CognitoAppClientID)
-	if clientID != "" {
-		switch strings.TrimSpace(claims.TokenUse) {
-		case "access":
-			if strings.TrimSpace(claims.ClientID) != clientID {
-				return "", ErrInvalidToken
-			}
-		case "id":
-			if len(claims.Audience) == 0 || !claimStringsContains(claims.Audience, clientID) {
-				return "", ErrInvalidToken
-			}
-		default:
-			// Algunos tokens pueden omitir token_use; exigir al menos aud o client_id coherente.
-			if claims.ClientID != "" && claims.ClientID != clientID {
-				return "", ErrInvalidToken
-			}
-			if len(claims.Audience) > 0 && !claimStringsContains(claims.Audience, clientID) {
-				return "", ErrInvalidToken
-			}
+	if claims.Subject == "" {
+		// fallback por si jwt lib no mapea Subject por tipo de token
+		parts := strings.Split(tokenStr, ".")
+		if len(parts) != 3 {
+			return "", ErrInvalidToken
 		}
+		payload, err := base64.RawURLEncoding.DecodeString(parts[1])
+		if err != nil {
+			return "", ErrInvalidToken
+		}
+		var rawClaims map[string]any
+		if err := json.Unmarshal(payload, &rawClaims); err != nil {
+			return "", ErrInvalidToken
+		}
+		sub, _ := rawClaims["sub"].(string)
+		if strings.TrimSpace(sub) == "" {
+			return "", ErrInvalidToken
+		}
+		return strings.TrimSpace(sub), nil
 	}
 
 	return claims.Subject, nil
-}
-
-func claimStringsContains(aud jwt.ClaimStrings, want string) bool {
-	for _, a := range aud {
-		if a == want {
-			return true
-		}
-	}
-	return false
 }
