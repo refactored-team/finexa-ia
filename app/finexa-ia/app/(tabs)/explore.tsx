@@ -2,6 +2,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Settings } from 'lucide-react-native';
 import { useState } from 'react';
 import {
+  Image,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -73,7 +74,7 @@ export default function ExploreScreen() {
                 </Text>
 
                 <View style={styles.protocolSection}>
-                  <Text style={styles.protocolLabel}>Protocolo Finexa Ejecutando:</Text>
+                  <Text style={styles.protocolLabel}>Protocolo Finexa Ejecutado:</Text>
 
                   <View style={styles.protocolList}>
                     <View style={styles.protocolItem}>
@@ -417,7 +418,7 @@ const styles = StyleSheet.create({
     color: PrismColors.textPrimary,
   },
   alertCard: {
-    paddingTop: 48,
+    // paddingTop: 48,
   },
   alertHeader: {
     flexDirection: 'row',
