@@ -31,9 +31,9 @@ import (
 //	@Failure		500		{object}	apiresult.ErrResult
 //	@Router			/v1/transactions/sync-and-analyze [post]
 func (h *TransactionsHandler) syncAndAnalyze(c *echo.Context) error {
-	uid, ok := authUserID(c)
-	if !ok {
-		return apiresult.RespondError(c, http.StatusUnauthorized, apiresult.CodeUnauthorized, "missing authenticated user", nil)
+	uid, err := h.userIDFromPath(c)
+	if err != nil {
+		return apiresult.RespondError(c, http.StatusBadRequest, apiresult.CodeValidationError, "invalid user id", nil)
 	}
 	if h.store == nil {
 		return apiresult.RespondError(c, http.StatusInternalServerError, apiresult.CodeInternalError, "store not initialized", nil)
