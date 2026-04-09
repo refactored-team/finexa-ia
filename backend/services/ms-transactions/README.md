@@ -131,3 +131,20 @@ curl -X POST "$API_BASE/v1/transactions/test-bedrock" \
 - Health: [`internal/handlers/health.go`](internal/handlers/health.go)
 - Modelo de respuesta de transacción: [`internal/models/transaction.go`](internal/models/transaction.go)
 - Wiring de rutas: [`cmd/server/main.go`](cmd/server/main.go)
+
+## Checklist manual E2E (sync-and-analyze)
+
+1. Usuario autenticado existe en `users`.
+2. Usuario tiene `plaid_items.access_token` activo (`deleted_at IS NULL`).
+3. `ms-transactions` tiene `PLAID_CLIENT_ID`, `PLAID_SECRET`/`SANDBOX_SECRET`, `PLAID_ENV`.
+4. `AI_PIPELINE_BASE_URL` apunta a `ai-pipeline` disponible.
+5. Ejecutar:
+   - `POST /v1/transactions/sync-and-analyze`
+6. Verificar persistencia:
+   - `public.transactions` (upserts por `transaction_id`)
+   - `finexa_tx.transaction_analysis`
+   - `finexa_tx.insights`
+   - `finexa_tx.resilience_factors`
+   - `finexa_tx.cash_flow`
+   - `finexa_tx.pulse`
+   - `finexa_tx.pipeline_runs`

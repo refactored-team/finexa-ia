@@ -13,9 +13,12 @@ import (
 	"github.com/labstack/echo/v5"
 
 	"finexa-ia/apiresult"
+	"finexa-ia/ms-transactions/internal/aiclient"
 	"finexa-ia/ms-transactions/internal/auth"
 	"finexa-ia/ms-transactions/internal/config"
 	"finexa-ia/ms-transactions/internal/models"
+	"finexa-ia/ms-transactions/internal/persistence"
+	"finexa-ia/ms-transactions/internal/plaidsync"
 )
 
 const (
@@ -24,13 +27,23 @@ const (
 )
 
 type TransactionsHandler struct {
-	db   *sql.DB
-	cfg  *config.App
-	auth *auth.Deps
+	db    *sql.DB
+	cfg   *config.App
+	auth  *auth.Deps
+	plaid *plaidsync.Client
+	ai    *aiclient.Client
+	store *persistence.Store
 }
 
 func NewTransactionsHandler(db *sql.DB, cfg *config.App, authDeps *auth.Deps) *TransactionsHandler {
-	return &TransactionsHandler{db: db, cfg: cfg, auth: authDeps}
+	return &TransactionsHandler{
+		db:    db,
+		cfg:   cfg,
+		auth:  authDeps,
+		plaid: plaidsync.New(cfg),
+		ai:    aiclient.New(cfg.ResolveAIPipelineBaseURL()),
+		store: persistence.New(db),
+	}
 }
 
 func (h *TransactionsHandler) Register(e *echo.Echo) {
@@ -44,6 +57,7 @@ func (h *TransactionsHandler) Register(e *echo.Echo) {
 	g.GET("/resilience-factors", h.listResilienceFactors)
 	g.GET("/cash-flow/latest", h.getLatestCashFlow)
 	g.GET("/pulse/latest", h.getLatestPulse)
+	g.POST("/sync-and-analyze", h.syncAndAnalyze)
 	g.POST("/test-bedrock", h.testBedrock)
 }
 
