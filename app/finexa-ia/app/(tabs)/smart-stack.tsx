@@ -145,7 +145,7 @@ export default function SmartStackScreen() {
     resilience: { score_total: 14 },
     cash_flow: { projected_liquidity: 1400 },
     ant_expense_total: 2100,
-    insights: [{ title: 'Gastos hormiga altos en delivery y cafes' }],
+    insights: [{ title: 'Gastos hormiga altos en delivery y cafés' }],
   };
   const accounts = [
     {
@@ -192,7 +192,7 @@ export default function SmartStackScreen() {
   const gaugeProgress = analysis.resilience.score_total / 100;
   const circumference = 2 * Math.PI * 32;
   const strokeDashoffset = circumference - gaugeProgress * circumference;
-  const topInsight = `${analysis.insights[0]?.title ?? ''}`.slice(0, 30);
+  const topInsight = `${analysis.insights[0]?.title ?? ''}`;
   const cardColors = ['#312E81', '#3730A3', '#4338CA'];
   const selectedAccount = accounts.find((a) => a.account_id === selectedAccountId) ?? null;
   const allRecent = useMemo(
@@ -223,7 +223,7 @@ export default function SmartStackScreen() {
   };
   const openSheet = (id: string) => {
     setSelectedAccountId(id);
-    sheetY.value = withTiming(screenHeight * 0.25, { duration: 250 });
+    sheetY.value = withTiming(0, { duration: 250 });
   };
   const closeSheet = () => {
     sheetY.value = withTiming(screenHeight, { duration: 220 });
@@ -319,7 +319,7 @@ export default function SmartStackScreen() {
                 </View>
               </View>
               <View style={styles.gaugeRight}>
-                <Text style={styles.gaugeRightTitle}>Dias de oxigeno</Text>
+                <Text style={styles.gaugeRightTitle}>Días de oxigeno</Text>
                 <Text style={styles.gaugeRightSubtitle}>Tu dinero alcanza hasta el {projectedDate}</Text>
                 <View style={styles.insightBadge}>
                   <Text style={styles.insightBadgeText}>{topInsight}</Text>
@@ -430,9 +430,9 @@ const styles = StyleSheet.create({
     flex: 1,
     // height: 1000,
   },
-  // safe: {
-  //   flex: 1,
-  // },
+  safe: {
+    // Intentionally left without flex to avoid constraining ScrollView height.
+  },
   header: {
     paddingHorizontal: 22,
     paddingTop: 10,
@@ -511,6 +511,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 18,
+    height: 120,
   },
   gaugeLeft: {
     width: 75,
@@ -542,14 +543,15 @@ const styles = StyleSheet.create({
 
   },
   gaugeRightTitle: {
-    fontSize: 13,
+    fontSize: 16,
     fontWeight: '700',
     color: '#000000',
   },
   gaugeRightSubtitle: {
-    fontSize: 10,
+    fontSize: 12,
     color: '#6B7280',
     lineHeight: 14,
+    marginVertical: 2,
   },
   insightBadge: {
     alignSelf: 'flex-start',
@@ -557,10 +559,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 999,
+
+    width: '90%',
   },
   insightBadgeText: {
     color: '#854D0E',
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: '600',
   },
   sectionLabel: {
@@ -671,7 +675,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 0,
     right: 0,
-    bottom: -20,
+    bottom: 0,
     backgroundColor: '#FFFFFF',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
