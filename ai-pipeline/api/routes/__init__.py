@@ -5,7 +5,7 @@ for the FastAPI app to include.
 
 from fastapi import APIRouter
 
-from pipeline.api.routes import analyze, cashflow, classify, system, whatif
+from pipeline.api.routes import action_plan, analyze, cashflow, classify, survival, system, whatif
 
 router = APIRouter()
 router.include_router(system.router)
@@ -13,5 +13,7 @@ router.include_router(classify.router)
 router.include_router(analyze.router)
 router.include_router(cashflow.router)
 router.include_router(whatif.router)
+router.include_router(action_plan.router)
+router.include_router(survival.router)
 
 __all__ = ["router"]
