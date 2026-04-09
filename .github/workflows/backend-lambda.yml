@@ -8,11 +8,15 @@ on:
   pull_request:
     paths:
       - "backend/**"
+      - "ai-pipeline/**"
+      - "infra/**"
       - ".github/workflows/backend-lambda.yml"
   # Cualquier rama: merge a feat/* también dispara tests + docker build (no solo PR abierto).
   push:
     paths:
       - "backend/**"
+      - "ai-pipeline/**"
+      - "infra/**"
       - ".github/workflows/backend-lambda.yml"
   workflow_dispatch:
 
@@ -63,14 +67,17 @@ jobs:
       matrix:
         include:
           - service: ms-plaid
-            dockerfile: services/ms-plaid/Dockerfile.lambda
+            dockerfile: backend/services/ms-plaid/Dockerfile.lambda
+            context: backend
           - service: ms-users
-            dockerfile: services/ms-users/Dockerfile.lambda
+            dockerfile: backend/services/ms-users/Dockerfile.lambda
+            context: backend
           - service: ms-transactions
-            dockerfile: services/ms-transactions/Dockerfile.lambda
-    defaults:
-      run:
-        working-directory: backend
+            dockerfile: backend/services/ms-transactions/Dockerfile.lambda
+            context: backend
+          - service: ai-pipeline
+            dockerfile: ai-pipeline/Dockerfile.lambda
+            context: ai-pipeline
     steps:
       - uses: actions/checkout@v4
 
@@ -82,7 +89,7 @@ jobs:
             --build-arg "GIT_SHA=$TAG_SHA" \
             -f ${{ matrix.dockerfile }} \
             -t lambda-ci:${{ matrix.service }} \
-            .
+            ${{ matrix.context }}
 
   deploy:
     name: Push ECR + Lambda (${{ matrix.service }})
@@ -97,14 +104,17 @@ jobs:
       matrix:
         include:
           - service: ms-plaid
-            dockerfile: services/ms-plaid/Dockerfile.lambda
+            dockerfile: backend/services/ms-plaid/Dockerfile.lambda
+            context: backend
           - service: ms-users
-            dockerfile: services/ms-users/Dockerfile.lambda
+            dockerfile: backend/services/ms-users/Dockerfile.lambda
+            context: backend
           - service: ms-transactions
-            dockerfile: services/ms-transactions/Dockerfile.lambda
-    defaults:
-      run:
-        working-directory: backend
+            dockerfile: backend/services/ms-transactions/Dockerfile.lambda
+            context: backend
+          - service: ai-pipeline
+            dockerfile: ai-pipeline/Dockerfile.lambda
+            context: ai-pipeline
     steps:
       - uses: actions/checkout@v4
 
@@ -135,7 +145,7 @@ jobs:
             -f ${{ matrix.dockerfile }} \
             -t "$REGISTRY/$REPO:$TAG_SHA" \
             -t "$REGISTRY/$REPO:latest" \
-            .
+            ${{ matrix.context }}
           docker push "$REGISTRY/$REPO:$TAG_SHA"
           docker push "$REGISTRY/$REPO:latest"
           aws lambda update-function-code \

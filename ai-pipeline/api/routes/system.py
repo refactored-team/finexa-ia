@@ -28,6 +28,26 @@ def health_check() -> HealthResponse:
     )
 
 
+@router.get(
+    "/health",
+    response_model=HealthResponse,
+    tags=["Sistema"],
+    summary="Health check (Lambda/API Gateway)",
+)
+def health_check_lambda() -> HealthResponse:
+    return health_check()
+
+
+@router.get(
+    "/ready",
+    response_model=HealthResponse,
+    tags=["Sistema"],
+    summary="Readiness check",
+)
+def readiness_check() -> HealthResponse:
+    return health_check()
+
+
 @router.post(
     "/test-bedrock",
     tags=["Sistema"],
