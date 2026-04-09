@@ -1,6 +1,14 @@
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useEffect, useMemo, useState } from 'react';
+import {
+  mapInsightToCancellationFinding,
+  type CancellationFindingDTO,
+} from '@/src/features/cancellation/mapInsightToFinding';
+import {
+  clearCancellationSnapshot,
+  consumePendingCancellationInsight,
+} from '@/src/features/cancellation/pendingInsight';
 import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   SharedValue,
@@ -27,6 +35,23 @@ interface CancellationFinding {
   service_name: string;
   amount: number;
   steps: CancellationStep[];
+  screenTitle?: string;
+  savingsMetaLine?: string;
+  serviceIconBg?: string;
+}
+
+function dtoToFinding(dto: CancellationFindingDTO): CancellationFinding {
+  return {
+    id: dto.id,
+    title: dto.title,
+    icon: dto.icon,
+    service_name: dto.service_name,
+    amount: dto.amount,
+    steps: dto.steps,
+    screenTitle: dto.screenTitle,
+    savingsMetaLine: dto.savingsMetaLine,
+    serviceIconBg: dto.serviceIconBg,
+  };
 }
 
 export interface CancellationScreenProps {
@@ -279,18 +304,19 @@ export function CancellationScreen({ finding, onComplete, onBack }: Cancellation
           <Pressable style={styles.backButton} onPress={onBack}>
             <Text style={styles.backText}>←</Text>
           </Pressable>
-          <Text style={styles.headerTitle}>Cancelar suscripción</Text>
+          <Text style={styles.headerTitle}>{finding.screenTitle ?? 'Cancelar suscripción'}</Text>
           <View style={styles.headerRightSpacer} />
         </View>
 
         <View style={styles.serviceRow}>
-          <View style={styles.serviceIconWrap}>
+          <View style={[styles.serviceIconWrap, { backgroundColor: finding.serviceIconBg ?? '#1DB954' }]}>
             <Text style={styles.serviceIcon}>{finding.icon}</Text>
           </View>
           <View style={styles.serviceTextWrap}>
             <Text style={styles.serviceName}>{finding.service_name}</Text>
             <Text style={styles.serviceMeta}>
-              ${finding.amount} · cobrado {Math.max(1, currentStep + 1)} veces
+              {finding.savingsMetaLine ??
+                `$${finding.amount} · cobrado ${Math.max(1, currentStep + 1)} veces`}
             </Text>
           </View>
         </View>
@@ -365,9 +391,20 @@ export function CancellationScreen({ finding, onComplete, onBack }: Cancellation
 
 export default function CancellingProcessRoute() {
   const router = useRouter();
+  const [finding] = useState<CancellationFinding>(() => {
+    const pending = consumePendingCancellationInsight();
+    if (pending) {
+      return dtoToFinding(mapInsightToCancellationFinding(pending));
+    }
+    return MOCK_FINDING;
+  });
+
+  useEffect(() => () => clearCancellationSnapshot(), []);
+
   return (
     <CancellationScreen
-      finding={MOCK_FINDING}
+      key={finding.id}
+      finding={finding}
       onBack={() => router.back()}
       onComplete={() => router.replace('/(tabs)/explore')}
     />
@@ -423,7 +460,6 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 12,
-    backgroundColor: '#1DB954',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 10,

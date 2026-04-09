@@ -11,6 +11,7 @@ import {
   Dimensions,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter } from 'expo-router';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -22,6 +23,8 @@ import { Spacing } from '@/constants/uiStyles';
 import SmartStack, { Finding, Theme } from '@/components/SmartStack';
 import { AuthBackground } from '@/components/auth/AuthBackground';
 import { useSignOut } from '@/lib/auth/useSignOut';
+import type { CancellationInsightPayload } from '@/src/features/cancellation/mapInsightToFinding';
+import { setPendingCancellationInsight } from '@/src/features/cancellation/pendingInsight';
 import apiClient from '@/src/services/api/apiClient';
 
 // ---------------------------------------------------------------------------
@@ -117,9 +120,13 @@ type ApiCashFlow = {
 };
 
 type ApiInsight = {
+  id?: number;
   title?: string | null;
   description?: string | null;
+  priority?: string | null;
+  potential_monthly_saving?: number | null;
   affected_category?: string | null;
+  updated_at?: string | null;
 };
 
 type ApiTransaction = {
@@ -184,6 +191,7 @@ const fallbackFindings: Finding[] = [
 // Screen
 // ---------------------------------------------------------------------------
 export default function SmartStackScreen() {
+  const router = useRouter();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [activeCardIndex, setActiveCardIndex] = useState(0);
   const theme = HERO_THEME;
@@ -318,19 +326,50 @@ export default function SmartStackScreen() {
   const stackFindings = useMemo<Finding[]>(() => {
     if (apiInsights.length === 0) return fallbackFindings;
 
-    return apiInsights.slice(0, 3).map((insight, index) => ({
-      id: String(index + 1),
-      title: insight.title ?? `Insight ${index + 1}`,
-      icon: '💡',
-      cardColor: cardColors[index % 3],
-      buttonColor: index === 2 ? '#6366F1' : '#4F46E5',
-      steps: [
-        { text: 'Analizamos tus transacciones recientes', completed: true, active: false },
-        { text: insight.description ?? 'Detectamos un patrón de gasto relevante', completed: true, active: false },
-        { text: '¿Quieres que te ayude a resolverlo?', completed: false, active: true },
-      ],
-    }));
+    return apiInsights.slice(0, 3).map((insight, index) => {
+      const payload: CancellationInsightPayload = {
+        id: typeof insight.id === 'number' ? insight.id : index + 1,
+        title: insight.title,
+        description: insight.description,
+        priority: insight.priority,
+        potential_monthly_saving: insight.potential_monthly_saving,
+        affected_category: insight.affected_category,
+        updated_at: insight.updated_at,
+      };
+      return {
+        id: String(insight.id ?? index + 1),
+        title: insight.title ?? `Recomendación ${index + 1}`,
+        icon: '💡',
+        cardColor: cardColors[index % 3],
+        buttonColor: index === 2 ? '#6366F1' : '#4F46E5',
+        cancellationSource: payload,
+        steps: [
+          { text: 'Analizamos tus transacciones recientes', completed: true, active: false },
+          { text: insight.description ?? 'Detectamos un patrón de gasto relevante', completed: true, active: false },
+          { text: '¿Quieres que te ayude a resolverlo?', completed: false, active: true },
+        ],
+      };
+    });
   }, [apiInsights]);
+
+  const handleVerEstrategia = useCallback(
+    (finding: Finding) => {
+      if (finding.cancellationSource) {
+        setPendingCancellationInsight(finding.cancellationSource);
+      } else {
+        const activeStep = finding.steps.find((s) => s.active);
+        setPendingCancellationInsight({
+          id: Number.parseInt(finding.id, 10) || 0,
+          title: finding.title,
+          description: activeStep?.text ?? finding.title,
+          affected_category: 'default',
+          potential_monthly_saving: 500,
+        });
+      }
+      router.push('/cancelling-process');
+    },
+    [router],
+  );
   const onAccountsScroll = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {
     const rawIndex = Math.round(e.nativeEvent.contentOffset.x / CARD_WIDTH);
     const clampedIndex = Math.max(0, Math.min(rawIndex, accounts.length - 1));
@@ -432,6 +471,7 @@ export default function SmartStackScreen() {
               theme={theme}
               currentIndex={currentIndex}
               onIndexChange={setCurrentIndex}
+              onVerEstrategia={handleVerEstrategia}
             />
 
             <View style={styles.lowerSection}>

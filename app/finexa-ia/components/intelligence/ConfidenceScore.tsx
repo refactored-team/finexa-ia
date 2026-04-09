@@ -1,5 +1,6 @@
 import { PrismColors } from '@/constants/theme';
-import { Radius, Shadow, Spacing, TextStyles } from '@/constants/uiStyles';
+import { Radius, Spacing, TextStyles } from '@/constants/uiStyles';
+import { LinearGradient } from 'expo-linear-gradient';
 import { ShieldCheck, Sparkles } from 'lucide-react-native';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
@@ -18,8 +19,11 @@ export default function ConfidenceScore({
   const displayScore = antExpensePercentage != null ? `${antExpensePercentage}%` : '—';
 
   return (
-    <View style={styles.container}>
-      {/* Accent Top Left */}
+    <LinearGradient
+      colors={['#3525cd', '#1e128c']}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={styles.container}>
       <View style={[styles.prismAccent, styles.prismAccentTl]} />
 
       <View style={styles.header}>
@@ -27,7 +31,7 @@ export default function ConfidenceScore({
           <Text style={styles.label}>Puntaje de Confianza</Text>
           <View style={styles.scoreRow}>
             <Text style={styles.scoreText}>{displayScore}</Text>
-            <ShieldCheck size={20} color={PrismColors.tertiary} fill={PrismColors.tertiary + '30'} />
+            <ShieldCheck size={20} color="#00FFFF" fill="rgba(0,255,255,0.25)" />
           </View>
           {riskLevel != null && (
             <Text style={styles.riskLabel}>Riesgo: {riskLevel}</Text>
@@ -35,7 +39,7 @@ export default function ConfidenceScore({
         </View>
 
         <View style={styles.iconWrap}>
-          <Sparkles size={20} color={PrismColors.tertiary} />
+          <Sparkles size={20} color="#00FFFF" />
         </View>
       </View>
 
@@ -43,23 +47,25 @@ export default function ConfidenceScore({
         <Text style={styles.summaryText}>{summary}</Text>
       )}
 
-      {/* Accent Bottom Right */}
       <View style={[styles.prismAccent, styles.prismAccentBr]} />
-    </View>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
     borderRadius: Radius.xl,
-    ...Shadow.card,
     overflow: 'hidden',
     padding: Spacing.xl,
     borderWidth: 0.5,
-    borderColor: 'rgba(39, 75, 154, 0.08)',
+    borderColor: 'rgba(255, 255, 255, 0.12)',
     gap: Spacing.md,
+    shadowColor: '#1e128c',
+    shadowOffset: { width: 0, height: 16 },
+    shadowOpacity: 0.4,
+    shadowRadius: 32,
+    elevation: 8,
   },
   statusMicro: {
     position: 'absolute',
@@ -88,8 +94,8 @@ const styles = StyleSheet.create({
   prismAccentBr: {
     bottom: -1,
     right: -1,
-    backgroundColor: PrismColors.tertiary,
-    shadowColor: PrismColors.tertiary,
+    backgroundColor: '#00FFFF',
+    shadowColor: '#00FFFF',
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.4,
     shadowRadius: 6,
@@ -103,10 +109,11 @@ const styles = StyleSheet.create({
   },
   label: {
     fontFamily: TextStyles.caption.fontFamily,
-    fontSize: 10,
+    fontSize: 11,
     letterSpacing: 1.5,
     textTransform: 'uppercase',
-    color: 'rgba(30, 41, 59, 0.7)',
+    color: '#F8FAFC',
+    fontWeight: '600',
   },
   scoreRow: {
     flexDirection: 'row',
@@ -118,17 +125,18 @@ const styles = StyleSheet.create({
     fontFamily: TextStyles.screenTitle.fontFamily,
     fontSize: 36,
     letterSpacing: -1,
-    color: PrismColors.primary,
+    color: '#FFFFFF',
+    fontWeight: '700',
   },
   iconWrap: {
     width: 48,
     height: 48,
     borderRadius: 24,
     borderWidth: 0.5,
-    borderColor: 'rgba(6, 182, 212, 0.2)', // tertiary with opacity
+    borderColor: 'rgba(255, 255, 255, 0.2)',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(6, 182, 212, 0.05)',
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
   },
   footerLabel: {
     fontFamily: TextStyles.caption.fontFamily,
@@ -139,16 +147,18 @@ const styles = StyleSheet.create({
   },
   riskLabel: {
     fontFamily: TextStyles.caption.fontFamily,
-    fontSize: 10,
+    fontSize: 11,
     letterSpacing: 0.5,
-    color: 'rgba(30, 41, 59, 0.6)',
+    color: '#E2E8F0',
     marginTop: 4,
     textTransform: 'capitalize',
+    fontWeight: '600',
   },
   summaryText: {
     fontFamily: TextStyles.bodyMedium.fontFamily,
-    fontSize: 12,
-    lineHeight: 18,
-    color: 'rgba(30, 41, 59, 0.7)',
+    fontSize: 14,
+    lineHeight: 22,
+    color: '#F1F5F9',
+    fontWeight: '500',
   },
 });

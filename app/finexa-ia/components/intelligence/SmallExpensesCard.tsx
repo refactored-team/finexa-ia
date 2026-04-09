@@ -106,13 +106,15 @@ const styles = StyleSheet.create({
   title: {
     fontFamily: TextStyles.screenTitle.fontFamily,
     fontSize: 18,
-    color: PrismColors.textPrimary,
+    color: '#0F172A',
+    fontWeight: '700',
   },
   totalValue: {
     fontFamily: TextStyles.screenTitle.fontFamily,
     fontSize: 26,
     color: PrismColors.danger,
     marginTop: 4,
+    fontWeight: '700',
   },
   leakBadge: {
     backgroundColor: 'rgba(185, 28, 28, 0.05)',
@@ -124,9 +126,9 @@ const styles = StyleSheet.create({
   },
   leakBadgeText: {
     fontFamily: TextStyles.caption.fontFamily,
-    fontSize: 10,
-    fontWeight: '700',
-    color: PrismColors.danger,
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#991B1B',
     textTransform: 'uppercase',
   },
   listContainer: {
@@ -157,20 +159,22 @@ const styles = StyleSheet.create({
   },
   itemName: {
     fontFamily: TextStyles.bodyMedium.fontFamily,
-    fontSize: 14,
-    color: PrismColors.textPrimary,
+    fontSize: 15,
+    color: '#0F172A',
+    fontWeight: '600',
   },
   itemTime: {
     fontFamily: TextStyles.caption.fontFamily,
-    fontSize: 10,
-    color: 'rgba(100, 116, 139, 0.7)',
+    fontSize: 11,
+    color: '#475569',
     marginTop: 2,
+    fontWeight: '500',
   },
   itemAmount: {
     fontFamily: TextStyles.bodyMedium.fontFamily,
-    fontSize: 14,
-    fontWeight: '700',
-    color: PrismColors.textPrimary,
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#0F172A',
   },
   prismAccent: {
     position: 'absolute',

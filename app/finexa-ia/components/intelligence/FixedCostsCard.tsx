@@ -79,19 +79,21 @@ const styles = StyleSheet.create({
   title: {
     fontFamily: TextStyles.screenTitle.fontFamily,
     fontSize: 18,
-    color: PrismColors.textPrimary,
+    color: '#0F172A',
+    fontWeight: '700',
   },
   totalValue: {
     fontFamily: TextStyles.screenTitle.fontFamily,
     fontSize: 26,
-    color: PrismColors.textPrimary,
+    color: '#0F172A',
     marginTop: 4,
+    fontWeight: '700',
   },
   ratioBadge: {
     fontFamily: TextStyles.caption.fontFamily,
-    fontSize: 11,
-    fontWeight: '700',
-    color: PrismColors.primary,
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#1D4ED8',
     marginTop: Spacing.md,
     letterSpacing: 0.5,
   },
@@ -102,8 +104,9 @@ const styles = StyleSheet.create({
   },
   itemText: {
     fontFamily: TextStyles.bodyMedium.fontFamily,
-    fontSize: 12,
-    color: PrismColors.textSecondary,
+    fontSize: 13,
+    color: '#1E293B',
+    fontWeight: '500',
   },
   progressTrack: {
     marginTop: Spacing.xl,

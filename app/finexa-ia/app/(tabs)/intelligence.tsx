@@ -229,14 +229,15 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.lg,
   },
   errorTitle: {
-    color: PrismColors.textPrimary,
-    fontWeight: '700',
-    fontSize: 16,
+    color: '#0F172A',
+    fontWeight: '800',
+    fontSize: 17,
   },
   errorText: {
-    color: PrismColors.textSecondary,
-    fontSize: 13,
-    lineHeight: 20,
+    color: '#334155',
+    fontSize: 14,
+    lineHeight: 22,
+    fontWeight: '500',
   },
   retryButton: {
     alignSelf: 'flex-start',
@@ -247,8 +248,8 @@ const styles = StyleSheet.create({
   },
   retryText: {
     color: '#FFFFFF',
-    fontWeight: '700',
-    fontSize: 12,
+    fontWeight: '800',
+    fontSize: 13,
     letterSpacing: 0.3,
     textTransform: 'uppercase',
   },

@@ -19,6 +19,7 @@ import { SharedValue } from 'react-native-reanimated';
 
 import { Colors, PrismColors } from '@/constants/theme';
 import { Spacing } from '@/constants/uiStyles';
+import type { CancellationInsightPayload } from '@/src/features/cancellation/mapInsightToFinding';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -34,6 +35,7 @@ export interface Finding {
     completed: boolean;
     active: boolean;
   }>;
+  cancellationSource?: CancellationInsightPayload;
 }
 
 export interface Theme {
@@ -56,6 +58,7 @@ interface StackCardProps {
   isActive: boolean;
   translateY: SharedValue<number>;
   theme: Theme;
+  onVerEstrategia?: (finding: Finding) => void;
 }
 
 interface SmartStackProps {
@@ -63,12 +66,13 @@ interface SmartStackProps {
   theme: Theme;
   currentIndex: number;
   onIndexChange: (index: number) => void;
+  onVerEstrategia?: (finding: Finding) => void;
 }
 
 // ---------------------------------------------------------------------------
 // Card Component
 // ---------------------------------------------------------------------------
-function StackCard({ finding, offset, isActive, translateY, theme }: StackCardProps) {
+function StackCard({ finding, offset, isActive, translateY, theme, onVerEstrategia }: StackCardProps) {
   const [stepsCollapsed, setStepsCollapsed] = useState(true);
   const router = useRouter();
 
@@ -153,7 +157,13 @@ function StackCard({ finding, offset, isActive, translateY, theme }: StackCardPr
         style={styles.ctaButton}>
         <Pressable
           style={styles.ctaPressable}
-          onPress={() => router.push('/cancelling-process')}>
+          onPress={() => {
+            if (onVerEstrategia) {
+              onVerEstrategia(finding);
+              return;
+            }
+            router.push('/cancelling-process');
+          }}>
           <Text style={styles.ctaText}>Ver estrategia</Text>
         </Pressable>
       </LinearGradient>
@@ -199,6 +209,7 @@ export default function SmartStack({
   theme,
   currentIndex,
   onIndexChange,
+  onVerEstrategia,
 }: SmartStackProps) {
   const translateY = useSharedValue(0);
   const currentIndexSV = useSharedValue(currentIndex);
@@ -246,6 +257,7 @@ export default function SmartStack({
               isActive={false}
               translateY={translateY}
               theme={theme}
+              onVerEstrategia={onVerEstrategia}
             />
           );
         })}
@@ -259,6 +271,7 @@ export default function SmartStack({
             isActive={true}
             translateY={translateY}
             theme={theme}
+            onVerEstrategia={onVerEstrategia}
           />
         </GestureDetector>
       </View>
