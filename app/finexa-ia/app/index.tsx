@@ -1,12 +1,12 @@
-import { Redirect } from 'expo-router';
+import { Redirect, type Href } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 
+import { Layout } from '@/constants/uiStyles';
 import { isAmplifyAuthConfigured } from '@/lib/amplify/configure';
 import { hasAuthenticatedUser } from '@/lib/auth/cognito';
 import { getPostAuthDestination } from '@/lib/auth/postAuthDestination';
 import { syncInternalUserFromSession } from '@/src/services/api/users/usersService';
-import { Layout } from '@/constants/uiStyles';
 
 export default function Index() {
   const [ready, setReady] = useState(false);
@@ -74,7 +74,7 @@ export default function Index() {
         </View>
       );
     }
-    return <Redirect href={signedInHref} />;
+    return <Redirect href={signedInHref as Href} />;
   }
 
   return <Redirect href="/login" />;

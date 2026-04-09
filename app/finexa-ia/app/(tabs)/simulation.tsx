@@ -1,0 +1,18 @@
+import React from 'react';
+import { View, Text, StyleSheet } from 'react-native';
+
+export default function SimulationScreen() {
+  return (
+    <View style={styles.container}>
+      <Text>Simulation Screen Placeholder</Text>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+});

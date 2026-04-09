@@ -1,36 +1,19 @@
-import { BlurView } from 'expo-blur';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
-  ActivityIndicator,
   Alert,
   Platform,
-  Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   TurboModuleRegistry,
   useWindowDimensions,
-  View,
-  type StyleProp,
-  type ViewStyle,
+  View
 } from 'react-native';
-import Animated, {
-  Easing,
-  interpolate,
-  runOnJS,
-  useAnimatedProps,
-  useAnimatedStyle,
-  useSharedValue,
-  withDelay,
-  withRepeat,
-  withSequence,
-  withTiming,
-} from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Svg, { Circle, Defs, G, Stop, LinearGradient as SvgLinearGradient } from 'react-native-svg';
 
+import { AuthBackground } from '@/components/auth';
 import { plaidService } from '@/src/services/api/plaid/plaidService';
 import {
   create as plaidCreate,
@@ -40,7 +23,6 @@ import {
   type LinkSuccess,
 } from 'react-native-plaid-link-sdk';
 
-/** Plaid RN: onExit recibe un solo objeto { error?, metadata } (no el par (error, metadata) del SDK web). */
 function logPlaidLinkExit(linkExit: LinkExit) {
   const { error, metadata } = linkExit;
   if (error) {
@@ -60,257 +42,19 @@ function logPlaidLinkExit(linkExit: LinkExit) {
   }
 }
 
-import { AuthBackground } from '@/components/auth';
 import {
-  ChevronRight,
+  ArrowRight,
   Landmark,
   Lock,
-  Shield,
-  Sparkles,
-  Target,
-  TrendingUp,
+  ShieldCheck
 } from '@/constants/lucideIcons';
-import { PrismColors } from '@/constants/theme';
-import { BorderColors, Layout, Radius, Shadow, Spacing, TextStyles } from '@/constants/uiStyles';
+import { Radius, Shadow, Spacing, TextStyles } from '@/constants/uiStyles';
 import {
   getExpoGoDevBuildInstructions,
   isAmplifyAuthConfigured,
   isExpoGo,
 } from '@/lib/amplify/configure';
-import { signOutUser } from '@/lib/auth/cognito';
 import { getInternalUserIdFromSession } from '@/src/services/api/users/usersService';
-
-const RING_SIZE = 168;
-const RING_R = 58;
-const RING_STROKE = 6;
-/** Arco al que “crece” la línea; el score completo se desbloquea al vincular el banco */
-const PROGRESS_PREVIEW = 0.22;
-
-const RING_STATUS_MESSAGES = [
-  'Tu score te espera',
-  'Solo falta vincular',
-  'Con Plaid, en un paso',
-  'Listo cuando conectes',
-] as const;
-
-const AnimatedCircle = Animated.createAnimatedComponent(Circle);
-
-const VALUE_ITEMS = [
-  {
-    Icon: Shield,
-    title: 'Encriptación',
-    body: 'Tus datos viajan cifrados de extremo a extremo.',
-  },
-  {
-    Icon: Sparkles,
-    title: 'IA predictiva',
-    body: 'Modelos que anticipan tendencias en tus finanzas.',
-  },
-  {
-    Icon: TrendingUp,
-    title: 'Crecimiento',
-    body: 'Optimización automática de tu flujo de capital.',
-  },
-  {
-    Icon: Target,
-    title: 'Precisión',
-    body: 'Categorización exacta de cada transacción.',
-  },
-] as const;
-
-const ENTER = {
-  duration: 460,
-  easing: Easing.out(Easing.cubic),
-  slide: 14,
-} as const;
-
-function EnterFadeSlide({
-  delay = 0,
-  style,
-  children,
-}: {
-  delay?: number;
-  style?: StyleProp<ViewStyle>;
-  children: ReactNode;
-}) {
-  const t = useSharedValue(0);
-  useEffect(() => {
-    t.value = withDelay(delay, withTiming(1, { duration: ENTER.duration, easing: ENTER.easing }));
-  }, [delay, t]);
-  const animatedStyle = useAnimatedStyle(() => ({
-    opacity: t.value,
-    transform: [{ translateY: interpolate(t.value, [0, 1], [ENTER.slide, 0]) }],
-  }));
-  return <Animated.View style={[style, animatedStyle]}>{children}</Animated.View>;
-}
-
-function PulsingRingGlow({
-  ringSize,
-  style,
-}: {
-  ringSize: number;
-  style: ViewStyle;
-}) {
-  const o = useSharedValue(0.34);
-  useEffect(() => {
-    o.value = withRepeat(
-      withSequence(
-        withTiming(0.58, { duration: 2400, easing: Easing.inOut(Easing.sin) }),
-        withTiming(0.34, { duration: 2400, easing: Easing.inOut(Easing.sin) }),
-      ),
-      -1,
-      false,
-    );
-  }, [o]);
-  const animatedStyle = useAnimatedStyle(() => ({ opacity: o.value }));
-  const w = ringSize + 44;
-  return (
-    <Animated.View
-      style={[
-        style,
-        animatedStyle,
-        {
-          width: w,
-          height: w,
-          borderRadius: w / 2,
-          marginTop: -w / 2,
-          marginLeft: -w / 2,
-        },
-      ]}
-    />
-  );
-}
-
-function BreathingIconBadge({ children }: { children: ReactNode }) {
-  const s = useSharedValue(1);
-  useEffect(() => {
-    s.value = withRepeat(
-      withSequence(
-        withTiming(1.035, { duration: 2200, easing: Easing.inOut(Easing.sin) }),
-        withTiming(1, { duration: 2200, easing: Easing.inOut(Easing.sin) }),
-      ),
-      -1,
-      false,
-    );
-  }, [s]);
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: s.value }],
-  }));
-  return <Animated.View style={animatedStyle}>{children}</Animated.View>;
-}
-
-type RingSvgDims = {
-  ringSize: number;
-  ringCx: number;
-  ringCy: number;
-  ringR: number;
-  ringCirc: number;
-};
-
-function AnimatedProgressRing({ ringSize, ringCx, ringCy, ringR, ringCirc }: RingSvgDims) {
-  const progress = useSharedValue(0);
-
-  useEffect(() => {
-    progress.value = withDelay(
-      400,
-      withTiming(PROGRESS_PREVIEW, { duration: 2600, easing: Easing.out(Easing.cubic) }),
-    );
-  }, [progress]);
-
-  const animatedProps = useAnimatedProps(() => ({
-    strokeDashoffset: ringCirc * (1 - progress.value),
-  }));
-
-  return (
-    <Svg width={ringSize} height={ringSize} style={styles.ringSvg}>
-      <Defs>
-        <SvgLinearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-          <Stop offset="0%" stopColor={PrismColors.primary} />
-          <Stop offset="48%" stopColor={PrismColors.tertiary} />
-          <Stop offset="100%" stopColor={PrismColors.secondary} />
-        </SvgLinearGradient>
-      </Defs>
-      <Circle
-        cx={ringCx}
-        cy={ringCy}
-        r={ringR}
-        stroke="rgba(148, 163, 184, 0.28)"
-        strokeWidth={RING_STROKE}
-        fill="none"
-      />
-      <G transform={`rotate(-90 ${ringCx} ${ringCy})`}>
-        <AnimatedCircle
-          cx={ringCx}
-          cy={ringCy}
-          r={ringR}
-          stroke="url(#ringGrad)"
-          strokeWidth={RING_STROKE}
-          fill="none"
-          strokeLinecap="round"
-          strokeDasharray={`${ringCirc} ${ringCirc}`}
-          animatedProps={animatedProps}
-        />
-      </G>
-    </Svg>
-  );
-}
-
-function RingStatusCycle({
-  messages,
-  tightLayout,
-}: {
-  messages: readonly string[];
-  tightLayout: boolean;
-}) {
-  const [index, setIndex] = useState(0);
-  const labelOp = useSharedValue(1);
-
-  const advance = useCallback(() => {
-    setIndex((i) => (i + 1) % messages.length);
-    labelOp.value = withTiming(1, {
-      duration: 400,
-      easing: Easing.out(Easing.cubic),
-    });
-  }, [labelOp, messages.length]);
-
-  useEffect(() => {
-    labelOp.value = 1;
-    let intervalId: ReturnType<typeof setInterval> | undefined;
-    const step = () => {
-      labelOp.value = withTiming(
-        0,
-        { duration: 340, easing: Easing.inOut(Easing.quad) },
-        (finished) => {
-          if (finished) {
-            runOnJS(advance)();
-          }
-        },
-      );
-    };
-    const startDelay = setTimeout(() => {
-      intervalId = setInterval(step, 3600);
-    }, 2200);
-    return () => {
-      clearTimeout(startDelay);
-      if (intervalId) clearInterval(intervalId);
-    };
-  }, [advance, labelOp]);
-
-  const captionAnim = useAnimatedStyle(() => ({
-    opacity: labelOp.value,
-    transform: [{ translateY: interpolate(labelOp.value, [0, 1], [5, 0]) }],
-  }));
-
-  return (
-    <Animated.View style={[styles.ringStatusTextWrap, captionAnim]}>
-      <Text
-        style={[styles.ringAwaitTitle, tightLayout && styles.ringAwaitTitleTight]}
-        numberOfLines={2}>
-        {messages[index] ?? messages[0]}
-      </Text>
-    </Animated.View>
-  );
-}
 
 export default function LinkBankScreen() {
   const insets = useSafeAreaInsets();
@@ -318,7 +62,6 @@ export default function LinkBankScreen() {
   const router = useRouter();
 
   const [isLinking, setIsLinking] = useState(false);
-  const [signingOut, setSigningOut] = useState(false);
 
   const clientIsExpoGo = useMemo(() => isExpoGo(), []);
 
@@ -332,7 +75,7 @@ export default function LinkBankScreen() {
         const id = await getInternalUserIdFromSession();
         const { linked } = await plaidService.getPlaidLinkStatus(String(id));
         if (!cancelled && linked) {
-          router.replace('/(tabs)/explore');
+          router.replace('/(tabs)/dashboard');
         }
       } catch {
         /* permanece en link-bank */
@@ -343,35 +86,6 @@ export default function LinkBankScreen() {
     };
   }, [router]);
 
-  const tightLayout = windowH < 700;
-  const ringSize = tightLayout ? 148 : RING_SIZE;
-  const ringR = tightLayout ? 52 : RING_R;
-  const ringCirc = 2 * Math.PI * ringR;
-  const ringCx = ringSize / 2;
-  const ringCy = ringSize / 2;
-
-  const headerPaddingTop = insets.top + Spacing.sm;
-  const bodyPaddingTop = useMemo(() => headerPaddingTop + (tightLayout ? 76 : 82), [headerPaddingTop, tightLayout]);
-
-  async function handleSignOut() {
-    if (signingOut) return;
-    setSigningOut(true);
-    try {
-      if (!isAmplifyAuthConfigured()) {
-        router.replace('/login');
-        return;
-      }
-      const result = await signOutUser();
-      if (!result.ok) {
-        Alert.alert('Cerrar sesión', result.message);
-        return;
-      }
-      router.replace('/login');
-    } finally {
-      setSigningOut(false);
-    }
-  }
-
   function showDevBuildHelp() {
     const d = getExpoGoDevBuildInstructions();
     if (d) {
@@ -379,7 +93,6 @@ export default function LinkBankScreen() {
     }
   }
 
-  /** Link token solo al pulsar el CTA: se pide al backend y luego se abre el SDK en la misma interacción. */
   async function handleCtaPress() {
     if (clientIsExpoGo) {
       showDevBuildHelp();
@@ -396,7 +109,7 @@ export default function LinkBankScreen() {
     if (!nativePlaidPresent) {
       Alert.alert(
         'Plaid no está enlazado',
-        'Falta el módulo nativo del SDK. Volvé a compilar con npx expo run:ios (o run:android) después de instalar dependencias. Si usás Expo Go, no funcionará: necesitás un development build.',
+        'Falta el módulo nativo del SDK. Volvé a compilar con npx expo run:ios (o run:android).',
       );
       return;
     }
@@ -413,11 +126,7 @@ export default function LinkBankScreen() {
           internalUserId = '1';
         }
       } catch (e) {
-        console.error('Error al obtener usuario interno:', e);
-        Alert.alert(
-          'Usuario no encontrado',
-          'No encontramos tu perfil en el servidor. Cerrá sesión e iniciá de nuevo para sincronizar.',
-        );
+        Alert.alert('Usuario no encontrado', 'No encontramos tu perfil. Inicia sesión de nuevo.');
         setIsLinking(false);
         return;
       }
@@ -427,31 +136,27 @@ export default function LinkBankScreen() {
         const data = await plaidService.createLinkToken(internalUserId);
         linkToken = data.data?.link_token ?? null;
       } catch (error) {
-        console.error('Error al obtener el link_token:', error);
         Alert.alert('Error', 'No se pudo conectar con el servidor bancario.');
         setIsLinking(false);
         return;
       }
 
       if (!linkToken) {
-        Alert.alert('Error', 'No se recibió un token de enlace válido. Intentá de nuevo.');
+        Alert.alert('Error', 'No se recibió un token válido.');
         setIsLinking(false);
         return;
       }
 
-      plaidCreate({
-        token: linkToken,
-      });
+      plaidCreate({ token: linkToken });
 
       plaidOpen({
         iOSPresentationStyle: 'MODAL' as unknown as LinkIOSPresentationStyle,
         onSuccess: async (success: LinkSuccess) => {
           try {
             await plaidService.exchangePublicToken(internalUserId, success.publicToken);
-            router.replace('/(tabs)/explore');
+            router.replace('/(tabs)/dashboard');
           } catch (error) {
-            console.error('Error al guardar conexión bancaria:', error);
-            Alert.alert('Error', 'No se pudo guardar la conexión de forma segura.');
+            Alert.alert('Error', 'No se pudo guardar la conexión.');
           } finally {
             setIsLinking(false);
           }
@@ -462,537 +167,330 @@ export default function LinkBankScreen() {
         },
       });
     } catch (error) {
-      console.error('[Plaid] open/create failed:', error);
       setIsLinking(false);
-      Alert.alert(
-        'Plaid no disponible',
-        'Para abrir Plaid con este SDK necesitas un dev build (no Expo Go). Revisa la consola para el detalle.',
-      );
+      Alert.alert('Plaid no disponible', 'Para abrir Plaid necesitas un dev build.');
     }
   }
 
+  const paddingTop = insets.top || Spacing.md;
+
   return (
-    <AuthBackground>
-      <View style={Layout.flex1}>
-        <BlurView
-          intensity={48}
-          tint="light"
-          style={[styles.headerBlur, { paddingTop: headerPaddingTop, paddingBottom: Spacing.sm }]}>
-          <EnterFadeSlide delay={0}>
-            <View style={styles.headerInner}>
-              <Pressable
-                onPress={handleSignOut}
-                disabled={signingOut}
-                accessibilityRole="button"
-                accessibilityLabel="Cerrar sesión"
-                accessibilityState={{ disabled: signingOut }}
-                hitSlop={12}
-                style={({ pressed }) => [
-                  styles.signOutPress,
-                  pressed && !signingOut && styles.pressed,
-                  signingOut && styles.signOutDisabled,
-                ]}>
-                {signingOut ? (
-                  <View style={styles.signOutRow}>
-                    <ActivityIndicator size="small" color={PrismColors.primary} />
-                    <Text style={styles.signOutLabel}>Cerrando sesión…</Text>
-                  </View>
-                ) : (
-                  <Text style={styles.signOutLabel}>Cerrar sesión</Text>
-                )}
-              </Pressable>
-              <View style={styles.headerTitles}>
-                <Text style={styles.headerTitle} numberOfLines={1}>
-                  Vincular banco
-                </Text>
-                <Text style={styles.headerSubtitle} numberOfLines={1}>
-                  Nivel bancario
-                </Text>
-              </View>
-            </View>
-          </EnterFadeSlide>
-        </BlurView>
+    <AuthBackground showBottomBar>
+      <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 80 }]} showsVerticalScrollIndicator={false}>
 
-        <View
-          style={[
-            Layout.flex1,
-            styles.body,
-            { paddingTop: bodyPaddingTop, paddingHorizontal: Spacing.lg },
-          ]}>
-          <View style={[Layout.flex1, styles.mainFill]}>
-            {clientIsExpoGo ? (
-              <View style={styles.expoGoBanner}>
-                <Text style={styles.expoGoBannerTitle}>Estás en Expo Go</Text>
-                <Text style={styles.expoGoBannerBody}>
-                  Plaid no puede abrirse aquí: Expo Go no incluye el SDK nativo. Compilá la app con{' '}
-                  <Text style={styles.expoGoBannerMono}>expo run:ios</Text> o{' '}
-                  <Text style={styles.expoGoBannerMono}>expo run:android</Text> y usá{' '}
-                  <Text style={styles.expoGoBannerMono}>npm run start:dev</Text>.
-                </Text>
-                <Pressable onPress={showDevBuildHelp} hitSlop={8} style={styles.expoGoBannerLinkWrap}>
-                  <Text style={styles.expoGoBannerLink}>Ver pasos detallados</Text>
-                </Pressable>
-              </View>
-            ) : null}
-            <View style={[styles.glassCard, Shadow.card]}>
-              <View style={styles.scoreSection}>
-                <EnterFadeSlide delay={70}>
-                  <View>
-                    <Text style={styles.scoreEyebrow}>Score</Text>
-                    <Text style={styles.scoreHeadline} numberOfLines={2}>
-                      Tu puntuación al vincular tu banco
-                    </Text>
-                    <Text style={styles.scoreLead} numberOfLines={tightLayout ? 1 : 2}>
-                      Con Plaid, en segundos y con datos cifrados.
-                    </Text>
-                  </View>
-                </EnterFadeSlide>
-
-                <EnterFadeSlide delay={140} style={styles.ringEnterWrap}>
-                  <View style={[styles.ringStage, { width: ringSize, height: ringSize }]}>
-                    <PulsingRingGlow ringSize={ringSize} style={styles.ringGlowOuter} />
-                    <View
-                      style={[
-                        styles.ringGlowInner,
-                        {
-                          width: ringSize + 16,
-                          height: ringSize + 16,
-                          borderRadius: (ringSize + 16) / 2,
-                          marginTop: -(ringSize + 16) / 2,
-                          marginLeft: -(ringSize + 16) / 2,
-                        },
-                      ]}
-                    />
-                    <View style={[styles.ringBlock, { width: ringSize, height: ringSize }]}>
-                      <AnimatedProgressRing
-                        ringSize={ringSize}
-                        ringCx={ringCx}
-                        ringCy={ringCy}
-                        ringR={ringR}
-                        ringCirc={ringCirc}
-                      />
-                      <LinearGradient
-                        colors={['rgba(255,255,255,0.92)', 'rgba(248,250,252,0.75)']}
-                        style={[
-                          styles.ringInnerDisc,
-                          {
-                            width: (ringR - RING_STROKE) * 2 - 10,
-                            height: (ringR - RING_STROKE) * 2 - 10,
-                            borderRadius: ringR - RING_STROKE,
-                          },
-                        ]}
-                      />
-                      <View style={styles.ringCenter} pointerEvents="none">
-                        <BreathingIconBadge>
-                          <View style={styles.ringIconBadge}>
-                            <Sparkles size={18} color={PrismColors.primary} strokeWidth={2} />
-                          </View>
-                        </BreathingIconBadge>
-                        <RingStatusCycle messages={RING_STATUS_MESSAGES} tightLayout={tightLayout} />
-                        <View style={styles.ringAwaitRow}>
-                          <Landmark size={12} color={PrismColors.tertiary} strokeWidth={2} />
-                          <Text style={styles.ringAwaitHint} numberOfLines={1}>
-                            Vía Plaid
-                          </Text>
-                        </View>
-                      </View>
-                    </View>
-                  </View>
-                </EnterFadeSlide>
-
-                <View style={styles.valueGrid}>
-                  {VALUE_ITEMS.map(({ Icon, title, body }, index) => (
-                    <EnterFadeSlide
-                      key={title}
-                      delay={220 + index * 52}
-                      style={styles.valueCellEnter}>
-                      <View
-                        style={[
-                          styles.valueCell,
-                          styles.valueCellDimmed,
-                          tightLayout && styles.valueCellTight,
-                        ]}>
-                        <View style={styles.valueIconWrap}>
-                          <Icon
-                            size={tightLayout ? 16 : 18}
-                            color={PrismColors.primary}
-                            strokeWidth={2}
-                          />
-                        </View>
-                        <Text style={[styles.valueTitle, tightLayout && styles.valueTitleTight]} numberOfLines={1}>
-                          {title}
-                        </Text>
-                        <Text
-                          style={[styles.valueBody, tightLayout && styles.valueBodyTight]}
-                          numberOfLines={tightLayout ? 2 : 3}>
-                          {body}
-                        </Text>
-                      </View>
-                    </EnterFadeSlide>
-                  ))}
-                </View>
-              </View>
-            </View>
+        {clientIsExpoGo && (
+          <View style={styles.expoGoBanner}>
+            <Text style={styles.expoGoText}>Estás en Expo Go. Plaid no funcionará sin Dev Build.</Text>
           </View>
+        )}
 
-          <View style={[styles.footer, { paddingBottom: insets.bottom + Spacing.sm }]}>
-            <EnterFadeSlide delay={400}>
-              <TouchableOpacity
-                onPress={handleCtaPress}
-                disabled={clientIsExpoGo || isLinking}
-                style={[
-                  styles.ctaPress,
-                  Shadow.button,
-                  (clientIsExpoGo || isLinking) && styles.disabledButton,
-                ]}>
-                <LinearGradient
-                  colors={
-                    clientIsExpoGo
-                      ? ['rgba(100,116,139,0.85)', 'rgba(71,85,105,0.9)']
-                      : [PrismColors.primary, PrismColors.secondary]
-                  }
-                  start={{ x: 0, y: 0.5 }}
-                  end={{ x: 1, y: 0.5 }}
-                  style={styles.ctaGradient}>
-                  <Text style={styles.ctaLabel} numberOfLines={1}>
-                    {clientIsExpoGo
-                      ? 'Usá un dev build para Plaid'
-                      : isLinking
-                        ? 'Conectando...'
-                        : 'Vincular con Plaid'}
-                  </Text>
-                  {!clientIsExpoGo && !isLinking && (
-                    <ChevronRight size={18} color="#FFFFFF" strokeWidth={2.5} />
-                  )}
-                </LinearGradient>
-              </TouchableOpacity>
-            </EnterFadeSlide>
+        {/* Hero Section */}
+        <View style={styles.heroSection}>
+          <View style={styles.heroIconWrapper}>
+            <Landmark size={32} color="#042F2E" strokeWidth={2} />
+          </View>
+          <Text style={styles.heroTitle}>Aún no nos {'\n'} conocemos bien.</Text>
+          <Text style={styles.heroSubtitle}>
+            Comparte tus movimientos {'\n'}
+            conmigo para empezar a construir {'\n'}
+            tu <Text style={styles.heroSubtitleBold}>mapa financiero</Text>.
+          </Text>
+        </View>
 
-            <EnterFadeSlide delay={460}>
-              <View style={styles.secureRow}>
-                <Lock size={12} color={PrismColors.textSecondary} strokeWidth={2} />
-                <Text style={styles.secureText}>100% seguro</Text>
-              </View>
-            </EnterFadeSlide>
+        <View style={styles.cardWhite}>
+          <Text style={styles.cardTitle}>Análisis Predictivo</Text>
+          <Text style={styles.cardDesc}>
+            Una vez conectados, Finexa analiza tus patrones de gasto para generar un mapa de salud financiera personalizado en menos de 60 segundos.
+          </Text>
+
+          {/* MAIN CTA */}
+          <TouchableOpacity
+            onPress={handleCtaPress}
+            disabled={isLinking || clientIsExpoGo}
+            style={[styles.mainCta, (isLinking || clientIsExpoGo) && styles.mainCtaDisabled]}
+          >
+            <Text style={styles.mainCtaText}>
+              {isLinking ? 'Conectando...' : 'Vincular Cuenta Bancaria'}
+            </Text>
+            {!isLinking && <ArrowRight size={20} color="#FFFFFF" />}
+          </TouchableOpacity>
+        </View>
+
+        {/* Footer info */}
+        <View style={styles.footerInfo}>
+          <View style={styles.footerRow}>
+            <Lock size={12} color="#64748B" />
+            <Text style={styles.footerText}>CIFRADO AES-256</Text>
+          </View>
+          <View style={styles.footerRow}>
+            <ShieldCheck size={12} color="#64748B" />
+            <Text style={styles.footerText}>CUMPLE GDPR</Text>
           </View>
         </View>
-      </View>
+        <View style={[styles.footerRow, { justifyContent: 'center', marginTop: Spacing.sm }]}>
+          <ShieldCheck size={12} color="#64748B" />
+          <Text style={styles.footerText}>CERTIFICADO PLAID</Text>
+        </View>
+      </ScrollView>
     </AuthBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  headerBlur: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    zIndex: 10,
+  scrollContent: {
     paddingHorizontal: Spacing.lg,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: BorderColors.subtle,
-    overflow: 'hidden',
-  },
-  headerInner: {
-    gap: Spacing.sm,
-  },
-  signOutPress: {
-    alignSelf: 'flex-start',
-    paddingVertical: Spacing.xs,
-    minHeight: 24,
-    justifyContent: 'center',
-  },
-  signOutRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-  },
-  signOutLabel: {
-    ...TextStyles.link,
-    fontSize: 13,
-  },
-  signOutDisabled: {
-    opacity: 0.85,
-  },
-  pressed: {
-    opacity: 0.75,
-  },
-  headerTitles: {
-    alignItems: 'center',
-  },
-  headerTitle: {
-    fontFamily: TextStyles.screenTitle.fontFamily,
-    fontSize: 16,
-    lineHeight: 20,
-    color: PrismColors.textPrimary,
-    textAlign: 'center',
-  },
-  headerSubtitle: {
-    fontFamily: TextStyles.caption.fontFamily,
-    fontSize: 11,
-    lineHeight: 14,
-    color: PrismColors.textSecondary,
-    marginTop: 1,
-    textAlign: 'center',
-  },
-  body: {
-    minHeight: 0,
-  },
-  mainFill: {
-    justifyContent: 'center',
-    minHeight: 0,
-    gap: Spacing.md,
+    paddingTop: Spacing.xl,
+    paddingBottom: 40,
   },
   expoGoBanner: {
-    borderRadius: Radius.md,
+    backgroundColor: '#FEF3C7',
     padding: Spacing.md,
-    backgroundColor: 'rgba(254, 243, 199, 0.95)',
-    borderWidth: 1,
-    borderColor: 'rgba(245, 158, 11, 0.45)',
+    borderRadius: Radius.md,
+    marginBottom: Spacing.md,
   },
-  expoGoBannerTitle: {
+  expoGoText: {
+    ...TextStyles.caption,
+    color: '#92400E',
+  },
+  heroSection: {
+    alignItems: 'center',
+    marginBottom: Spacing.xxl,
+  },
+  heroIconWrapper: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: '#5EEAD4',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: Spacing.xl,
+    shadowColor: '#5EEAD4',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.4,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  heroTitle: {
+    fontFamily: TextStyles.screenTitle.fontFamily,
+    fontSize: 28,
+    lineHeight: 34,
+    color: '#0F172A',
+    textAlign: 'center',
+    marginBottom: Spacing.md,
+  },
+  heroSubtitle: {
+    fontFamily: TextStyles.body.fontFamily,
+    fontSize: 15,
+    lineHeight: 22,
+    color: '#475569',
+    textAlign: 'center',
+  },
+  heroSubtitleBold: {
+    fontFamily: TextStyles.bodyMedium.fontFamily,
+    color: '#3B82F6',
+  },
+  cardWhite: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    padding: Spacing.xl,
+    marginBottom: Spacing.lg,
+    ...Shadow.card,
+    shadowOpacity: 0.04,
+  },
+  cardBlue: {
+    backgroundColor: '#4F46E5', // Indigo primary
+    borderRadius: 24,
+    padding: Spacing.xl,
+    marginBottom: Spacing.lg,
+    ...Shadow.card,
+    shadowOpacity: 0.1,
+    shadowColor: '#4F46E5',
+  },
+  stepLabelGreen: {
+    fontFamily: TextStyles.labelUppercase.fontFamily,
+    fontSize: 11,
+    letterSpacing: 2,
+    color: '#059669',
+    marginBottom: Spacing.sm,
+  },
+  stepLabelBlue: {
+    fontFamily: TextStyles.labelUppercase.fontFamily,
+    fontSize: 11,
+    letterSpacing: 2,
+    color: '#A5B4FC',
+    marginBottom: Spacing.sm,
+  },
+  stepLabelBlue2: {
+    fontFamily: TextStyles.labelUppercase.fontFamily,
+    fontSize: 11,
+    letterSpacing: 2,
+    color: '#3B82F6',
+    marginBottom: Spacing.sm,
+  },
+  cardTitle: {
+    fontFamily: TextStyles.screenTitle.fontFamily,
+    fontSize: 22,
+    lineHeight: 28,
+    color: '#0F172A',
+    marginBottom: Spacing.sm,
+  },
+  cardTitleWhite: {
+    fontFamily: TextStyles.screenTitle.fontFamily,
+    fontSize: 22,
+    lineHeight: 28,
+    color: '#FFFFFF',
+    marginBottom: Spacing.sm,
+  },
+  cardDesc: {
+    fontFamily: TextStyles.body.fontFamily,
+    fontSize: 14,
+    lineHeight: 22,
+    color: '#64748B',
+    marginBottom: Spacing.xl,
+  },
+  cardDescWhite: {
+    fontFamily: TextStyles.body.fontFamily,
+    fontSize: 14,
+    lineHeight: 22,
+    color: '#E0E7FF',
+    marginBottom: Spacing.xl,
+  },
+  vaultIllustration: {
+    height: 140,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  vaultBadge: {
+    position: 'absolute',
+    bottom: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.95)',
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 6,
+    borderRadius: 20,
+    gap: 6,
+  },
+  vaultBadgeText: {
+    fontFamily: TextStyles.bodyMedium.fontFamily,
+    fontSize: 12,
+    color: '#065F46',
+  },
+  cardOptions: {
+    gap: Spacing.md,
+  },
+  optionRowActive: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    padding: Spacing.md,
+    borderRadius: 12,
+    gap: Spacing.sm,
+  },
+  optionRowInactive: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'transparent',
+    padding: Spacing.md,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+    gap: Spacing.sm,
+  },
+  optionTextActive: {
     fontFamily: TextStyles.bodyMedium.fontFamily,
     fontSize: 14,
-    color: '#92400E',
-    marginBottom: Spacing.xs,
-  },
-  expoGoBannerBody: {
-    fontFamily: TextStyles.caption.fontFamily,
-    fontSize: 12,
-    lineHeight: 17,
-    color: '#78350F',
-  },
-  expoGoBannerMono: {
-    fontFamily: TextStyles.bodyMedium.fontFamily,
-    fontSize: 12,
-    color: '#92400E',
-  },
-  expoGoBannerLinkWrap: {
-    alignSelf: 'flex-start',
-    marginTop: Spacing.sm,
-  },
-  expoGoBannerLink: {
-    ...TextStyles.linkSmall,
-    fontSize: 13,
-  },
-  footer: {
-    flexShrink: 0,
-    paddingTop: Spacing.sm,
-  },
-  glassCard: {
-    borderRadius: Radius.md + 2,
-    paddingVertical: Spacing.md,
-    paddingHorizontal: Spacing.md,
-    backgroundColor: 'rgba(255,255,255,0.58)',
-    borderWidth: 1,
-    borderColor: BorderColors.card,
-    overflow: 'hidden',
-  },
-  scoreSection: {
-    gap: 0,
-  },
-  ringEnterWrap: {
-    alignSelf: 'center',
-  },
-  valueCellEnter: {
-    width: '48%',
-    maxWidth: '48%',
-  },
-  scoreEyebrow: {
-    ...TextStyles.labelUppercase,
-    fontSize: 9,
-    letterSpacing: 1.8,
-    color: PrismColors.tertiary,
-    textAlign: 'center',
-    marginBottom: 4,
-  },
-  scoreHeadline: {
-    fontFamily: TextStyles.screenTitle.fontFamily,
-    fontSize: 17,
-    lineHeight: 22,
-    letterSpacing: -0.35,
-    color: PrismColors.textPrimary,
-    textAlign: 'center',
-    marginBottom: 6,
-    paddingHorizontal: Spacing.xs,
-  },
-  scoreLead: {
-    fontFamily: TextStyles.body.fontFamily,
-    fontSize: 12,
-    lineHeight: 16,
-    color: PrismColors.textSecondary,
-    textAlign: 'center',
-    marginBottom: Spacing.sm,
-    paddingHorizontal: Spacing.sm,
-  },
-  ringStage: {
-    position: 'relative',
-    alignSelf: 'center',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: Spacing.sm,
-  },
-  ringGlowOuter: {
-    position: 'absolute',
-    top: '50%',
-    left: '50%',
-    backgroundColor: `${PrismColors.primary}18`,
-  },
-  ringGlowInner: {
-    position: 'absolute',
-    top: '50%',
-    left: '50%',
-    backgroundColor: `${PrismColors.secondary}0D`,
-  },
-  ringBlock: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  ringSvg: {
-    position: 'absolute',
-  },
-  ringInnerDisc: {
-    position: 'absolute',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.85)',
-  },
-  ringCenter: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    top: 0,
-    bottom: 0,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: Spacing.md,
-    gap: 4,
-  },
-  ringIconBadge: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: `${PrismColors.primary}12`,
-    borderWidth: 1,
-    borderColor: `${PrismColors.primary}22`,
-  },
-  ringStatusTextWrap: {
-    minHeight: 34,
-    justifyContent: 'center',
-    alignItems: 'center',
-    maxWidth: '88%',
-  },
-  ringAwaitTitle: {
-    fontFamily: TextStyles.bodyMedium.fontFamily,
-    fontSize: 12,
-    lineHeight: 15,
-    color: PrismColors.textPrimary,
-    textAlign: 'center',
-  },
-  ringAwaitTitleTight: {
-    fontSize: 11,
-    lineHeight: 14,
-  },
-  ringAwaitRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  ringAwaitHint: {
-    fontFamily: TextStyles.caption.fontFamily,
-    fontSize: 10,
-    lineHeight: 13,
-    color: PrismColors.textSecondary,
-    textAlign: 'center',
-  },
-  valueGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    rowGap: Spacing.md,
-    columnGap: Spacing.sm,
-  },
-  valueCell: {
-    width: '100%',
-    borderRadius: Radius.md,
-    paddingVertical: Spacing.md,
-    paddingHorizontal: Spacing.md,
-    backgroundColor: 'rgba(248,250,252,0.9)',
-    borderWidth: 1,
-    borderColor: BorderColors.subtle,
-  },
-  valueCellTight: {
-    paddingVertical: Spacing.sm + 2,
-    paddingHorizontal: Spacing.sm,
-  },
-  valueCellDimmed: {
-    opacity: 0.6,
-  },
-  valueIconWrap: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: `${PrismColors.primary}10`,
-    marginBottom: Spacing.sm,
-  },
-  valueTitle: {
-    fontFamily: TextStyles.bodyMedium.fontFamily,
-    fontSize: 13,
-    lineHeight: 17,
-    color: PrismColors.textPrimary,
-    marginBottom: 4,
-  },
-  valueTitleTight: {
-    fontSize: 11,
-    lineHeight: 14,
-    marginBottom: 2,
-  },
-  valueBody: {
-    fontFamily: TextStyles.caption.fontFamily,
-    fontSize: 11,
-    lineHeight: 15,
-    color: PrismColors.textSecondary,
-  },
-  valueBodyTight: {
-    fontSize: 10,
-    lineHeight: 13,
-  },
-  ctaPress: {
-    borderRadius: Radius.full,
-    overflow: 'hidden',
-    marginBottom: Spacing.sm,
-  },
-  ctaPressed: {
-    opacity: 0.95,
-    transform: [{ scale: 0.98 }],
-  },
-  disabledButton: {
-    opacity: 0.6,
-  },
-  ctaGradient: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: Spacing.sm,
-    paddingVertical: Spacing.md + 2,
-    paddingHorizontal: Spacing.lg,
-  },
-  ctaLabel: {
-    fontFamily: TextStyles.onPrimary.fontFamily,
-    fontSize: 15,
     color: '#FFFFFF',
   },
-  secureRow: {
+  optionTextInactive: {
+    fontFamily: TextStyles.body.fontFamily,
+    fontSize: 14,
+    color: '#A5B4FC',
+  },
+  mainCta: {
     flexDirection: 'row',
+    backgroundColor: '#3B82F6', // Blue
+    borderRadius: Radius.lg,
+    paddingVertical: Spacing.md + 4,
+    paddingHorizontal: Spacing.xl,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: Spacing.sm,
+    gap: Spacing.md,
+    marginBottom: Spacing.xl,
   },
-  secureText: {
-    ...TextStyles.caption,
-    fontSize: 11,
+  mainCtaDisabled: {
+    opacity: 0.6,
+  },
+  mainCtaText: {
+    fontFamily: TextStyles.onPrimary.fontFamily,
+    fontSize: 16,
+    color: '#FFFFFF',
+  },
+  chartIllustration: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 16,
+    padding: Spacing.lg,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  chartHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: Spacing.xl,
+  },
+  chartTitle: {
+    fontFamily: TextStyles.bodyMedium.fontFamily,
+    fontSize: 13,
+    color: '#334155',
+  },
+  chartValue: {
+    fontFamily: TextStyles.bodyMedium.fontFamily,
+    fontSize: 13,
+    color: '#059669',
+    textAlign: 'right',
+  },
+  barsContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+    paddingHorizontal: Spacing.sm,
+    height: 100,
+    marginBottom: Spacing.sm,
+  },
+  bar: {
+    width: 28,
+    borderRadius: 4,
+  },
+  chartLabels: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: Spacing.xs,
+    borderTopWidth: 1,
+    borderTopColor: '#E2E8F0',
+    paddingTop: Spacing.xs,
+  },
+  chartLabelText: {
+    fontFamily: TextStyles.caption.fontFamily,
+    fontSize: 10,
+    color: '#94A3B8',
+  },
+  footerInfo: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: Spacing.xl,
+    marginTop: Spacing.lg,
+  },
+  footerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  footerText: {
+    fontFamily: TextStyles.caption.fontFamily,
+    fontSize: 10,
+    color: '#64748B',
+    letterSpacing: 0.5,
   },
 });
