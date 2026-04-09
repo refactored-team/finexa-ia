@@ -131,7 +131,7 @@ flowchart TB
   P -->|HTTPS| Plaid
 ```
 
-_La capa **ai-pipeline** (FastAPI local, ver `backend/docker-compose.yml`) no está desplegada en el MVP Terraform; es desarrollo y experimentación._
+_La capa **ai-pipeline** (FastAPI, ver `backend/docker-compose.yml`) no está desplegada en el MVP Terraform actual; corre en local/Docker y se integra vía `POST http://localhost:8000` desde la app o Postman. El despliegue AWS es parte del roadmap._
 
 ### Despliegue local (Docker + procesos Go)
 
@@ -249,6 +249,7 @@ flowchart TB
 | **Integración** | Plaid API (sandbox / producción según entorno) | Agregación bancaria y tokens vía `ms-plaid`. |
 | **Datos** | PostgreSQL 16 (Docker local; RDS en cloud) | Persistencia transaccional única entre microservicios acoplados por esquema. |
 | **IA / datos** | Python en [`models/`](models/) | Scripts de preparación de datos y pruebas contra entornos Plaid (no sustituyen inferencia en producción). |
+| **AI Pipeline** | FastAPI, Python, AWS Bedrock (Claude Sonnet), AWS SageMaker (XGBoost) | Servicio de inteligencia financiera: clasificación de transacciones, análisis conductual, score de resiliencia ML, plan de accion para sugerencias y Modo Supervivencia. |
 | **Infraestructura** | Terraform, VPC, ECR, API Gateway, Lambda, Cognito | **Cloud-native** en AWS: API **serverless** (Lambda), red y auth gestionados. |
 | **Infraestructura** | Secrets Manager, CloudWatch (+ SNS opcional) | Secretos rotados fuera del repo; logs y alertas. |
 | **CI/CD** | GitHub Actions ([`.github/workflows/backend-lambda.yml`](.github/workflows/backend-lambda.yml)) | Tests Go, build de imágenes en PR, despliegue controlado a `main`. |
@@ -291,10 +292,97 @@ Arquitectura en capas por servicio — **handlers → services → repository** 
 
 Este diseño permite sincronizar y consultar datos financieros con latencia acotada por la red y el backend serverless, priorizando rutas síncronas para operaciones interactivas y dejando espacio a procesos asíncronos o por lotes en evoluciones futuras.
 
-### IA (visión vs. implementación actual)
+### AI Pipeline — arquitectura e implementación
 
-- **Visión de producto:** modelos y reglas que enriquecen transacciones crudas con **detección de gastos hormiga**, picos emocionales de gasto y recomendaciones contextualizadas — orientadas a **baja latencia percibida** en la app y a escalabilidad en la nube.
-- **Repositorio hoy:** la carpeta [`models/`](models/) contiene **scripts Python** para generación y limpieza de datos en sandbox (por ejemplo, poblar transacciones de prueba vía API Plaid). **No** hay en este repositorio un servicio de inferencia desplegado en **Amazon SageMaker** ni invocaciones a **Amazon Bedrock** en el código backend analizado; la arquitectura Lambda + API Gateway está **preparada** para integrar una capa de inferencia (HTTP interno, cola o función dedicada) sin rediseñar el cliente móvil.
+El directorio [`ai-pipeline/`](ai-pipeline/) contiene un servicio **FastAPI** que expone la inteligencia financiera de Finexa. Acepta transacciones en **formato Plaid** y produce clasificación, insights conductuales, score de resiliencia ML, proyección de cash flow y simulaciones hipotéticas.
+
+#### Endpoints y pipeline (Steps A → E + extras)
+
+| Endpoint | Step | Descripción |
+|----------|------|-------------|
+| `POST /classify` | **A** | Clasifica transacciones con la cadena **caché → heurísticas → Bedrock**. Solo las transacciones ambiguas llegan al LLM. |
+| `POST /analyze` | **A + B + C + D** | Pipeline completo: clasificación + análisis conductual (insights) + score de resiliencia + explicación LLM + cash flow + daily pulse. Steps B y C corren en paralelo con `asyncio.gather`. |
+| `POST /cashflow` | **Radar** | Detección de gastos recurrentes, proyección de liquidez a 30 días, alertas de Día de Riesgo y detección de ráfagas de gasto impulsivo. Más rápido que `/analyze` (omite B y C). |
+| `POST /whatif` | **Simulador** | Simula cómo cambia el Score de Resiliencia y la liquidez proyectada al modificar hábitos o ingresos. Análisis diferencial vía Bedrock. |
+| `POST /insights/action-plan` | **E** | Recibe un insight de `/analyze` y devuelve un plan de 2–4 pasos concretos (cancelar suscripción, sustituir gasto hormiga, configurar ahorro automático, etc.). |
+| `POST /survival-mode` | **Supervivencia** | Simula el escenario de recorte brusco: elimina gastos hormiga, suscripciones, entretenimiento y variables; conserva renta, comida, salud y transporte. Devuelve ahorro mensual proyectado, runway y desglose por categoría. **Sin Bedrock — cálculo puro.** |
+
+#### Cadena de clasificación (Step A)
+
+```
+Transacción Plaid
+       │
+       ▼
+  ┌─────────┐    hit     ┌─────────────────────┐
+  │  Caché  │──────────▶│ EnrichedTransaction  │
+  └────┬────┘           │  source: "cache"     │
+       │ miss           └─────────────────────┘
+       ▼
+  ┌───────────┐   hit    ┌─────────────────────┐
+  │Heurísticas│─────────▶│  source: "heuristic" │
+  └─────┬─────┘          └─────────────────────┘
+        │ ambigua
+        ▼
+  ┌──────────────────────────────────┐
+  │  Bedrock (Claude Sonnet) Tool Use│  batches en paralelo
+  └──────────┬───────────────────────┘
+             │ ok            │ fallo
+             ▼               ▼
+      source:"bedrock"  source:"fallback"
+```
+
+#### Score de Resiliencia Financiera — Modelo ML (XGBoost en SageMaker)
+
+El score (0–100) se predice con un endpoint **XGBoost** desplegado en **Amazon SageMaker**, entrenado sobre 10 000 usuarios simulados en tres arquetipos:
+
+| Arquetipo | Descripción |
+|-----------|-------------|
+| **El Estable** (40 %) | Alto ahorro, gastos fijos bajos, baja variabilidad de ingresos |
+| **El Freelancer Volátil** (40 %) | Ahorro irregular, fijos medios, alta variabilidad de ingresos |
+| **El Sobrendeudado** (20 %) | Sin ahorro, fijos al límite del ingreso |
+
+Los **5 features** enviados al endpoint (en este orden exacto, como CSV):
+
+| Feature | Escala | Dirección |
+|---------|--------|-----------|
+| `ratio_ahorro` | 0–100 % del ingreso ahorrado | Mayor = mejor |
+| `control_fijos` | 0–100 % del ingreso en gastos fijos | Menor = mejor |
+| `frec_hormiga` | 0–100 % del gasto total en hormiga | Menor = mejor |
+| `var_ingresos` | 0–100 % de variación ingreso obs. vs declarado | Menor = mejor |
+| `runway` | 0–12 meses de gastos cubiertos por ahorro | Mayor = mejor |
+
+**Target de entrenamiento** (fórmula heurística + ruido gaussiano σ=5):
+
+```
+score = ratio_ahorro × 0.30
+      + (100 − control_fijos) × 0.25
+      + (100 − frec_hormiga)  × 0.20
+      + (100 − var_ingresos)  × 0.15
+      + (runway / 12 × 100)   × 0.10
+      + N(0, 5)                          # ruido estadístico
+```
+
+Entrenamiento: **XGBoost 1.5-1** (`objective=reg:squarederror`, `max_depth=5`, `eta=0.2`, `num_round=100`) en instancia `ml.m5.xlarge`; inferencia en `ml.t2.medium`.
+
+**Niveles del score:**
+
+| Rango | Nivel |
+|-------|-------|
+| ≥ 75 | `resiliente` |
+| 50–74 | `estable` |
+| 25–49 | `vulnerable` |
+| < 25 | `frágil` |
+
+Si el endpoint SageMaker no está disponible, el servicio **cae automáticamente** a la misma fórmula heurística ponderada como respaldo.
+
+#### Integraciones AWS
+
+| Servicio | Uso |
+|----------|-----|
+| **AWS Bedrock** (Claude Sonnet) | Clasificación de transacciones ambiguas, análisis conductual con insights, explicación personalizada del score de resiliencia, análisis diferencial What-If, planes de acción por insight |
+| **AWS SageMaker** | Endpoint XGBoost para predicción del Score de Resiliencia Financiera |
+
+Todos los bloques que invocan Bedrock o SageMaker tienen **fallback determinístico** (heurísticas o plan de respaldo) para que la API siempre devuelva una respuesta útil.
 
 ---
 
@@ -356,7 +444,8 @@ Variables típicas: `AWS_REGION`, `LAMBDA_PROJECT`, `LAMBDA_ENV`, `TAG_SHA` (ver
 
 ## Roadmap y mejoras futuras
 
-- Integrar **inferencia gestionada** (p. ej. endpoint **SageMaker** o modelos fundacionales vía **Bedrock**) detrás de una API interna o cola, con límites de coste y latencia definidos.
+- Desplegar **ai-pipeline** en AWS (ECS Fargate o Lambda container) para que la app móvil consuma los endpoints de IA en producción con las mismas garantías de seguridad (Cognito + API Gateway) que los microservicios Go.
+- Reentrenar el modelo XGBoost con datos reales de usuarios en lugar del dataset simulado.
 - Profundizar categorización de comercios y series temporales sobre el histórico ya almacenado.
 - Notificaciones proactivas (push / email) gobernadas por preferencias del usuario.
 - Pruebas de carga sobre API Gateway + Lambda y ajuste de memoria/concurrencia reservada donde el presupuesto lo permita.
@@ -369,7 +458,7 @@ Variables típicas: `AWS_REGION`, `LAMBDA_PROJECT`, `LAMBDA_ENV`, `TAG_SHA` (ver
 ```
 finexa-ia/
 ├── app/finexa-ia/          # Cliente Expo / React Native
-├── ai-pipeline/            # FastAPI (dev / experimentación; ver docker-compose en backend)
+├── ai-pipeline/            # FastAPI — IA financiera (Bedrock + SageMaker); ver docker-compose en backend
 ├── backend/
 │   ├── pkg/apiresult/      # Utilidades HTTP compartidas
 │   ├── services/
