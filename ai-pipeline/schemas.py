@@ -144,14 +144,22 @@ class ResilienceFactorDetail(BaseModel):
 
 
 class ResilienceScore(BaseModel):
-    """Score de resiliencia financiera calculado con fórmula de 5 factores."""
-    score_total: float = Field(..., ge=0.0, le=100.0, description="Puntaje final ponderado (0-100)")
+    """Score de resiliencia financiera calculado por el modelo XGBoost de SageMaker."""
+    score_total: float = Field(..., ge=0.0, le=100.0, description="Puntaje final predicho por el modelo (0-100)")
     nivel: str = Field(
         ...,
         pattern=r"^(fragil|vulnerable|estable|resiliente)$",
         description="Categoría de resiliencia: fragil (<25), vulnerable (25-50), estable (50-75), resiliente (≥75)",
     )
     factores: list[ResilienceFactorDetail] = Field(..., description="Detalle de los 5 factores")
+    raw_features: Optional[dict[str, float]] = Field(
+        None,
+        description=(
+            "Features crudas enviadas al modelo XGBoost: "
+            "ratio_ahorro (%), control_fijos (%), frec_hormiga (%), "
+            "var_ingresos (%), runway (meses 0-12)"
+        ),
+    )
     explicacion_llm: Optional[str] = Field(
         None,
         description="Explicación en lenguaje natural generada por Bedrock sobre los 3 factores más impactantes",

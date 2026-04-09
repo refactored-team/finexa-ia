@@ -1,12 +1,12 @@
 """
 RF2 — Score de Resiliencia Financiera (El Escudo).
 
-Fórmula de 5 factores:
-  1. Ratio ahorro/ingreso      30%  — ¿Cuánto ahorra del ingreso?
-  2. Control de gastos fijos   25%  — ¿Los fijos consumen demasiado?
-  3. Frecuencia hormiga         20%  — ¿Cuánto se pierde en gastos pequeños?
-  4. Variabilidad de ingresos  15%  — ¿Qué tan estable es el ingreso?
-  5. Runway financiero          10%  — ¿Cuántos meses de gastos puede cubrir?
+5 features → endpoint XGBoost en SageMaker:
+  1. ratio_ahorro      — % del ingreso que se ahorra (mayor = mejor)
+  2. control_fijos     — % del ingreso en gastos fijos (menor = mejor)
+  3. frec_hormiga      — % del gasto total en gastos hormiga (menor = mejor)
+  4. var_ingresos      — variabilidad del ingreso vs declarado en % (menor = mejor)
+  5. runway            — meses de gastos cubiertos por el ahorro (0-12, mayor = mejor)
 
 Score final: 0-100
   ≥ 75 → resiliente
@@ -18,7 +18,10 @@ Score final: 0-100
 from __future__ import annotations
 
 import json
+import os
 from typing import Optional
+
+import boto3
 
 from pipeline.bedrock import invoke_resilience_explanation, MODEL_SONNET
 from pipeline.logger import get_logger
@@ -39,6 +42,7 @@ logger = get_logger(__name__)
 
 _FIXED_CATEGORIES = {FinexaCategory.FIJO, FinexaCategory.SUSCRIPCION}
 
+# Pesos heurísticos — solo se usan como fallback cuando el endpoint no está disponible
 _FACTOR_WEIGHTS = {
     "ratio_ahorro_ingreso": 0.30,
     "control_fijos": 0.25,
@@ -46,6 +50,10 @@ _FACTOR_WEIGHTS = {
     "variabilidad_ingresos": 0.15,
     "runway": 0.10,
 }
+
+# SageMaker endpoint — reemplazar PLACEHOLDER con el nombre real al desplegar
+SAGEMAKER_ENDPOINT_NAME = "sagemaker-xgboost-2026-04-08-22-22-57-077"
+SAGEMAKER_REGION = os.getenv("AWS_REGION", "us-east-1")
 
 _NIVELES = [
     (75.0, "resiliente"),
@@ -68,6 +76,70 @@ def _nivel(score: float) -> str:
         if score >= threshold:
             return label
     return "fragil"
+
+
+# ─────────────────────────────────────────────────────────────
+# SageMaker — features crudas e inferencia
+# ─────────────────────────────────────────────────────────────
+
+def _compute_raw_features(
+    total_income: float,
+    total_expense: float,
+    total_fijos: float,
+    total_hormiga: float,
+    ingresos_mensuales: float,
+) -> dict[str, float]:
+    """
+    Calcula los 5 features en la misma escala que los datos de entrenamiento:
+      - ratio_ahorro  : % del ingreso ahorrado (0-100)
+      - control_fijos : % del ingreso en gastos fijos (0-100)
+      - frec_hormiga  : % del gasto total en hormiga (0-100)
+      - var_ingresos  : variabilidad ingreso vs declarado en % (0-100)
+      - runway        : meses de gastos cubiertos por ahorro (0-12)
+    """
+    ingreso_ref = max(total_income, ingresos_mensuales, 1.0)
+
+    ratio_ahorro = _clamp(max(0.0, (ingreso_ref - total_expense) / ingreso_ref * 100))
+    control_fijos = _clamp(total_fijos / ingreso_ref * 100)
+    frec_hormiga = _clamp(total_hormiga / max(total_expense, 0.01) * 100)
+    var_ingresos = (
+        10.0  # valor neutral cuando no hay datos de ingreso observado
+        if ingresos_mensuales <= 0 or total_income == 0
+        else _clamp(abs(total_income - ingresos_mensuales) / ingresos_mensuales * 100)
+    )
+    ahorro_mensual = ingreso_ref - total_expense
+    runway = _clamp(ahorro_mensual / max(total_expense, 0.01), 0.0, 12.0)
+
+    return {
+        "ratio_ahorro": round(ratio_ahorro, 4),
+        "control_fijos": round(control_fijos, 4),
+        "frec_hormiga": round(frec_hormiga, 4),
+        "var_ingresos": round(var_ingresos, 4),
+        "runway": round(runway, 4),
+    }
+
+
+def _predict_score_sagemaker(features: dict[str, float]) -> float:
+    """
+    Llama al endpoint XGBoost en SageMaker con los 5 features y retorna el score (0-100).
+
+    CSV de entrada: ratio_ahorro, control_fijos, frec_hormiga, var_ingresos, runway
+    """
+    csv_body = (
+        f"{features['ratio_ahorro']},"
+        f"{features['control_fijos']},"
+        f"{features['frec_hormiga']},"
+        f"{features['var_ingresos']},"
+        f"{features['runway']}"
+    )
+    runtime = boto3.client("sagemaker-runtime", region_name=SAGEMAKER_REGION)
+    response = runtime.invoke_endpoint(
+        EndpointName=SAGEMAKER_ENDPOINT_NAME,
+        ContentType="text/csv",
+        Body=csv_body,
+    )
+    score = float(response["Body"].read().decode("utf-8"))
+    return _clamp(score)
 
 
 # ─────────────────────────────────────────────────────────────
@@ -186,9 +258,10 @@ def compute_resilience_score(
     profile: UserProfile,
 ) -> ResilienceScore:
     """
-    Calcula el score de resiliencia financiera con la fórmula de 5 factores.
+    Calcula el score de resiliencia enviando los 5 features al endpoint XGBoost
+    de SageMaker. Si el endpoint no está disponible, cae al cálculo heurístico.
 
-    Esta función es puramente matemática (sin llamadas a Bedrock).
+    Esta función es síncrona (sin llamadas a Bedrock).
     Para la explicación en lenguaje natural usa generate_resilience_explanation().
 
     Args:
@@ -219,11 +292,30 @@ def compute_resilience_score(
         if tx.is_ant_expense and tx.amount > 0
     )
 
+    # Features crudas → SageMaker
+    raw_features = _compute_raw_features(
+        total_income, total_expense, total_fijos, total_hormiga,
+        profile.ingresos_mensuales,
+    )
+
+    # Descripciones por factor (para UI y explicación LLM)
     s1, d1 = _score_ratio_ahorro(total_income, total_expense, profile.ingresos_mensuales)
     s2, d2 = _score_control_fijos(total_fijos, profile.ingresos_mensuales, total_income)
     s3, d3 = _score_frecuencia_hormiga(total_hormiga, total_expense)
     s4, d4 = _score_variabilidad_ingresos(total_income, profile.ingresos_mensuales)
     s5, d5 = _score_runway(total_income, total_expense, profile.ingresos_mensuales)
+
+    # Score final: endpoint ML con fallback heurístico
+    try:
+        score_total = _predict_score_sagemaker(raw_features)
+        score_source = "sagemaker"
+    except Exception as exc:
+        logger.warning(
+            "sagemaker_endpoint_unavailable_using_heuristic",
+            extra={"error": str(exc), "endpoint": SAGEMAKER_ENDPOINT_NAME, "step": "resilience"},
+        )
+        score_total = s1 * 0.30 + s2 * 0.25 + s3 * 0.20 + s4 * 0.15 + s5 * 0.10
+        score_source = "heuristic"
 
     raw_factors = [
         ("ratio_ahorro_ingreso", 0.30, s1, d1),
@@ -244,13 +336,13 @@ def compute_resilience_score(
         for nombre, peso, score, desc in raw_factors
     ]
 
-    score_total = sum(f.score_raw * f.peso for f in factores)
-
     logger.info(
         "resilience_score_computed",
         extra={
             "score_total": round(score_total, 1),
             "nivel": _nivel(score_total),
+            "score_source": score_source,
+            "raw_features": raw_features,
             "step": "resilience",
         },
     )
@@ -259,6 +351,7 @@ def compute_resilience_score(
         score_total=round(score_total, 1),
         nivel=_nivel(score_total),
         factores=factores,
+        raw_features=raw_features,
     )
 
 
@@ -293,7 +386,7 @@ async def generate_resilience_explanation(
     """
     top_factors = _top_3_impacting_factors(score)
 
-    context = {
+    context: dict = {
         "perfil": {
             "edad": profile.edad,
             "ocupacion": profile.ocupacion,
@@ -304,6 +397,13 @@ async def generate_resilience_explanation(
         "score_resiliencia": {
             "score_total": score.score_total,
             "nivel": score.nivel,
+        },
+        "valores_del_modelo": {
+            "ratio_ahorro_pct": score.raw_features.get("ratio_ahorro") if score.raw_features else None,
+            "control_fijos_pct": score.raw_features.get("control_fijos") if score.raw_features else None,
+            "frec_hormiga_pct": score.raw_features.get("frec_hormiga") if score.raw_features else None,
+            "var_ingresos_pct": score.raw_features.get("var_ingresos") if score.raw_features else None,
+            "runway_meses": score.raw_features.get("runway") if score.raw_features else None,
         },
         "factores_mas_impactantes": [
             {
