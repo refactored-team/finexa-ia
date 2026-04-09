@@ -26,6 +26,8 @@ from pipeline.core.logger import get_logger
 from pipeline.domain.models import (
     EnrichedTransaction,
     FinexaCategory,
+    ResilienceExplanation,
+    ResilienceExplanationSection,
     ResilienceFactorDetail,
     ResilienceScore,
     UserProfile,
@@ -332,10 +334,10 @@ async def generate_resilience_explanation(
     score: ResilienceScore,
     profile: UserProfile,
     model_id: str | None = None,
-) -> str:
+) -> ResilienceExplanation:
     """
     Inyecta el UserProfile y el ResilienceScore en Bedrock para generar
-    una explicación en lenguaje natural sobre los 3 factores más impactantes.
+    una explicación estructurada (headline + resumen + 1-3 secciones por factor).
     """
     model_id = model_id or settings.bedrock_model_sonnet
     top_factors = _top_3_impacting_factors(score)
@@ -395,17 +397,66 @@ async def generate_resilience_explanation(
         return _fallback_explanation(score, profile, top_factors)
 
 
+_FALLBACK_ACTIONS: dict[str, str] = {
+    "ratio_ahorro_ingreso": (
+        "Automatiza una transferencia semanal a una cuenta de ahorro el día que recibes tu pago."
+    ),
+    "control_fijos": (
+        "Revisa tus gastos fijos y cancela o renegocia al menos un servicio este mes."
+    ),
+    "frecuencia_hormiga": (
+        "Elige 2 gastos hormiga repetitivos y sustitúyelos con una alternativa casera esta semana."
+    ),
+    "variabilidad_ingresos": (
+        "Lleva un registro mensual de tus ingresos durante los próximos 3 meses para identificar tu piso real."
+    ),
+    "runway": (
+        "Define un monto fijo mensual para tu fondo de emergencia y prográmalo como cargo automático."
+    ),
+}
+
+_FALLBACK_TITLES: dict[str, str] = {
+    "ratio_ahorro_ingreso": "Tu ritmo de ahorro aún tiene espacio para crecer",
+    "control_fijos": "Tus gastos fijos pesan más de lo recomendado",
+    "frecuencia_hormiga": "Los gastos pequeños se acumulan más de lo que parece",
+    "variabilidad_ingresos": "Tus ingresos tienen más movimiento del esperado",
+    "runway": "Tu colchón de emergencia aún está en construcción",
+}
+
+
 def _fallback_explanation(
     score: ResilienceScore,
     profile: UserProfile,
     top_factors: list[ResilienceFactorDetail],
-) -> str:
-    """Explicación heurística cuando Bedrock no está disponible."""
-    lines = [
-        f"Tu Score de Resiliencia es {score.score_total:.0f}/100 ({score.nivel}).",
-        f"Hola, {profile.ocupacion}. Aquí están los 3 factores que más impactaron tu resultado:",
-        "",
+) -> ResilienceExplanation:
+    """Explicación estructurada de respaldo cuando Bedrock no está disponible."""
+    secciones = [
+        ResilienceExplanationSection(
+            factor=f.nombre,
+            titulo=_FALLBACK_TITLES.get(f.nombre, f.nombre.replace("_", " ").capitalize()),
+            diagnostico=f.descripcion,
+            accion=_FALLBACK_ACTIONS.get(
+                f.nombre,
+                "Revisa este factor con calma y define una meta concreta para los próximos 30 días.",
+            ),
+        )
+        for f in top_factors
     ]
-    for i, f in enumerate(top_factors, 1):
-        lines.append(f"{i}. {f.nombre.replace('_', ' ').capitalize()}: {f.descripcion}")
-    return "\n".join(lines)
+
+    return ResilienceExplanation(
+        headline=f"Tu score es {score.score_total:.0f}/100 — nivel {score.nivel}.",
+        resumen=(
+            f"Hola, {profile.ocupacion}. Estos son los factores que más impactaron tu resultado; "
+            "trabajarlos uno por uno te dará el mayor avance."
+        ),
+        secciones=secciones or [
+            ResilienceExplanationSection(
+                factor="ratio_ahorro_ingreso",
+                titulo="Sin datos suficientes para un diagnóstico detallado",
+                diagnostico=(
+                    "No tenemos suficiente historial para destacar factores específicos en este periodo."
+                ),
+                accion="Registra tus ingresos y gastos durante 30 días para recibir un análisis personalizado.",
+            )
+        ],
+    )

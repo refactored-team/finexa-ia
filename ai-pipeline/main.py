@@ -65,6 +65,15 @@ _TAGS: list[dict] = [
             "financiero y onboarding."
         ),
     },
+    {
+        "name": "Insights",
+        "description": (
+            "**Step E** — Plan de acción detallado para un insight específico. "
+            "El usuario selecciona un insight de `/analyze` y recibe una guía de "
+            "**2 a 4 pasos concretos** para ejecutar ahora mismo o en los próximos días: "
+            "cancelar una suscripción, sustituir un gasto hormiga, configurar ahorro automático, etc."
+        ),
+    },
 ]
 
 # ─────────────────────────────────────────────────────────────

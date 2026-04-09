@@ -5,6 +5,7 @@ Importa todos los modelos desde este módulo:
     from pipeline.domain.models import PlaidTransaction, EnrichedTransaction, ...
 """
 
+from pipeline.domain.models.action_plan import ActionStep, InsightActionPlan
 from pipeline.domain.models.analysis import BehavioralAnalysisResult, SpendingInsight
 from pipeline.domain.models.cashflow import (
     CashFlowResult,
@@ -25,6 +26,8 @@ from pipeline.domain.models.plaid import (
 )
 from pipeline.domain.models.pulse import DailyPulse
 from pipeline.domain.models.resilience import (
+    ResilienceExplanation,
+    ResilienceExplanationSection,
     ResilienceFactorDetail,
     ResilienceScore,
     UserProfile,
@@ -41,10 +44,15 @@ __all__ = [
     "EnrichedTransaction",
     "FinexaCategory",
     "TransactionClassification",
+    # action plan
+    "ActionStep",
+    "InsightActionPlan",
     # analysis
     "BehavioralAnalysisResult",
     "SpendingInsight",
     # resilience
+    "ResilienceExplanation",
+    "ResilienceExplanationSection",
     "ResilienceFactorDetail",
     "ResilienceScore",
     "UserProfile",
