@@ -1,4 +1,5 @@
 import {
+  Alert,
   FlatList,
   Image,
   NativeScrollEvent,
@@ -10,6 +11,7 @@ import {
   View,
   Dimensions,
 } from 'react-native';
+import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -21,6 +23,8 @@ import { PrismColors } from '@/constants/theme';
 import { Spacing } from '@/constants/uiStyles';
 import SmartStack, { Finding, Theme } from '@/components/SmartStack';
 import { AuthBackground } from '@/components/auth/AuthBackground';
+import { isAmplifyAuthConfigured } from '@/lib/amplify/configure';
+import { signOutUser } from '@/lib/auth/cognito';
 import apiClient from '@/src/services/api/apiClient';
 
 // ---------------------------------------------------------------------------
@@ -183,8 +187,10 @@ const fallbackFindings: Finding[] = [
 // Screen
 // ---------------------------------------------------------------------------
 export default function SmartStackScreen() {
+  const router = useRouter();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [activeCardIndex, setActiveCardIndex] = useState(0);
+  const [signingOut, setSigningOut] = useState(false);
   const theme = HERO_THEME;
   const tabBarHeight = useBottomTabBarHeight();
   const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
@@ -364,6 +370,25 @@ export default function SmartStackScreen() {
     transform: [{ translateY: sheetY.value }],
   }));
 
+  async function handleSignOut() {
+    if (signingOut) return;
+    setSigningOut(true);
+    try {
+      if (!isAmplifyAuthConfigured()) {
+        router.replace('/login');
+        return;
+      }
+      const result = await signOutUser();
+      if (!result.ok) {
+        Alert.alert('Cerrar sesión', result.message);
+        return;
+      }
+      router.replace('/login');
+    } finally {
+      setSigningOut(false);
+    }
+  }
+
   return (
     <AuthBackground showBottomBar showHeader={false}>
       <View style={[styles.root, { backgroundColor: '#E5E7EB' }]}>
@@ -390,9 +415,9 @@ export default function SmartStackScreen() {
                   />
                 </View>
 
-                <View style={styles.chatButton}>
-                  <Text style={styles.chatButtonIcon}>💬</Text>
-                </View>
+                <Pressable onPress={handleSignOut} style={styles.logoutButton} disabled={signingOut}>
+                  <Text style={styles.logoutButtonText}>{signingOut ? 'Cerrando...' : 'Cerrar sesión'}</Text>
+                </Pressable>
               </View>
 
               <Text
@@ -599,16 +624,19 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
-  chatButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
-    backgroundColor: 'rgba(255,255,255,0.92)',
+  logoutButton: {
+    minHeight: 40,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.96)',
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
     alignItems: 'center',
     justifyContent: 'center',
+    paddingHorizontal: 12,
   },
-  chatButtonIcon: {
-    fontSize: 18,
+  logoutButtonText: {
+    fontSize: 12,
+    fontWeight: '700',
     color: '#111827',
   },
   welcomeLine: {
