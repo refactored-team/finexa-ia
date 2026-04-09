@@ -73,7 +73,7 @@ export default function LoginScreen() {
   }
 
   return (
-    <AuthBackground>
+    <AuthBackground showHeader={false}>
       <SafeAreaView style={Layout.flex1} edges={['left', 'right']}>
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
