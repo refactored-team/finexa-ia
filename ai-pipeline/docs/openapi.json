@@ -1,0 +1,1958 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Finexa AI Pipeline",
+    "summary": "Análisis financiero personal impulsado por Claude (AWS Bedrock) + XGBoost.",
+    "description": "\nAPI de inteligencia artificial para análisis financiero personal.\n\nAcepta transacciones en **formato Plaid** y produce:\n\n- **Clasificación** por categoría Finexa (hormiga, fijo, suscripción, variable, …)\n- **Análisis conductual** con insights accionables priorizados\n- **Score de Resiliencia Financiera** (0–100) con explicación LLM\n- **Proyección de cash flow** y alertas de liquidez\n- **Simulaciones What-If** para evaluar cambios de hábitos\n\n## Formato de respuesta\n\nTodas las respuestas exitosas siguen la forma:\n\n```json\n{ \"ok\": true, \"data\": { ... }, \"meta\": { \"elapsed_ms\": 450 } }\n```\n\nTodos los errores siguen la forma:\n\n```json\n{ \"ok\": false, \"error\": \"codigo_snake_case\", \"detail\": \"mensaje\" }\n```\n\n## Stack interno\n\n| Capa | Responsabilidad |\n|---|---|\n| `api/` | FastAPI routes y modelos Pydantic de request/response |\n| `services/` | Orquestación entre dominios |\n| `domain/` | Lógica pura (classifier, analyzer, resilience, forecaster, whatif) |\n| `infrastructure/` | Integraciones externas (AWS Bedrock, SageMaker, caché) |\n\n## Fuentes de clasificación (`source`)\n\n| Valor | Significado |\n|---|---|\n| `heuristic` | Regla determinística — sin costo, sin latencia |\n| `cache` | Resultado de clasificación previa en memoria |\n| `bedrock` | Clasificado por Claude Sonnet vía AWS Bedrock |\n| `fallback` | Bedrock no disponible — clasificación de respaldo |\n",
+    "termsOfService": "https://finexa.ai/terms",
+    "contact": {
+      "name": "Finexa AI Team",
+      "url": "https://finexa.ai/",
+      "email": "engineering@finexa.ai"
+    },
+    "license": {
+      "name": "Proprietary",
+      "identifier": "LicenseRef-Finexa-Proprietary"
+    },
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8000",
+      "description": "Local development"
+    },
+    {
+      "url": "https://api.finexa.ai",
+      "description": "Producción"
+    }
+  ],
+  "paths": {
+    "/": {
+      "get": {
+        "tags": [
+          "Sistema"
+        ],
+        "summary": "Health check",
+        "operationId": "health_check__get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/test-bedrock": {
+      "post": {
+        "tags": [
+          "Sistema"
+        ],
+        "summary": "Prueba de conectividad con AWS Bedrock",
+        "description": "Envía un mensaje simple a Claude y verifica que la respuesta llega correctamente.",
+        "operationId": "test_bedrock_test_bedrock_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Test Bedrock Test Bedrock Post"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/classify": {
+      "post": {
+        "tags": [
+          "Clasificación"
+        ],
+        "summary": "Clasificar transacciones",
+        "description": "Categoriza cada transacción con el pipeline **caché → heurísticas → Bedrock** (solo las ambiguas llegan a Bedrock).\n\n### Categorías disponibles (`FinexaCategory`)\n| Valor | Ejemplos |\n|---|---|\n| `suscripcion` | Netflix, Spotify, Adobe, iCloud, ChatGPT |\n| `fijo` | Renta, CFE, Telmex, seguros, gimnasio |\n| `hormiga` | Café, OXXO, Rappi pequeños (frecuentes y evitables) |\n| `variable` | Compras discrecionales sin patrón fijo |\n| `ingreso` | Salario, depósitos, reembolsos |\n| `transporte` | Uber, Didi, gasolineras, CDMX |\n| `alimentacion` | Restaurantes, supermercados, delivery |\n| `salud` | Farmacias, médicos, laboratorios |\n| `entretenimiento` | Cine, eventos, videojuegos |\n| `transferencia` | SPEI entre cuentas propias |\n| `desconocido` | No clasificable con confianza suficiente |\n\n### Campo `source`\n| Valor | Significado |\n|---|---|\n| `heuristic` | Regla de texto/categoría Plaid — sin costo |\n| `cache` | Resultado de clasificación previa en memoria |\n| `bedrock` | Clasificado por Claude via AWS Bedrock |\n| `fallback` | Bedrock no disponible — clasificación de respaldo |",
+        "operationId": "classify_classify_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClassifyRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClassifyResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error interno de clasificación",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/analyze": {
+      "post": {
+        "tags": [
+          "Análisis completo"
+        ],
+        "summary": "Pipeline completo de análisis financiero",
+        "description": "Ejecuta los 4 steps del pipeline **en paralelo** (Steps B, C y D con `asyncio.gather`):\n\n| Step | Componente | Requiere |\n|---|---|---|\n| A | Clasificación | `transactions` |\n| B | Análisis conductual (insights, risk_level) | `transactions` |\n| C | Score de Resiliencia (5 factores + LLM) | `user_profile` |\n| D | Cash flow forecast (recurrentes, liquidez) | `saldo_actual` |\n| + | Daily pulse (presupuesto libre del día) | `user_profile` + `saldo_actual` |\n\n### Score de Resiliencia — 5 factores\n| Factor | Peso | Qué mide | Ideal |\n|---|---|---|---|\n| `ratio_ahorro_ingreso` | 30% | Ahorro / ingreso | ≥ 20% |\n| `control_fijos` | 25% | Gastos fijos / ingreso | ≤ 40% |\n| `frecuencia_hormiga` | 20% | Gastos hormiga / total | ≤ 5% |\n| `variabilidad_ingresos` | 15% | Estabilidad del ingreso | ≤ 5% delta |\n| `runway` | 10% | Meses cubiertos por ahorro | ≥ 3 |",
+        "operationId": "analyze_analyze_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnalyzeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnalyzeResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/cashflow": {
+      "post": {
+        "tags": [
+          "Cash Flow"
+        ],
+        "summary": "Cash flow forecast + presupuesto libre del día",
+        "description": "Más rápido que `/analyze` cuando solo necesitas información de liquidez.\n\n**Incluye:**\n- Gastos recurrentes detectados (GROUP BY comercio, monto ±15%)\n- Liquidez proyectada a 30 días: `saldo_actual − recurrentes_pendientes`\n- Alerta de Día de Riesgo si la liquidez cae bajo el umbral\n- Alertas de gasto impulsivo (3+ gastos discrecionales en ventana de 4h)\n- Daily pulse (solo si se envía `ingresos_mensuales`)\n\n### Tipos de alerta de liquidez\n| `alert_type` | Condición |\n|---|---|\n| `liquidez_baja` | Proyección < umbral pero > 0 |\n| `liquidez_critica` | Proyección negativa |",
+        "operationId": "cashflow_cashflow_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CashFlowRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CashFlowResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/whatif": {
+      "post": {
+        "tags": [
+          "Simulador"
+        ],
+        "summary": "Simulador de escenarios hipotéticos (What-If)",
+        "description": "Responde: **¿Cómo cambia mi salud financiera si modifico mis hábitos?**\n\n**Flujo interno:**\n1. Clasifica las transacciones (Step A)\n2. Calcula el Score de Resiliencia base (`score_antes`)\n3. Aplica el escenario: escala los montos de cada categoría\n4. Recalcula el score con datos modificados (`score_despues`)\n5. Genera `analisis_diferencial` en lenguaje natural via Bedrock\n\n**`delta_score` positivo = mejora.**",
+        "operationId": "whatif_whatif_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WhatIfRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WhatIfResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "`user_profile` o `scenario` inválidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AnalyzeData": {
+        "properties": {
+          "classified": {
+            "items": {
+              "$ref": "#/components/schemas/EnrichedTransaction"
+            },
+            "type": "array",
+            "title": "Classified",
+            "description": "Transacciones enriquecidas (mismo schema que `/classify`)."
+          },
+          "analysis": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BehavioralAnalysisResult"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Análisis conductual: insights, risk_level, gastos hormiga. Usa fallback heurístico si Bedrock falla — **nunca es `null`** cuando hay transacciones."
+          },
+          "resilience": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ResilienceScore"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Score 0–100 con 5 factores y explicación LLM. **`null` si no se envió `user_profile`.**"
+          },
+          "cash_flow": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CashFlowResult"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Recurrentes, liquidez proyectada y alertas. **`null` si no se envió `saldo_actual`.**"
+          },
+          "pulse": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DailyPulse"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Presupuesto libre del día. **`null` si faltan `saldo_actual` o `user_profile`.**"
+          }
+        },
+        "type": "object",
+        "required": [
+          "classified"
+        ],
+        "title": "AnalyzeData"
+      },
+      "AnalyzeMeta": {
+        "properties": {
+          "elapsed_ms": {
+            "type": "integer",
+            "title": "Elapsed Ms",
+            "description": "Tiempo total en ms (Steps A+B+C+D en paralelo)."
+          },
+          "total_transactions": {
+            "type": "integer",
+            "title": "Total Transactions",
+            "description": "Transacciones recibidas."
+          },
+          "parsed": {
+            "type": "integer",
+            "title": "Parsed",
+            "description": "Parseadas correctamente."
+          },
+          "classified": {
+            "type": "integer",
+            "title": "Classified",
+            "description": "Clasificadas."
+          },
+          "parse_errors": {
+            "type": "integer",
+            "title": "Parse Errors",
+            "description": "Fallaron al parsear."
+          },
+          "from_cache": {
+            "type": "integer",
+            "title": "From Cache",
+            "description": "Clasificadas desde caché."
+          },
+          "from_heuristic": {
+            "type": "integer",
+            "title": "From Heuristic",
+            "description": "Clasificadas por heurísticas."
+          },
+          "from_bedrock": {
+            "type": "integer",
+            "title": "From Bedrock",
+            "description": "Clasificadas por Bedrock."
+          },
+          "from_fallback": {
+            "type": "integer",
+            "title": "From Fallback",
+            "description": "Clasificadas por fallback."
+          },
+          "ant_expenses_detected": {
+            "type": "integer",
+            "title": "Ant Expenses Detected",
+            "description": "Transacciones marcadas como gasto hormiga."
+          }
+        },
+        "type": "object",
+        "required": [
+          "elapsed_ms",
+          "total_transactions",
+          "parsed",
+          "classified",
+          "parse_errors",
+          "from_cache",
+          "from_heuristic",
+          "from_bedrock",
+          "from_fallback",
+          "ant_expenses_detected"
+        ],
+        "title": "AnalyzeMeta"
+      },
+      "AnalyzeRequest": {
+        "properties": {
+          "transactions": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "minItems": 1,
+            "title": "Transactions",
+            "description": "Lista de transacciones en formato Plaid."
+          },
+          "user_profile": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User Profile",
+            "description": "Perfil financiero del usuario. **Requerido para calcular el Score de Resiliencia.**\n\nCampos: `edad` (int 18-100), `ocupacion` (str), `ingresos_mensuales` (float > 0), `metas` (list[str]), `dependientes` (int >= 0)"
+          },
+          "saldo_actual": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Saldo Actual",
+            "description": "Saldo actual de la cuenta en MXN. **Requerido para cash flow y daily pulse.**",
+            "examples": [
+              12000.0
+            ]
+          },
+          "liquidez_threshold": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Liquidez Threshold",
+            "description": "Umbral de alerta de liquidez (MXN). Default: 10% de `ingresos_mensuales` o $8,500."
+          }
+        },
+        "type": "object",
+        "required": [
+          "transactions"
+        ],
+        "title": "AnalyzeRequest",
+        "example": {
+          "saldo_actual": 12000.0,
+          "transactions": [
+            {
+              "amount": 179.0,
+              "date": "2026-04-01",
+              "iso_currency_code": "MXN",
+              "merchant_name": "Netflix",
+              "name": "NETFLIX.COM",
+              "personal_finance_category": {
+                "confidence_level": "VERY_HIGH",
+                "detailed": "ENTERTAINMENT_TV_AND_MOVIES",
+                "primary": "ENTERTAINMENT"
+              },
+              "transaction_id": "tx_001"
+            },
+            {
+              "amount": 85.0,
+              "date": "2026-04-03",
+              "iso_currency_code": "MXN",
+              "merchant_name": "OXXO",
+              "name": "OXXO INSURGENTES 482",
+              "personal_finance_category": {
+                "confidence_level": "VERY_HIGH",
+                "detailed": "FOOD_AND_DRINK_CONVENIENCE_STORES",
+                "primary": "FOOD_AND_DRINK"
+              },
+              "transaction_id": "tx_002"
+            },
+            {
+              "amount": -35000.0,
+              "date": "2026-04-01",
+              "iso_currency_code": "MXN",
+              "name": "NOMINA ACME CORP SA DE CV",
+              "personal_finance_category": {
+                "confidence_level": "VERY_HIGH",
+                "detailed": "INCOME_WAGES",
+                "primary": "INCOME"
+              },
+              "transaction_id": "tx_003"
+            }
+          ],
+          "user_profile": {
+            "dependientes": 0,
+            "edad": 29,
+            "ingresos_mensuales": 35000.0,
+            "metas": [
+              "fondo de emergencia",
+              "viaje a Europa"
+            ],
+            "ocupacion": "Ingeniera de software"
+          }
+        }
+      },
+      "AnalyzeResponse": {
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "const": true,
+            "title": "Ok",
+            "default": true
+          },
+          "data": {
+            "$ref": "#/components/schemas/AnalyzeData"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/AnalyzeMeta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data",
+          "meta"
+        ],
+        "title": "AnalyzeResponse"
+      },
+      "BehavioralAnalysisResult": {
+        "properties": {
+          "ant_expense_total": {
+            "type": "number",
+            "title": "Ant Expense Total",
+            "description": "Sum of all detected gastos hormiga in the period"
+          },
+          "ant_expense_percentage": {
+            "type": "number",
+            "title": "Ant Expense Percentage",
+            "description": "Gastos hormiga as % of total spending"
+          },
+          "risk_level": {
+            "type": "string",
+            "pattern": "^(bajo|medio|alto|critico)$",
+            "title": "Risk Level"
+          },
+          "insights": {
+            "items": {
+              "$ref": "#/components/schemas/SpendingInsight"
+            },
+            "type": "array",
+            "maxItems": 5,
+            "title": "Insights"
+          },
+          "summary": {
+            "type": "string",
+            "maxLength": 5000,
+            "title": "Summary",
+            "description": "Plain-language summary of the user's spending behavior"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ant_expense_total",
+          "ant_expense_percentage",
+          "risk_level",
+          "insights",
+          "summary"
+        ],
+        "title": "BehavioralAnalysisResult",
+        "description": "Schema for Bedrock Step B output."
+      },
+      "CashFlowData": {
+        "properties": {
+          "cash_flow": {
+            "$ref": "#/components/schemas/CashFlowResult",
+            "description": "Proyección de cash flow."
+          },
+          "pulse": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DailyPulse"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Presupuesto libre del día. **`null` si no se envió `ingresos_mensuales`.**"
+          }
+        },
+        "type": "object",
+        "required": [
+          "cash_flow"
+        ],
+        "title": "CashFlowData"
+      },
+      "CashFlowRequest": {
+        "properties": {
+          "transactions": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "minItems": 1,
+            "title": "Transactions",
+            "description": "Lista de transacciones en formato Plaid."
+          },
+          "saldo_actual": {
+            "type": "number",
+            "title": "Saldo Actual",
+            "description": "Saldo actual de la cuenta en MXN.",
+            "examples": [
+              12000.0
+            ]
+          },
+          "ingresos_mensuales": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ingresos Mensuales",
+            "description": "Ingreso mensual declarado. **Requerido para daily pulse y threshold automático.**",
+            "examples": [
+              35000.0
+            ]
+          },
+          "liquidez_threshold": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Liquidez Threshold",
+            "description": "Umbral de alerta personalizado (MXN)."
+          }
+        },
+        "type": "object",
+        "required": [
+          "transactions",
+          "saldo_actual"
+        ],
+        "title": "CashFlowRequest",
+        "example": {
+          "ingresos_mensuales": 35000.0,
+          "saldo_actual": 12000.0,
+          "transactions": [
+            {
+              "amount": 179.0,
+              "date": "2026-04-01",
+              "iso_currency_code": "MXN",
+              "merchant_name": "Netflix",
+              "name": "NETFLIX.COM",
+              "personal_finance_category": {
+                "confidence_level": "VERY_HIGH",
+                "detailed": "ENTERTAINMENT_TV_AND_MOVIES",
+                "primary": "ENTERTAINMENT"
+              },
+              "transaction_id": "tx_001"
+            },
+            {
+              "amount": 85.0,
+              "date": "2026-04-03",
+              "iso_currency_code": "MXN",
+              "merchant_name": "OXXO",
+              "name": "OXXO INSURGENTES 482",
+              "personal_finance_category": {
+                "confidence_level": "VERY_HIGH",
+                "detailed": "FOOD_AND_DRINK_CONVENIENCE_STORES",
+                "primary": "FOOD_AND_DRINK"
+              },
+              "transaction_id": "tx_002"
+            },
+            {
+              "amount": -35000.0,
+              "date": "2026-04-01",
+              "iso_currency_code": "MXN",
+              "name": "NOMINA ACME CORP SA DE CV",
+              "personal_finance_category": {
+                "confidence_level": "VERY_HIGH",
+                "detailed": "INCOME_WAGES",
+                "primary": "INCOME"
+              },
+              "transaction_id": "tx_003"
+            }
+          ]
+        }
+      },
+      "CashFlowResponse": {
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "const": true,
+            "title": "Ok",
+            "default": true
+          },
+          "data": {
+            "$ref": "#/components/schemas/CashFlowData"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/SimpleMeta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data",
+          "meta"
+        ],
+        "title": "CashFlowResponse"
+      },
+      "CashFlowResult": {
+        "properties": {
+          "recurring_expenses": {
+            "items": {
+              "$ref": "#/components/schemas/RecurringExpense"
+            },
+            "type": "array",
+            "title": "Recurring Expenses",
+            "description": "Gastos recurrentes detectados en el periodo"
+          },
+          "projected_liquidity": {
+            "type": "number",
+            "title": "Projected Liquidity",
+            "description": "Liquidez estimada: saldo_actual − recurrentes pendientes"
+          },
+          "liquidity_alert": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LiquidityAlert"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Alerta de liquidez si projected_liquidity < threshold"
+          },
+          "impulse_alerts": {
+            "items": {
+              "$ref": "#/components/schemas/ImpulseSpendingAlert"
+            },
+            "type": "array",
+            "title": "Impulse Alerts",
+            "description": "Alertas de gasto impulsivo detectadas"
+          },
+          "forecast_horizon_days": {
+            "type": "integer",
+            "exclusiveMinimum": 0.0,
+            "title": "Forecast Horizon Days",
+            "description": "Horizonte de proyección en días",
+            "default": 30
+          }
+        },
+        "type": "object",
+        "required": [
+          "projected_liquidity"
+        ],
+        "title": "CashFlowResult",
+        "description": "Resultado completo del análisis de cash flow: recurrentes + liquidez + alertas."
+      },
+      "ClassifyData": {
+        "properties": {
+          "transactions": {
+            "items": {
+              "$ref": "#/components/schemas/EnrichedTransaction"
+            },
+            "type": "array",
+            "title": "Transactions",
+            "description": "Transacciones enriquecidas con `category`, `confidence`, `is_ant_expense` y `source`."
+          }
+        },
+        "type": "object",
+        "required": [
+          "transactions"
+        ],
+        "title": "ClassifyData"
+      },
+      "ClassifyMeta": {
+        "properties": {
+          "elapsed_ms": {
+            "type": "integer",
+            "title": "Elapsed Ms",
+            "description": "Tiempo de ejecución en ms."
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total",
+            "description": "Transacciones recibidas."
+          },
+          "parsed": {
+            "type": "integer",
+            "title": "Parsed",
+            "description": "Parseadas correctamente."
+          },
+          "classified": {
+            "type": "integer",
+            "title": "Classified",
+            "description": "Clasificadas con éxito."
+          },
+          "parse_errors": {
+            "type": "integer",
+            "title": "Parse Errors",
+            "description": "Fallaron al parsear."
+          },
+          "from_cache": {
+            "type": "integer",
+            "title": "From Cache",
+            "description": "Clasificadas desde caché en memoria."
+          },
+          "from_heuristic": {
+            "type": "integer",
+            "title": "From Heuristic",
+            "description": "Clasificadas por reglas heurísticas (sin Bedrock)."
+          },
+          "from_bedrock": {
+            "type": "integer",
+            "title": "From Bedrock",
+            "description": "Clasificadas por Claude via Bedrock."
+          },
+          "from_fallback": {
+            "type": "integer",
+            "title": "From Fallback",
+            "description": "Fallback cuando Bedrock no estaba disponible."
+          }
+        },
+        "type": "object",
+        "required": [
+          "elapsed_ms",
+          "total",
+          "parsed",
+          "classified",
+          "parse_errors",
+          "from_cache",
+          "from_heuristic",
+          "from_bedrock",
+          "from_fallback"
+        ],
+        "title": "ClassifyMeta"
+      },
+      "ClassifyRequest": {
+        "properties": {
+          "transactions": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "minItems": 1,
+            "title": "Transactions",
+            "description": "Lista de transacciones en formato Plaid."
+          }
+        },
+        "type": "object",
+        "required": [
+          "transactions"
+        ],
+        "title": "ClassifyRequest",
+        "description": "Campos **mínimos** por transacción: `name`, `amount` (float), `date` (YYYY-MM-DD).\n\nCampos opcionales que mejoran la precisión:\n`transaction_id`, `merchant_name`, `iso_currency_code`, `pending`,\n`personal_finance_category { primary, detailed, confidence_level }`,\n`counterparties [{ name, type }]`",
+        "example": {
+          "transactions": [
+            {
+              "amount": 179.0,
+              "date": "2026-04-01",
+              "iso_currency_code": "MXN",
+              "merchant_name": "Netflix",
+              "name": "NETFLIX.COM",
+              "personal_finance_category": {
+                "confidence_level": "VERY_HIGH",
+                "detailed": "ENTERTAINMENT_TV_AND_MOVIES",
+                "primary": "ENTERTAINMENT"
+              },
+              "transaction_id": "tx_001"
+            },
+            {
+              "amount": 85.0,
+              "date": "2026-04-03",
+              "iso_currency_code": "MXN",
+              "merchant_name": "OXXO",
+              "name": "OXXO INSURGENTES 482",
+              "personal_finance_category": {
+                "confidence_level": "VERY_HIGH",
+                "detailed": "FOOD_AND_DRINK_CONVENIENCE_STORES",
+                "primary": "FOOD_AND_DRINK"
+              },
+              "transaction_id": "tx_002"
+            },
+            {
+              "amount": -35000.0,
+              "date": "2026-04-01",
+              "iso_currency_code": "MXN",
+              "name": "NOMINA ACME CORP SA DE CV",
+              "personal_finance_category": {
+                "confidence_level": "VERY_HIGH",
+                "detailed": "INCOME_WAGES",
+                "primary": "INCOME"
+              },
+              "transaction_id": "tx_003"
+            }
+          ]
+        }
+      },
+      "ClassifyResponse": {
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "const": true,
+            "title": "Ok",
+            "default": true
+          },
+          "data": {
+            "$ref": "#/components/schemas/ClassifyData"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ClassifyMeta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data",
+          "meta"
+        ],
+        "title": "ClassifyResponse"
+      },
+      "DailyPulse": {
+        "properties": {
+          "reference_date": {
+            "type": "string",
+            "title": "Reference Date",
+            "description": "Fecha de referencia (YYYY-MM-DD)"
+          },
+          "presupuesto_libre_diario": {
+            "type": "number",
+            "title": "Presupuesto Libre Diario",
+            "description": "Dinero disponible para gastar hoy sin comprometer compromisos del mes"
+          },
+          "saldo_actual": {
+            "type": "number",
+            "title": "Saldo Actual"
+          },
+          "gasto_fijo_mensual": {
+            "type": "number",
+            "title": "Gasto Fijo Mensual",
+            "description": "Total de gastos fijos + suscripciones del periodo"
+          },
+          "gasto_variable_hoy": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Gasto Variable Hoy",
+            "description": "Gasto variable registrado en la fecha de referencia"
+          },
+          "gasto_promedio_diario": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Gasto Promedio Diario",
+            "description": "Gasto variable promedio por día activo"
+          },
+          "dias_restantes_mes": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Dias Restantes Mes"
+          },
+          "porcentaje_consumido_mes": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Porcentaje Consumido Mes",
+            "description": "% del ingreso mensual ya gastado"
+          },
+          "alerta": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "presupuesto_agotado",
+                  "presupuesto_bajo"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Alerta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "reference_date",
+          "presupuesto_libre_diario",
+          "saldo_actual",
+          "gasto_fijo_mensual",
+          "gasto_variable_hoy",
+          "gasto_promedio_diario",
+          "dias_restantes_mes",
+          "porcentaje_consumido_mes"
+        ],
+        "title": "DailyPulse",
+        "description": "Snapshot diario del presupuesto libre disponible."
+      },
+      "EnrichedTransaction": {
+        "properties": {
+          "transaction_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Transaction Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "merchant_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Merchant Name"
+          },
+          "amount": {
+            "type": "number",
+            "title": "Amount"
+          },
+          "date": {
+            "type": "string",
+            "title": "Date"
+          },
+          "datetime": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Datetime",
+            "description": "Best available ISO 8601 datetime (authorized_datetime > datetime > None). Used for impulse-spending window detection."
+          },
+          "category": {
+            "$ref": "#/components/schemas/FinexaCategory"
+          },
+          "confidence": {
+            "type": "number",
+            "title": "Confidence"
+          },
+          "is_ant_expense": {
+            "type": "boolean",
+            "title": "Is Ant Expense",
+            "default": false
+          },
+          "reasoning": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reasoning"
+          },
+          "source": {
+            "type": "string",
+            "pattern": "^(heuristic|bedrock|cache|fallback)$",
+            "title": "Source"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "amount",
+          "date",
+          "category",
+          "confidence",
+          "source"
+        ],
+        "title": "EnrichedTransaction",
+        "description": "Final output: original Plaid data + classification metadata."
+      },
+      "ErrorResponse": {
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "const": false,
+            "title": "Ok",
+            "default": false
+          },
+          "error": {
+            "type": "string",
+            "title": "Error",
+            "description": "Código de error en snake_case.",
+            "examples": [
+              "pipeline_failed"
+            ]
+          },
+          "detail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Detail",
+            "description": "Mensaje detallado."
+          }
+        },
+        "type": "object",
+        "required": [
+          "error"
+        ],
+        "title": "ErrorResponse"
+      },
+      "FinexaCategory": {
+        "type": "string",
+        "enum": [
+          "suscripcion",
+          "fijo",
+          "hormiga",
+          "variable",
+          "ingreso",
+          "transporte",
+          "alimentacion",
+          "salud",
+          "entretenimiento",
+          "transferencia",
+          "desconocido"
+        ],
+        "title": "FinexaCategory"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "HealthResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "ok",
+            "title": "Status"
+          },
+          "service": {
+            "type": "string",
+            "title": "Service",
+            "examples": [
+              "finexa-ai-pipeline"
+            ]
+          },
+          "version": {
+            "type": "string",
+            "title": "Version",
+            "examples": [
+              "1.0.0"
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "service",
+          "version"
+        ],
+        "title": "HealthResponse"
+      },
+      "ImpulseSpendingAlert": {
+        "properties": {
+          "window_start": {
+            "type": "string",
+            "title": "Window Start",
+            "description": "Inicio de la ventana (ISO datetime o fecha)"
+          },
+          "window_end": {
+            "type": "string",
+            "title": "Window End",
+            "description": "Fin de la ventana"
+          },
+          "transaction_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Transaction Ids",
+            "description": "IDs o nombres de las transacciones involucradas"
+          },
+          "transaction_names": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Transaction Names",
+            "description": "Nombres de comercios en la ventana"
+          },
+          "total_amount": {
+            "type": "number",
+            "exclusiveMinimum": 0.0,
+            "title": "Total Amount",
+            "description": "Suma de los gastos en la ventana"
+          },
+          "count": {
+            "type": "integer",
+            "minimum": 3.0,
+            "title": "Count",
+            "description": "Número de gastos discrecionales detectados"
+          },
+          "message": {
+            "type": "string",
+            "maxLength": 500,
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "window_start",
+          "window_end",
+          "transaction_ids",
+          "transaction_names",
+          "total_amount",
+          "count",
+          "message"
+        ],
+        "title": "ImpulseSpendingAlert",
+        "description": "Alerta de gasto impulsivo: 3+ gastos discrecionales en ventana de 2-4 horas."
+      },
+      "LiquidityAlert": {
+        "properties": {
+          "alert_type": {
+            "type": "string",
+            "enum": [
+              "liquidez_critica",
+              "liquidez_baja"
+            ],
+            "title": "Alert Type"
+          },
+          "saldo_actual": {
+            "type": "number",
+            "title": "Saldo Actual",
+            "description": "Saldo actual de la cuenta"
+          },
+          "liquidez_estimada": {
+            "type": "number",
+            "title": "Liquidez Estimada",
+            "description": "saldo_actual − Σ(recurrentes pendientes)"
+          },
+          "gastos_pendientes": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Gastos Pendientes",
+            "description": "Suma de recurrentes pendientes en el horizonte"
+          },
+          "threshold": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Threshold",
+            "description": "Umbral que disparó la alerta"
+          },
+          "dias_riesgo": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Dias Riesgo",
+            "description": "Días estimados hasta que la liquidez sea crítica"
+          },
+          "pending_expenses": {
+            "items": {
+              "$ref": "#/components/schemas/RecurringExpense"
+            },
+            "type": "array",
+            "title": "Pending Expenses",
+            "description": "Gastos recurrentes que generan el riesgo"
+          },
+          "message": {
+            "type": "string",
+            "maxLength": 500,
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "alert_type",
+          "saldo_actual",
+          "liquidez_estimada",
+          "gastos_pendientes",
+          "threshold",
+          "dias_riesgo",
+          "pending_expenses",
+          "message"
+        ],
+        "title": "LiquidityAlert",
+        "description": "Alerta de Día de Riesgo: liquidez proyectada cae bajo el umbral de seguridad."
+      },
+      "RecurringExpense": {
+        "properties": {
+          "merchant": {
+            "type": "string",
+            "title": "Merchant",
+            "description": "Nombre canónico del comercio"
+          },
+          "avg_amount": {
+            "type": "number",
+            "exclusiveMinimum": 0.0,
+            "title": "Avg Amount",
+            "description": "Monto promedio de las ocurrencias"
+          },
+          "amount_variance": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Amount Variance",
+            "description": "Máxima desviación del monto como fracción del promedio (0.15 = 15%)"
+          },
+          "periodicity_days": {
+            "type": "integer",
+            "exclusiveMinimum": 0.0,
+            "title": "Periodicity Days",
+            "description": "Periodicidad detectada en días"
+          },
+          "periodicity_label": {
+            "type": "string",
+            "pattern": "^(semanal|quincenal|mensual|irregular)$",
+            "title": "Periodicity Label",
+            "description": "Etiqueta legible de la periodicidad"
+          },
+          "last_seen_date": {
+            "type": "string",
+            "title": "Last Seen Date",
+            "description": "Fecha de la última ocurrencia (YYYY-MM-DD)"
+          },
+          "next_expected_date": {
+            "type": "string",
+            "title": "Next Expected Date",
+            "description": "Fecha estimada del próximo cobro (YYYY-MM-DD)"
+          },
+          "occurrences": {
+            "type": "integer",
+            "minimum": 2.0,
+            "title": "Occurrences",
+            "description": "Número de veces observado en el periodo"
+          },
+          "category": {
+            "$ref": "#/components/schemas/FinexaCategory"
+          },
+          "is_pending": {
+            "type": "boolean",
+            "title": "Is Pending",
+            "description": "True si el próximo cobro cae dentro del horizonte de proyección y no ha ocurrido"
+          }
+        },
+        "type": "object",
+        "required": [
+          "merchant",
+          "avg_amount",
+          "amount_variance",
+          "periodicity_days",
+          "periodicity_label",
+          "last_seen_date",
+          "next_expected_date",
+          "occurrences",
+          "category",
+          "is_pending"
+        ],
+        "title": "RecurringExpense",
+        "description": "Gasto recurrente detectado: mismo comercio, monto ±15%, periodicidad consistente."
+      },
+      "ResilienceFactorDetail": {
+        "properties": {
+          "nombre": {
+            "type": "string",
+            "title": "Nombre",
+            "description": "Identificador del factor"
+          },
+          "peso": {
+            "type": "number",
+            "title": "Peso",
+            "description": "Peso del factor en la fórmula (0-1)"
+          },
+          "score_raw": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Score Raw",
+            "description": "Puntaje sin ponderar (0-100)"
+          },
+          "score_ponderado": {
+            "type": "number",
+            "title": "Score Ponderado",
+            "description": "Contribución real al score total (score_raw × peso)"
+          },
+          "descripcion": {
+            "type": "string",
+            "title": "Descripcion",
+            "description": "Explicación del valor calculado para este factor"
+          }
+        },
+        "type": "object",
+        "required": [
+          "nombre",
+          "peso",
+          "score_raw",
+          "score_ponderado",
+          "descripcion"
+        ],
+        "title": "ResilienceFactorDetail",
+        "description": "Detalle de un factor individual del score de resiliencia."
+      },
+      "ResilienceScore": {
+        "properties": {
+          "score_total": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Score Total",
+            "description": "Puntaje final predicho por el modelo (0-100)"
+          },
+          "nivel": {
+            "type": "string",
+            "pattern": "^(fragil|vulnerable|estable|resiliente)$",
+            "title": "Nivel",
+            "description": "Categoría de resiliencia: fragil (<25), vulnerable (25-50), estable (50-75), resiliente (≥75)"
+          },
+          "factores": {
+            "items": {
+              "$ref": "#/components/schemas/ResilienceFactorDetail"
+            },
+            "type": "array",
+            "title": "Factores",
+            "description": "Detalle de los 5 factores"
+          },
+          "raw_features": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "number"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Raw Features",
+            "description": "Features crudas enviadas al modelo XGBoost: ratio_ahorro (%), control_fijos (%), frec_hormiga (%), var_ingresos (%), runway (meses 0-12)"
+          },
+          "explicacion_llm": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Explicacion Llm",
+            "description": "Explicación en lenguaje natural generada por Bedrock sobre los 3 factores más impactantes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "score_total",
+          "nivel",
+          "factores"
+        ],
+        "title": "ResilienceScore",
+        "description": "Score de resiliencia financiera calculado por el modelo XGBoost de SageMaker."
+      },
+      "SimpleMeta": {
+        "properties": {
+          "elapsed_ms": {
+            "type": "integer",
+            "title": "Elapsed Ms",
+            "description": "Tiempo de ejecución en ms."
+          },
+          "classified": {
+            "type": "integer",
+            "title": "Classified",
+            "description": "Transacciones clasificadas internamente."
+          }
+        },
+        "type": "object",
+        "required": [
+          "elapsed_ms",
+          "classified"
+        ],
+        "title": "SimpleMeta"
+      },
+      "SpendingInsight": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "maxLength": 80,
+            "title": "Title"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 3000,
+            "title": "Description"
+          },
+          "priority": {
+            "type": "string",
+            "pattern": "^(alta|media|baja)$",
+            "title": "Priority"
+          },
+          "potential_monthly_saving": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Potential Monthly Saving",
+            "default": 0.0
+          },
+          "affected_category": {
+            "$ref": "#/components/schemas/FinexaCategory"
+          }
+        },
+        "type": "object",
+        "required": [
+          "title",
+          "description",
+          "priority",
+          "affected_category"
+        ],
+        "title": "SpendingInsight",
+        "description": "One actionable insight from the behavioral analysis (Step B)."
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      },
+      "WhatIfData": {
+        "properties": {
+          "result": {
+            "$ref": "#/components/schemas/WhatIfResult",
+            "description": "Resultado completo de la simulación."
+          }
+        },
+        "type": "object",
+        "required": [
+          "result"
+        ],
+        "title": "WhatIfData"
+      },
+      "WhatIfDeltaFactor": {
+        "properties": {
+          "factor": {
+            "type": "string",
+            "title": "Factor"
+          },
+          "score_antes": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Score Antes"
+          },
+          "score_despues": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Score Despues"
+          },
+          "delta": {
+            "type": "number",
+            "title": "Delta",
+            "description": "score_despues − score_antes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "factor",
+          "score_antes",
+          "score_despues",
+          "delta"
+        ],
+        "title": "WhatIfDeltaFactor",
+        "description": "Delta de un factor individual entre escenario base y escenario hipotético."
+      },
+      "WhatIfRequest": {
+        "properties": {
+          "transactions": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "minItems": 1,
+            "title": "Transactions",
+            "description": "Lista de transacciones en formato Plaid."
+          },
+          "user_profile": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "User Profile",
+            "description": "Perfil financiero del usuario (ver `/analyze`)."
+          },
+          "scenario": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Scenario",
+            "description": "Escenario hipotético a simular."
+          },
+          "saldo_actual": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Saldo Actual",
+            "description": "Saldo actual (MXN). Activa la comparación de liquidez antes/después.",
+            "examples": [
+              12000.0
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "transactions",
+          "user_profile",
+          "scenario"
+        ],
+        "title": "WhatIfRequest",
+        "description": "`scenario` acepta cualquier combinación (todos los campos son opcionales, default 0):\n\n| Campo | Rango | Descripción |\n|---|---|---|\n| `reduce_hormiga_pct` | 0–100 | % de reducción en gastos hormiga |\n| `reduce_variable_pct` | 0–100 | % de reducción en gastos variables |\n| `reduce_entretenimiento_pct` | 0–100 | % de reducción en entretenimiento |\n| `reduce_alimentacion_pct` | 0–100 | % de reducción en alimentación |\n| `reduce_transporte_pct` | 0–100 | % de reducción en transporte |\n| `reduce_suscripcion_pct` | 0–100 | % de reducción en suscripciones |\n| `nueva_ingresos_mensuales` | float > 0 | Nuevo ingreso mensual hipotético |\n| `extra_ahorro_mensual` | float >= 0 | Ahorro adicional mensual hipotético |",
+        "example": {
+          "saldo_actual": 12000.0,
+          "scenario": {
+            "reduce_hormiga_pct": 50.0,
+            "reduce_suscripcion_pct": 30.0
+          },
+          "transactions": [
+            {
+              "amount": 179.0,
+              "date": "2026-04-01",
+              "iso_currency_code": "MXN",
+              "merchant_name": "Netflix",
+              "name": "NETFLIX.COM",
+              "personal_finance_category": {
+                "confidence_level": "VERY_HIGH",
+                "detailed": "ENTERTAINMENT_TV_AND_MOVIES",
+                "primary": "ENTERTAINMENT"
+              },
+              "transaction_id": "tx_001"
+            },
+            {
+              "amount": 85.0,
+              "date": "2026-04-03",
+              "iso_currency_code": "MXN",
+              "merchant_name": "OXXO",
+              "name": "OXXO INSURGENTES 482",
+              "personal_finance_category": {
+                "confidence_level": "VERY_HIGH",
+                "detailed": "FOOD_AND_DRINK_CONVENIENCE_STORES",
+                "primary": "FOOD_AND_DRINK"
+              },
+              "transaction_id": "tx_002"
+            },
+            {
+              "amount": -35000.0,
+              "date": "2026-04-01",
+              "iso_currency_code": "MXN",
+              "name": "NOMINA ACME CORP SA DE CV",
+              "personal_finance_category": {
+                "confidence_level": "VERY_HIGH",
+                "detailed": "INCOME_WAGES",
+                "primary": "INCOME"
+              },
+              "transaction_id": "tx_003"
+            }
+          ],
+          "user_profile": {
+            "dependientes": 0,
+            "edad": 29,
+            "ingresos_mensuales": 35000.0,
+            "metas": [
+              "fondo de emergencia",
+              "viaje a Europa"
+            ],
+            "ocupacion": "Ingeniera de software"
+          }
+        }
+      },
+      "WhatIfResponse": {
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "const": true,
+            "title": "Ok",
+            "default": true
+          },
+          "data": {
+            "$ref": "#/components/schemas/WhatIfData"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/SimpleMeta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data",
+          "meta"
+        ],
+        "title": "WhatIfResponse"
+      },
+      "WhatIfResult": {
+        "properties": {
+          "escenario": {
+            "$ref": "#/components/schemas/WhatIfScenario"
+          },
+          "score_antes": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Score Antes"
+          },
+          "score_despues": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Score Despues"
+          },
+          "nivel_antes": {
+            "type": "string",
+            "pattern": "^(fragil|vulnerable|estable|resiliente)$",
+            "title": "Nivel Antes"
+          },
+          "nivel_despues": {
+            "type": "string",
+            "pattern": "^(fragil|vulnerable|estable|resiliente)$",
+            "title": "Nivel Despues"
+          },
+          "delta_score": {
+            "type": "number",
+            "title": "Delta Score",
+            "description": "score_despues − score_antes"
+          },
+          "delta_factores": {
+            "items": {
+              "$ref": "#/components/schemas/WhatIfDeltaFactor"
+            },
+            "type": "array",
+            "title": "Delta Factores"
+          },
+          "liquidez_antes": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Liquidez Antes"
+          },
+          "liquidez_despues": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Liquidez Despues"
+          },
+          "analisis_diferencial": {
+            "type": "string",
+            "maxLength": 2000,
+            "title": "Analisis Diferencial",
+            "description": "Análisis en lenguaje natural del impacto del escenario"
+          }
+        },
+        "type": "object",
+        "required": [
+          "escenario",
+          "score_antes",
+          "score_despues",
+          "nivel_antes",
+          "nivel_despues",
+          "delta_score",
+          "delta_factores",
+          "analisis_diferencial"
+        ],
+        "title": "WhatIfResult",
+        "description": "Resultado completo del simulador What-If."
+      },
+      "WhatIfScenario": {
+        "properties": {
+          "reduce_hormiga_pct": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Reduce Hormiga Pct",
+            "description": "% de reducción en gastos hormiga",
+            "default": 0.0
+          },
+          "reduce_variable_pct": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Reduce Variable Pct",
+            "description": "% de reducción en gastos variables",
+            "default": 0.0
+          },
+          "reduce_entretenimiento_pct": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Reduce Entretenimiento Pct",
+            "description": "% de reducción en entretenimiento",
+            "default": 0.0
+          },
+          "reduce_alimentacion_pct": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Reduce Alimentacion Pct",
+            "description": "% de reducción en alimentación",
+            "default": 0.0
+          },
+          "reduce_transporte_pct": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Reduce Transporte Pct",
+            "description": "% de reducción en transporte",
+            "default": 0.0
+          },
+          "reduce_suscripcion_pct": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Reduce Suscripcion Pct",
+            "description": "% de reducción en suscripciones",
+            "default": 0.0
+          },
+          "nueva_ingresos_mensuales": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nueva Ingresos Mensuales",
+            "description": "Nuevo ingreso mensual hipotético (MXN)"
+          },
+          "extra_ahorro_mensual": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Extra Ahorro Mensual",
+            "description": "Ahorro adicional mensual hipotético (MXN)",
+            "default": 0.0
+          }
+        },
+        "type": "object",
+        "title": "WhatIfScenario",
+        "description": "Escenario hipotético para el simulador What-If."
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "Sistema",
+      "description": "Endpoints de salud y diagnóstico de la API.\n\n- `GET /` — Health check ligero, no toca AWS.\n- `POST /test-bedrock` — Verifica conectividad con Claude vía Bedrock."
+    },
+    {
+      "name": "Clasificación",
+      "description": "**Step A** del pipeline. Categoriza transacciones Plaid con la cadena **caché → heurísticas → Bedrock** — solo las transacciones ambiguas llegan al LLM, reduciendo costo y latencia.\n\nNo ejecuta análisis conductual ni score de resiliencia."
+    },
+    {
+      "name": "Análisis completo",
+      "description": "**Pipeline completo** (Steps A → B → C → D, con B+C en paralelo vía `asyncio.gather`): clasificación + insights conductuales + score de resiliencia con explicación LLM + cash flow forecast + daily pulse."
+    },
+    {
+      "name": "Cash Flow",
+      "description": "**Radar financiero** — detección de gastos recurrentes, proyección de liquidez a 30 días, alertas de **Día de Riesgo** y detección de ráfagas de gasto impulsivo. Más rápido que `/analyze` porque omite los Steps B y C."
+    },
+    {
+      "name": "Simulador",
+      "description": "**What-If** — Simula cómo cambia el Score de Resiliencia y la liquidez proyectada al modificar hábitos de gasto o ingresos. Útil para coaching financiero y onboarding."
+    }
+  ]
+}
