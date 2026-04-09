@@ -43,19 +43,43 @@ const docTemplate = `{
         },
         "/v1/transactions": {
             "get": {
-                "description": "Lista transacciones (MVP); query user_id opcional",
+                "description": "Listado paginado por usuario autenticado. Soporta filtros por rango de fecha y categoría. Excluye borradas lógicas por defecto.",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
                     "transactions"
                 ],
-                "summary": "Listar transacciones",
+                "summary": "Listar transacciones del usuario autenticado",
                 "parameters": [
                     {
                         "type": "integer",
-                        "description": "Filtrar por usuario interno",
-                        "name": "user_id",
+                        "description": "Tamaño de página (default 50, max 200)",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Offset paginación (default 0)",
+                        "name": "offset",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "RFC3339 inicio (posted_at \u003e= from)",
+                        "name": "from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "RFC3339 fin (posted_at \u003c= to)",
+                        "name": "to",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filtro por categoría",
+                        "name": "category",
                         "in": "query"
                     }
                 ],
@@ -63,22 +87,351 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/finexa-ia_ms-transactions_internal_models.TransactionListItem"
-                            }
+                            "$ref": "#/definitions/apiresult.okEnvelope-array_finexa-ia_ms-transactions_internal_models_TransactionListItem"
                         }
                     },
                     "400": {
-                        "description": "user_id inválido",
+                        "description": "Bad Request",
                         "schema": {
-                            "type": "string"
+                            "$ref": "#/definitions/apiresult.ErrResult"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/apiresult.ErrResult"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "type": "string"
+                            "$ref": "#/definitions/apiresult.ErrResult"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/transactions/analysis/latest": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "analysis"
+                ],
+                "summary": "Último análisis agregado",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/apiresult.okEnvelope-finexa-ia_ms-transactions_internal_models_TransactionAnalysis"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/apiresult.ErrResult"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/apiresult.ErrResult"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apiresult.ErrResult"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/transactions/by-transaction-id/{transaction_id}": {
+            "get": {
+                "description": "Obtiene una transacción por transaction_id, aislada por usuario autenticado y excluyendo borradas lógicas.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "transactions"
+                ],
+                "summary": "Detalle por transaction_id",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "transaction_id externo",
+                        "name": "transaction_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/apiresult.okEnvelope-finexa-ia_ms-transactions_internal_models_TransactionListItem"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apiresult.ErrResult"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/apiresult.ErrResult"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/apiresult.ErrResult"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apiresult.ErrResult"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/transactions/cash-flow/latest": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "cashflow"
+                ],
+                "summary": "Último cash flow",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/apiresult.okEnvelope-finexa-ia_ms-transactions_internal_models_CashFlow"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/apiresult.ErrResult"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/apiresult.ErrResult"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apiresult.ErrResult"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/transactions/insights": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "analysis"
+                ],
+                "summary": "Listar insights",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Tamaño de página (default 50, max 200)",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Offset paginación (default 0)",
+                        "name": "offset",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/apiresult.okEnvelope-array_finexa-ia_ms-transactions_internal_models_Insight"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apiresult.ErrResult"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/apiresult.ErrResult"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apiresult.ErrResult"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/transactions/pulse/latest": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "pulse"
+                ],
+                "summary": "Último pulse",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/apiresult.okEnvelope-finexa-ia_ms-transactions_internal_models_Pulse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/apiresult.ErrResult"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/apiresult.ErrResult"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apiresult.ErrResult"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/transactions/resilience-factors": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "resilience"
+                ],
+                "summary": "Listar factores de resiliencia",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/apiresult.okEnvelope-array_finexa-ia_ms-transactions_internal_models_ResilienceFactor"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/apiresult.ErrResult"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apiresult.ErrResult"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/transactions/test-bedrock": {
+            "post": {
+                "description": "Hace una llamada simple al ai-pipeline (FastAPI) para probar Bedrock",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "ai"
+                ],
+                "summary": "Probar IA (Bedrock)",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apiresult.ErrResult"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/transactions/{id}": {
+            "get": {
+                "description": "Obtiene una transacción por id interno, aislada por usuario autenticado y excluyendo borradas lógicas.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "transactions"
+                ],
+                "summary": "Detalle por id interno",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID interno",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/apiresult.okEnvelope-finexa-ia_ms-transactions_internal_models_TransactionListItem"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apiresult.ErrResult"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/apiresult.ErrResult"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/apiresult.ErrResult"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apiresult.ErrResult"
                         }
                     }
                 }
@@ -86,6 +439,144 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "apiresult.ErrResult": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "$ref": "#/definitions/apiresult.ErrorPayload"
+                },
+                "ok": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "apiresult.ErrorPayload": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string"
+                },
+                "details": {
+                    "type": "object",
+                    "additionalProperties": {}
+                },
+                "message": {
+                    "type": "string"
+                }
+            }
+        },
+        "apiresult.okEnvelope-array_finexa-ia_ms-transactions_internal_models_Insight": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/finexa-ia_ms-transactions_internal_models.Insight"
+                    }
+                },
+                "ok": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "apiresult.okEnvelope-array_finexa-ia_ms-transactions_internal_models_ResilienceFactor": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/finexa-ia_ms-transactions_internal_models.ResilienceFactor"
+                    }
+                },
+                "ok": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "apiresult.okEnvelope-array_finexa-ia_ms-transactions_internal_models_TransactionListItem": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/finexa-ia_ms-transactions_internal_models.TransactionListItem"
+                    }
+                },
+                "ok": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "apiresult.okEnvelope-finexa-ia_ms-transactions_internal_models_CashFlow": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/finexa-ia_ms-transactions_internal_models.CashFlow"
+                },
+                "ok": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "apiresult.okEnvelope-finexa-ia_ms-transactions_internal_models_Pulse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/finexa-ia_ms-transactions_internal_models.Pulse"
+                },
+                "ok": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "apiresult.okEnvelope-finexa-ia_ms-transactions_internal_models_TransactionAnalysis": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/finexa-ia_ms-transactions_internal_models.TransactionAnalysis"
+                },
+                "ok": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "apiresult.okEnvelope-finexa-ia_ms-transactions_internal_models_TransactionListItem": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/finexa-ia_ms-transactions_internal_models.TransactionListItem"
+                },
+                "ok": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "finexa-ia_ms-transactions_internal_models.CashFlow": {
+            "type": "object",
+            "properties": {
+                "forecast_horizon_days": {
+                    "type": "integer"
+                },
+                "impulse_alerts": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "projected_liquidity": {
+                    "type": "number"
+                },
+                "recurring_expenses": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
         "finexa-ia_ms-transactions_internal_models.HealthResponse": {
             "type": "object",
             "properties": {
@@ -99,13 +590,127 @@ const docTemplate = `{
                 }
             }
         },
+        "finexa-ia_ms-transactions_internal_models.Insight": {
+            "type": "object",
+            "properties": {
+                "affected_category": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "potential_monthly_saving": {
+                    "type": "number"
+                },
+                "priority": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "finexa-ia_ms-transactions_internal_models.Pulse": {
+            "type": "object",
+            "properties": {
+                "alerta": {
+                    "type": "string"
+                },
+                "dias_restantes_mes": {
+                    "type": "integer"
+                },
+                "gasto_fijo_mensual": {
+                    "type": "number"
+                },
+                "gasto_promedio_diario": {
+                    "type": "number"
+                },
+                "gasto_variable_hoy": {
+                    "type": "number"
+                },
+                "porcentaje_consumido_mes": {
+                    "type": "number"
+                },
+                "presupuesto_libre_diario": {
+                    "type": "number"
+                },
+                "reference_date": {
+                    "description": "YYYY-MM-DD",
+                    "type": "string"
+                },
+                "saldo_actual": {
+                    "type": "number"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "finexa-ia_ms-transactions_internal_models.ResilienceFactor": {
+            "type": "object",
+            "properties": {
+                "descripcion": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "nombre": {
+                    "type": "string"
+                },
+                "peso": {
+                    "type": "number"
+                },
+                "score_ponderado": {
+                    "type": "number"
+                },
+                "score_raw": {
+                    "type": "number"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "finexa-ia_ms-transactions_internal_models.TransactionAnalysis": {
+            "type": "object",
+            "properties": {
+                "ant_expense_percentage": {
+                    "type": "number"
+                },
+                "ant_expense_total": {
+                    "type": "number"
+                },
+                "risk_level": {
+                    "type": "string"
+                },
+                "summary": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
         "finexa-ia_ms-transactions_internal_models.TransactionListItem": {
             "type": "object",
             "properties": {
                 "amount_cents": {
                     "type": "integer"
                 },
+                "category": {
+                    "type": "string"
+                },
                 "currency": {
+                    "type": "string"
+                },
+                "deleted_at": {
                     "type": "string"
                 },
                 "description": {
@@ -117,8 +722,8 @@ const docTemplate = `{
                 "posted_at": {
                     "type": "string"
                 },
-                "user_id": {
-                    "type": "integer"
+                "transaction_id": {
+                    "type": "string"
                 }
             }
         }

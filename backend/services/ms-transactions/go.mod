@@ -3,20 +3,19 @@ module finexa-ia/ms-transactions
 go 1.25.0
 
 require (
-	finexa-ia/apiresult v0.0.0-00010101000000-000000000000
 	github.com/MicahParks/keyfunc/v3 v3.8.0
 	github.com/aws/aws-sdk-go-v2 v1.41.5
 	github.com/aws/aws-sdk-go-v2/config v1.32.13
 	github.com/aws/aws-sdk-go-v2/service/secretsmanager v1.41.5
 	github.com/golang-jwt/jwt/v5 v5.2.2
-	github.com/jackc/pgx/v5 v5.9.1
-	github.com/labstack/echo/v5 v5.0.4
+	github.com/jackc/pgx/v5 v5.7.6
 	github.com/swaggo/http-swagger v1.3.4
 	github.com/swaggo/swag v1.16.6
 	go.uber.org/fx v1.24.0
 )
 
 require (
+	github.com/DATA-DOG/go-sqlmock v1.5.2 // indirect
 	github.com/KyleBanks/depth v1.2.1 // indirect
 	github.com/MicahParks/jwkset v0.11.0 // indirect
 	github.com/aws/aws-sdk-go-v2/credentials v1.19.13 // indirect
@@ -41,6 +40,7 @@ require (
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/mailru/easyjson v0.7.6 // indirect
 	github.com/rogpeppe/go-internal v1.14.1 // indirect
+	github.com/stretchr/testify v1.10.0 // indirect
 	github.com/swaggo/files v0.0.0-20220610200504-28940afbdbfe // indirect
 	go.uber.org/dig v1.19.0 // indirect
 	go.uber.org/multierr v1.10.0 // indirect

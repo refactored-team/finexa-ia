@@ -39,6 +39,11 @@ func (h *TransactionsHandler) Register(e *echo.Echo) {
 	g.GET("", h.list)
 	g.GET("/:id", h.getByID)
 	g.GET("/by-transaction-id/:transaction_id", h.getByTransactionID)
+	g.GET("/analysis/latest", h.getLatestAnalysis)
+	g.GET("/insights", h.listInsights)
+	g.GET("/resilience-factors", h.listResilienceFactors)
+	g.GET("/cash-flow/latest", h.getLatestCashFlow)
+	g.GET("/pulse/latest", h.getLatestPulse)
 	g.POST("/test-bedrock", h.testBedrock)
 }
 
@@ -271,6 +276,360 @@ LIMIT 1`, whereCond)
 		it.DeletedAt = &v
 	}
 	return it, nil
+}
+
+// getLatestAnalysis returns latest transaction_analysis snapshot for authenticated user.
+//
+//	@Summary		Último análisis agregado
+//	@Tags			analysis
+//	@Produce		json
+//	@Success		200	{object}	apiresult.okEnvelope[models.TransactionAnalysis]
+//	@Failure		401	{object}	apiresult.ErrResult
+//	@Failure		404	{object}	apiresult.ErrResult
+//	@Failure		500	{object}	apiresult.ErrResult
+//	@Router			/v1/transactions/analysis/latest [get]
+func (h *TransactionsHandler) getLatestAnalysis(c *echo.Context) error {
+	uid, ok := authUserID(c)
+	if !ok {
+		return apiresult.RespondError(c, http.StatusUnauthorized, apiresult.CodeUnauthorized, "missing authenticated user", nil)
+	}
+	ctx, cancel := context.WithTimeout(c.Request().Context(), 5*time.Second)
+	defer cancel()
+
+	const q = `SELECT ant_expense_total, ant_expense_percentage, risk_level, summary, updated_at
+FROM finexa_tx.transaction_analysis
+WHERE user_id = $1 AND deleted_at IS NULL
+ORDER BY updated_at DESC, id DESC
+LIMIT 1`
+	var (
+		antTotal sql.NullFloat64
+		antPct   sql.NullFloat64
+		risk     sql.NullString
+		sum      sql.NullString
+		updated  time.Time
+	)
+	if err := h.db.QueryRowContext(ctx, q, uid).Scan(&antTotal, &antPct, &risk, &sum, &updated); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return apiresult.RespondError(c, http.StatusNotFound, apiresult.CodeNotFound, "analysis not found", nil)
+		}
+		return apiresult.RespondError(c, http.StatusInternalServerError, apiresult.CodeInternalError, "query failed", nil)
+	}
+	out := models.TransactionAnalysis{UpdatedAt: updated.UTC().Format(time.RFC3339Nano)}
+	if antTotal.Valid {
+		v := antTotal.Float64
+		out.AntExpenseTotal = &v
+	}
+	if antPct.Valid {
+		v := antPct.Float64
+		out.AntExpensePercentage = &v
+	}
+	if risk.Valid {
+		v := risk.String
+		out.RiskLevel = &v
+	}
+	if sum.Valid {
+		v := sum.String
+		out.Summary = &v
+	}
+	return apiresult.RespondOK(c, http.StatusOK, out)
+}
+
+// listInsights returns insights list for authenticated user (paginated).
+//
+//	@Summary		Listar insights
+//	@Tags			analysis
+//	@Produce		json
+//	@Param			limit	query	int	false	"Tamaño de página (default 50, max 200)"
+//	@Param			offset	query	int	false	"Offset paginación (default 0)"
+//	@Success		200		{object}	apiresult.okEnvelope[[]models.Insight]
+//	@Failure		400		{object}	apiresult.ErrResult
+//	@Failure		401		{object}	apiresult.ErrResult
+//	@Failure		500		{object}	apiresult.ErrResult
+//	@Router			/v1/transactions/insights [get]
+func (h *TransactionsHandler) listInsights(c *echo.Context) error {
+	uid, ok := authUserID(c)
+	if !ok {
+		return apiresult.RespondError(c, http.StatusUnauthorized, apiresult.CodeUnauthorized, "missing authenticated user", nil)
+	}
+
+	limit := defaultListLimit
+	offset := 0
+	if raw := strings.TrimSpace(c.QueryParam("limit")); raw != "" {
+		n, err := strconv.Atoi(raw)
+		if err != nil || n <= 0 || n > maxListLimit {
+			return apiresult.RespondError(c, http.StatusBadRequest, apiresult.CodeValidationError, "limit must be between 1 and 200", nil)
+		}
+		limit = n
+	}
+	if raw := strings.TrimSpace(c.QueryParam("offset")); raw != "" {
+		n, err := strconv.Atoi(raw)
+		if err != nil || n < 0 {
+			return apiresult.RespondError(c, http.StatusBadRequest, apiresult.CodeValidationError, "offset must be >= 0", nil)
+		}
+		offset = n
+	}
+
+	ctx, cancel := context.WithTimeout(c.Request().Context(), 5*time.Second)
+	defer cancel()
+
+	const q = `SELECT id, title, description, priority, potential_monthly_saving, affected_category, updated_at
+FROM finexa_tx.insights
+WHERE user_id = $1 AND deleted_at IS NULL
+ORDER BY updated_at DESC, id DESC
+LIMIT $2 OFFSET $3`
+	rows, err := h.db.QueryContext(ctx, q, uid, limit, offset)
+	if err != nil {
+		return apiresult.RespondError(c, http.StatusInternalServerError, apiresult.CodeInternalError, "query failed", nil)
+	}
+	defer rows.Close()
+
+	out := make([]models.Insight, 0, limit)
+	for rows.Next() {
+		var (
+			it       models.Insight
+			title    sql.NullString
+			desc     sql.NullString
+			priority sql.NullString
+			save     sql.NullFloat64
+			aff      sql.NullString
+			updated  time.Time
+		)
+		if err := rows.Scan(&it.ID, &title, &desc, &priority, &save, &aff, &updated); err != nil {
+			return apiresult.RespondError(c, http.StatusInternalServerError, apiresult.CodeInternalError, "scan failed", nil)
+		}
+		if title.Valid {
+			v := title.String
+			it.Title = &v
+		}
+		if desc.Valid {
+			v := desc.String
+			it.Description = &v
+		}
+		if priority.Valid {
+			v := priority.String
+			it.Priority = &v
+		}
+		if save.Valid {
+			v := save.Float64
+			it.PotentialMonthlySaving = &v
+		}
+		if aff.Valid {
+			v := aff.String
+			it.AffectedCategory = &v
+		}
+		it.UpdatedAt = updated.UTC().Format(time.RFC3339Nano)
+		out = append(out, it)
+	}
+	if err := rows.Err(); err != nil {
+		return apiresult.RespondError(c, http.StatusInternalServerError, apiresult.CodeInternalError, "rows error", nil)
+	}
+	return apiresult.RespondOK(c, http.StatusOK, out)
+}
+
+// listResilienceFactors returns resilience_factors rows for authenticated user.
+//
+//	@Summary		Listar factores de resiliencia
+//	@Tags			resilience
+//	@Produce		json
+//	@Success		200	{object}	apiresult.okEnvelope[[]models.ResilienceFactor]
+//	@Failure		401	{object}	apiresult.ErrResult
+//	@Failure		500	{object}	apiresult.ErrResult
+//	@Router			/v1/transactions/resilience-factors [get]
+func (h *TransactionsHandler) listResilienceFactors(c *echo.Context) error {
+	uid, ok := authUserID(c)
+	if !ok {
+		return apiresult.RespondError(c, http.StatusUnauthorized, apiresult.CodeUnauthorized, "missing authenticated user", nil)
+	}
+	ctx, cancel := context.WithTimeout(c.Request().Context(), 5*time.Second)
+	defer cancel()
+
+	const q = `SELECT id, nombre, peso, score_raw, score_ponderado, descripcion, updated_at
+FROM finexa_tx.resilience_factors
+WHERE user_id = $1 AND deleted_at IS NULL
+ORDER BY updated_at DESC, id DESC`
+	rows, err := h.db.QueryContext(ctx, q, uid)
+	if err != nil {
+		return apiresult.RespondError(c, http.StatusInternalServerError, apiresult.CodeInternalError, "query failed", nil)
+	}
+	defer rows.Close()
+
+	out := make([]models.ResilienceFactor, 0, 8)
+	for rows.Next() {
+		var (
+			it      models.ResilienceFactor
+			nombre  sql.NullString
+			peso    sql.NullFloat64
+			raw     sql.NullFloat64
+			pond    sql.NullFloat64
+			desc    sql.NullString
+			updated time.Time
+		)
+		if err := rows.Scan(&it.ID, &nombre, &peso, &raw, &pond, &desc, &updated); err != nil {
+			return apiresult.RespondError(c, http.StatusInternalServerError, apiresult.CodeInternalError, "scan failed", nil)
+		}
+		if nombre.Valid {
+			v := nombre.String
+			it.Nombre = &v
+		}
+		if peso.Valid {
+			v := peso.Float64
+			it.Peso = &v
+		}
+		if raw.Valid {
+			v := raw.Float64
+			it.ScoreRaw = &v
+		}
+		if pond.Valid {
+			v := pond.Float64
+			it.ScorePonderado = &v
+		}
+		if desc.Valid {
+			v := desc.String
+			it.Descripcion = &v
+		}
+		it.UpdatedAt = updated.UTC().Format(time.RFC3339Nano)
+		out = append(out, it)
+	}
+	if err := rows.Err(); err != nil {
+		return apiresult.RespondError(c, http.StatusInternalServerError, apiresult.CodeInternalError, "rows error", nil)
+	}
+	return apiresult.RespondOK(c, http.StatusOK, out)
+}
+
+// getLatestCashFlow returns latest cash_flow snapshot for authenticated user.
+//
+//	@Summary		Último cash flow
+//	@Tags			cashflow
+//	@Produce		json
+//	@Success		200	{object}	apiresult.okEnvelope[models.CashFlow]
+//	@Failure		401	{object}	apiresult.ErrResult
+//	@Failure		404	{object}	apiresult.ErrResult
+//	@Failure		500	{object}	apiresult.ErrResult
+//	@Router			/v1/transactions/cash-flow/latest [get]
+func (h *TransactionsHandler) getLatestCashFlow(c *echo.Context) error {
+	uid, ok := authUserID(c)
+	if !ok {
+		return apiresult.RespondError(c, http.StatusUnauthorized, apiresult.CodeUnauthorized, "missing authenticated user", nil)
+	}
+	ctx, cancel := context.WithTimeout(c.Request().Context(), 5*time.Second)
+	defer cancel()
+
+	const q = `SELECT recurring_expenses, projected_liquidity, impulse_alerts, forecast_horizon_days, updated_at
+FROM finexa_tx.cash_flow
+WHERE user_id = $1 AND deleted_at IS NULL
+ORDER BY updated_at DESC, id DESC
+LIMIT 1`
+	var (
+		rec     []byte
+		proj    sql.NullFloat64
+		imp     []byte
+		horizon sql.NullInt64
+		updated time.Time
+	)
+	if err := h.db.QueryRowContext(ctx, q, uid).Scan(&rec, &proj, &imp, &horizon, &updated); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return apiresult.RespondError(c, http.StatusNotFound, apiresult.CodeNotFound, "cash flow not found", nil)
+		}
+		return apiresult.RespondError(c, http.StatusInternalServerError, apiresult.CodeInternalError, "query failed", nil)
+	}
+	out := models.CashFlow{UpdatedAt: updated.UTC().Format(time.RFC3339Nano)}
+	if len(rec) > 0 {
+		out.RecurringExpenses = rec
+	}
+	if proj.Valid {
+		v := proj.Float64
+		out.ProjectedLiquidity = &v
+	}
+	if len(imp) > 0 {
+		out.ImpulseAlerts = imp
+	}
+	if horizon.Valid {
+		v := int(horizon.Int64)
+		out.ForecastHorizonDays = &v
+	}
+	return apiresult.RespondOK(c, http.StatusOK, out)
+}
+
+// getLatestPulse returns latest pulse snapshot for authenticated user.
+//
+//	@Summary		Último pulse
+//	@Tags			pulse
+//	@Produce		json
+//	@Success		200	{object}	apiresult.okEnvelope[models.Pulse]
+//	@Failure		401	{object}	apiresult.ErrResult
+//	@Failure		404	{object}	apiresult.ErrResult
+//	@Failure		500	{object}	apiresult.ErrResult
+//	@Router			/v1/transactions/pulse/latest [get]
+func (h *TransactionsHandler) getLatestPulse(c *echo.Context) error {
+	uid, ok := authUserID(c)
+	if !ok {
+		return apiresult.RespondError(c, http.StatusUnauthorized, apiresult.CodeUnauthorized, "missing authenticated user", nil)
+	}
+	ctx, cancel := context.WithTimeout(c.Request().Context(), 5*time.Second)
+	defer cancel()
+
+	const q = `SELECT reference_date, presupuesto_libre_diario, saldo_actual, gasto_fijo_mensual, gasto_variable_hoy,
+gasto_promedio_diario, dias_restantes_mes, porcentaje_consumido_mes, alerta, updated_at
+FROM finexa_tx.pulse
+WHERE user_id = $1 AND deleted_at IS NULL
+ORDER BY updated_at DESC, id DESC
+LIMIT 1`
+	var (
+		refDate sql.NullTime
+		libre   sql.NullFloat64
+		saldo   sql.NullFloat64
+		fijo    sql.NullFloat64
+		varHoy  sql.NullFloat64
+		prom    sql.NullFloat64
+		dias    sql.NullInt64
+		pct     sql.NullFloat64
+		alerta  sql.NullString
+		updated time.Time
+	)
+	if err := h.db.QueryRowContext(ctx, q, uid).Scan(&refDate, &libre, &saldo, &fijo, &varHoy, &prom, &dias, &pct, &alerta, &updated); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return apiresult.RespondError(c, http.StatusNotFound, apiresult.CodeNotFound, "pulse not found", nil)
+		}
+		return apiresult.RespondError(c, http.StatusInternalServerError, apiresult.CodeInternalError, "query failed", nil)
+	}
+	out := models.Pulse{UpdatedAt: updated.UTC().Format(time.RFC3339Nano)}
+	if refDate.Valid {
+		v := refDate.Time.UTC().Format("2006-01-02")
+		out.ReferenceDate = &v
+	}
+	if libre.Valid {
+		v := libre.Float64
+		out.PresupuestoLibreDiario = &v
+	}
+	if saldo.Valid {
+		v := saldo.Float64
+		out.SaldoActual = &v
+	}
+	if fijo.Valid {
+		v := fijo.Float64
+		out.GastoFijoMensual = &v
+	}
+	if varHoy.Valid {
+		v := varHoy.Float64
+		out.GastoVariableHoy = &v
+	}
+	if prom.Valid {
+		v := prom.Float64
+		out.GastoPromedioDiario = &v
+	}
+	if dias.Valid {
+		v := int(dias.Int64)
+		out.DiasRestantesMes = &v
+	}
+	if pct.Valid {
+		v := pct.Float64
+		out.PorcentajeConsumidoMes = &v
+	}
+	if alerta.Valid {
+		v := alerta.String
+		out.Alerta = &v
+	}
+	return apiresult.RespondOK(c, http.StatusOK, out)
 }
 
 // testBedrock is a simple endpoint to test communication with the python ai-pipeline.
