@@ -13,7 +13,9 @@ from pipeline.domain.models import (
     CashFlowResult,
     DailyPulse,
     EnrichedTransaction,
+    InsightActionPlan,
     ResilienceScore,
+    SpendingInsight,
     WhatIfResult,
 )
 
@@ -309,3 +311,48 @@ class ErrorResponse(BaseModel):
     ok: Literal[False] = False
     error: str = Field(..., description="Código de error en snake_case.", examples=["pipeline_failed"])
     detail: Optional[str] = Field(None, description="Mensaje detallado.")
+
+
+# ─────────────────────────────────────────────────────────────
+# Action plan (Step E)
+# ─────────────────────────────────────────────────────────────
+
+class ActionPlanRequest(BaseModel):
+    """Solicitud de plan de accion para un insight especifico."""
+
+    insight: SpendingInsight = Field(
+        ...,
+        description=(
+            "El insight especifico seleccionado por el usuario en la UI. "
+            "Debe provenir de la respuesta de `/analyze`."
+        ),
+        examples=[
+            {
+                "title": "Cancela tu suscripcion a Netflix",
+                "description": "Tienes un cargo mensual de $179 que puedes cancelar ahora mismo.",
+                "priority": "alta",
+                "potential_monthly_saving": 179.0,
+                "affected_category": "suscripcion",
+                "is_immediate_action": True,
+                "action_steps": [
+                    "Entra a netflix.com/youraccount",
+                    "Click en 'Cancelar membresia'",
+                    "Confirma la cancelacion.",
+                ],
+                "action_url": "https://www.netflix.com/youraccount",
+            }
+        ],
+    )
+
+
+class ActionPlanData(BaseModel):
+    plan: InsightActionPlan = Field(
+        ...,
+        description="Plan de accion estructurado con 2-4 pasos para resolver el insight.",
+    )
+
+
+class ActionPlanResponse(BaseModel):
+    ok: Literal[True] = True
+    data: ActionPlanData
+    meta: SimpleMeta

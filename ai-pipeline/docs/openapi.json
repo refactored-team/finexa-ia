@@ -279,10 +279,199 @@
           }
         }
       }
+    },
+    "/insights/action-plan": {
+      "post": {
+        "tags": [
+          "Insights"
+        ],
+        "summary": "Plan de accion paso a paso para un insight",
+        "description": "Recibe un `SpendingInsight` (obtenido de `/analyze`) y genera un plan de **2 a 4 pasos estructurados** para que el usuario lo ejecute ahora mismo o en los proximos dias.\n\n### Tipos de plan segun el insight\n\n| Tipo de insight | Pasos generados | `es_accion_inmediata` |\n|---|---|---|\n| Suscripcion cancelable online | URL directa + navegacion + confirmacion | `true` |\n| Suscripcion con contrato fisico | Numero de contacto + guion + confirmacion escrita | `false` |\n| Gasto hormiga | Identificar + sustituir + meta semanal + registrar | `false` |\n| Gasto fijo alto | Listar + comparar + negociar o cambiar de plan | `false` |\n| Ahorro automatico | Definir monto + configurar transferencia + cuenta separada | `true` |\n\nCada paso incluye `tipo`, `instruccion` especifica, `duracion_minutos` y opcionalmente una `url` directa al panel de accion.\n\nSi Bedrock no esta disponible, se retorna un plan de respaldo basado en los `action_steps` que ya trae el insight.",
+        "operationId": "action_plan_insights_action_plan_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActionPlanRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionPlanResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
     "schemas": {
+      "ActionPlanData": {
+        "properties": {
+          "plan": {
+            "$ref": "#/components/schemas/InsightActionPlan",
+            "description": "Plan de accion estructurado con 2-4 pasos para resolver el insight."
+          }
+        },
+        "type": "object",
+        "required": [
+          "plan"
+        ],
+        "title": "ActionPlanData"
+      },
+      "ActionPlanRequest": {
+        "properties": {
+          "insight": {
+            "$ref": "#/components/schemas/SpendingInsight",
+            "description": "El insight especifico seleccionado por el usuario en la UI. Debe provenir de la respuesta de `/analyze`.",
+            "examples": [
+              {
+                "action_steps": [
+                  "Entra a netflix.com/youraccount",
+                  "Click en 'Cancelar membresia'",
+                  "Confirma la cancelacion."
+                ],
+                "action_url": "https://www.netflix.com/youraccount",
+                "affected_category": "suscripcion",
+                "description": "Tienes un cargo mensual de $179 que puedes cancelar ahora mismo.",
+                "is_immediate_action": true,
+                "potential_monthly_saving": 179.0,
+                "priority": "alta",
+                "title": "Cancela tu suscripcion a Netflix"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "insight"
+        ],
+        "title": "ActionPlanRequest",
+        "description": "Solicitud de plan de accion para un insight especifico."
+      },
+      "ActionPlanResponse": {
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "const": true,
+            "title": "Ok",
+            "default": true
+          },
+          "data": {
+            "$ref": "#/components/schemas/ActionPlanData"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/SimpleMeta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data",
+          "meta"
+        ],
+        "title": "ActionPlanResponse"
+      },
+      "ActionStep": {
+        "properties": {
+          "numero": {
+            "type": "integer",
+            "maximum": 4.0,
+            "minimum": 1.0,
+            "title": "Numero",
+            "description": "Posicion del paso en la secuencia (1-4)."
+          },
+          "titulo": {
+            "type": "string",
+            "maxLength": 100,
+            "title": "Titulo",
+            "description": "Encabezado corto del paso. Empieza con verbo imperativo. Sin markdown."
+          },
+          "instruccion": {
+            "type": "string",
+            "maxLength": 500,
+            "title": "Instruccion",
+            "description": "Instruccion detallada: que hacer exactamente, donde, que boton presionar, que decir al servicio al cliente, etc. Sin markdown."
+          },
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "cancelar",
+              "configurar",
+              "habito",
+              "revisar",
+              "contactar",
+              "otro"
+            ],
+            "title": "Tipo",
+            "description": "Naturaleza del paso:\n- `cancelar`: dar de baja un servicio online.\n- `configurar`: ajustar un setting, activar ahorro automatico, etc.\n- `habito`: cambio de comportamiento (llevar cafe, cocinar, etc.).\n- `revisar`: auditar algo antes de actuar (ver suscripciones, revisar recibos).\n- `contactar`: llamar, chatear o ir fisicamente a resolver algo.\n- `otro`: cualquier otro tipo de paso."
+          },
+          "url": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 400
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url",
+            "description": "URL directa donde se ejecuta este paso (panel de cancelacion, configuracion de cuenta, etc.). Solo cuando el paso se realiza 100% online. Ejemplo: https://www.netflix.com/youraccount"
+          },
+          "duracion_minutos": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 120.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duracion Minutos",
+            "description": "Tiempo estimado para completar este paso en minutos."
+          }
+        },
+        "type": "object",
+        "required": [
+          "numero",
+          "titulo",
+          "instruccion",
+          "tipo"
+        ],
+        "title": "ActionStep",
+        "description": "Un paso concreto del plan de accion."
+      },
       "AnalyzeData": {
         "properties": {
           "classified": {
@@ -1263,6 +1452,74 @@
         "title": "ImpulseSpendingAlert",
         "description": "Alerta de gasto impulsivo: 3+ gastos discrecionales en ventana de 2-4 horas."
       },
+      "InsightActionPlan": {
+        "properties": {
+          "insight_titulo": {
+            "type": "string",
+            "maxLength": 80,
+            "title": "Insight Titulo",
+            "description": "Titulo del insight de origen (reproducido para contexto de la UI)."
+          },
+          "objetivo": {
+            "type": "string",
+            "maxLength": 300,
+            "title": "Objetivo",
+            "description": "Una sola frase que describe el resultado concreto al completar el plan. Ej: 'Cancelar tu suscripcion a Netflix y liberar $179 al mes.'"
+          },
+          "pasos": {
+            "items": {
+              "$ref": "#/components/schemas/ActionStep"
+            },
+            "type": "array",
+            "maxItems": 4,
+            "minItems": 2,
+            "title": "Pasos",
+            "description": "Secuencia ordenada de 2 a 4 pasos. El orden importa: debe seguirse en secuencia."
+          },
+          "ahorro_mensual_estimado": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Ahorro Mensual Estimado",
+            "description": "Ahorro mensual esperado en MXN al completar el plan. 0 si no aplica.",
+            "default": 0.0
+          },
+          "tiempo_total_minutos": {
+            "type": "integer",
+            "maximum": 480.0,
+            "minimum": 1.0,
+            "title": "Tiempo Total Minutos",
+            "description": "Suma estimada de todos los pasos en minutos."
+          },
+          "es_accion_inmediata": {
+            "type": "boolean",
+            "title": "Es Accion Inmediata",
+            "description": "True cuando todos los pasos se pueden completar online ahora mismo. Permite a la UI mostrar un CTA directo.",
+            "default": false
+          },
+          "nota_final": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 300
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nota Final",
+            "description": "Mensaje de cierre opcional: que pasara despues (ej. 'Tu acceso sigue activo hasta el fin del ciclo de pago'), o un refuerzo positivo concreto."
+          }
+        },
+        "type": "object",
+        "required": [
+          "insight_titulo",
+          "objetivo",
+          "pasos",
+          "tiempo_total_minutos"
+        ],
+        "title": "InsightActionPlan",
+        "description": "Plan de accion estructurado con 2-4 pasos para resolver un insight especifico."
+      },
       "LiquidityAlert": {
         "properties": {
           "alert_type": {
@@ -2061,6 +2318,10 @@
     {
       "name": "Simulador",
       "description": "**What-If** — Simula cómo cambia el Score de Resiliencia y la liquidez proyectada al modificar hábitos de gasto o ingresos. Útil para coaching financiero y onboarding."
+    },
+    {
+      "name": "Insights",
+      "description": "**Step E** — Plan de acción detallado para un insight específico. El usuario selecciona un insight de `/analyze` y recibe una guía de **2 a 4 pasos concretos** para ejecutar ahora mismo o en los próximos días: cancelar una suscripción, sustituir un gasto hormiga, configurar ahorro automático, etc."
     }
   ]
 }
