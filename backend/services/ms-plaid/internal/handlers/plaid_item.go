@@ -1,17 +1,21 @@
 package handlers
 
 import (
+	"context"
 	"database/sql"
 	"errors"
+	"log/slog"
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/labstack/echo/v5"
 
 	"finexa-ia/apiresult"
 	"finexa-ia/ms-plaid/internal/models"
 	"finexa-ia/ms-plaid/internal/services"
+	"finexa-ia/ms-plaid/internal/transactionssync"
 )
 
 // PlaidItemHandler exposes the single Plaid connection per user (path userId).
@@ -19,10 +23,28 @@ import (
 type PlaidItemHandler struct {
 	svc      *services.PlaidItemService
 	exchange *services.PlaidExchangeService
+	sync     transactionssync.Client
 }
 
-func NewPlaidItemHandler(svc *services.PlaidItemService, exchange *services.PlaidExchangeService) *PlaidItemHandler {
-	return &PlaidItemHandler{svc: svc, exchange: exchange}
+func NewPlaidItemHandler(svc *services.PlaidItemService, exchange *services.PlaidExchangeService, sync transactionssync.Client) *PlaidItemHandler {
+	return &PlaidItemHandler{svc: svc, exchange: exchange, sync: sync}
+}
+
+// scheduleSyncAnalyzeAfterExchange dispara en background ms-transactions sync-and-analyze (Plaid + IA).
+func (h *PlaidItemHandler) scheduleSyncAnalyzeAfterExchange(userID int64) {
+	if !h.sync.Enabled() {
+		return
+	}
+	uid := userID
+	go func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 95*time.Second)
+		defer cancel()
+		if err := h.sync.TriggerSyncAnalyze(ctx, uid); err != nil {
+			slog.Error("post-exchange sync-and-analyze failed", "user_id", uid, "error", err)
+			return
+		}
+		slog.Info("post-exchange sync-and-analyze completed", "user_id", uid)
+	}()
 }
 
 func (h *PlaidItemHandler) Register(e *echo.Echo) {
@@ -123,6 +145,7 @@ func (h *PlaidItemHandler) exchangePublicToken(c *echo.Context) error {
 	if err != nil {
 		return h.mapExchangeError(c, err)
 	}
+	h.scheduleSyncAnalyzeAfterExchange(userID)
 	return apiresult.RespondOK(c, http.StatusOK, out)
 }
 
@@ -182,6 +205,7 @@ func (h *PlaidItemHandler) upsert(c *echo.Context) error {
 		if errEx != nil {
 			return h.mapExchangeError(c, errEx)
 		}
+		h.scheduleSyncAnalyzeAfterExchange(userID)
 		return apiresult.RespondOK(c, http.StatusOK, out)
 	}
 	item, err := h.svc.UpsertForUser(c.Request().Context(), userID, in)

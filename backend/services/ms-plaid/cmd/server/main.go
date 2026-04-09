@@ -29,6 +29,7 @@ import (
 	"finexa-ia/ms-plaid/internal/handlers"
 	"finexa-ia/ms-plaid/internal/repository"
 	"finexa-ia/ms-plaid/internal/services"
+	"finexa-ia/ms-plaid/internal/transactionssync"
 	pkgdb "finexa-ia/ms-plaid/pkg/db"
 )
 
@@ -41,6 +42,7 @@ func main() {
 			services.NewPlaidItemService,
 			services.NewPlaidExchangeService,
 			services.NewPlaidLinkService,
+			provideTransactionsSyncClient,
 			handlers.NewHealthHandler,
 			handlers.NewPlaidItemHandler,
 			handlers.NewPlaidLinkHandler,
@@ -49,6 +51,10 @@ func main() {
 		fx.Invoke(registerRoutes),
 		fx.Invoke(startServer),
 	).Run()
+}
+
+func provideTransactionsSyncClient(cfg *config.App) transactionssync.Client {
+	return transactionssync.New(cfg.ResolveMSTransactionsBaseURL())
 }
 
 func newEcho() *echo.Echo {

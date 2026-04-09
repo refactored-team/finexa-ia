@@ -50,6 +50,8 @@ type App struct {
 	// PlaidLinkCustomizationName: nombre exacto en el Dashboard (API: link_customization_name).
 	// Si está vacío tras cargar config, applyPlaidMVPDefaults usa production_component.
 	PlaidLinkCustomizationName string `json:"link_customization_name,omitempty"`
+	// MSTransactionsBaseURL — base HTTP de ms-transactions (sin barra final). Vacío = no se dispara sync-and-analyze tras exchange.
+	MSTransactionsBaseURL string `json:"ms_transactions_base_url,omitempty"`
 }
 
 // Load elige el origen de la configuración:
@@ -112,6 +114,9 @@ func fromEnv() (*App, error) {
 	if v := strings.TrimSpace(os.Getenv("PLAID_COUNTRY_CODES")); v != "" {
 		app.PlaidCountryCodes = v
 	}
+	if v := strings.TrimSpace(os.Getenv("MS_TRANSACTIONS_BASE_URL")); v != "" {
+		app.MSTransactionsBaseURL = v
+	}
 	applyPlaidMVPDefaults(app)
 	return app, nil
 }
@@ -163,6 +168,9 @@ func fromSecretsManager(secretID string) (*App, error) {
 	if v := strings.TrimSpace(os.Getenv("PLAID_COUNTRY_CODES")); v != "" {
 		app.PlaidCountryCodes = v
 	}
+	if v := strings.TrimSpace(os.Getenv("MS_TRANSACTIONS_BASE_URL")); v != "" {
+		app.MSTransactionsBaseURL = v
+	}
 	applyPlaidMVPDefaults(&app)
 	return &app, nil
 }
@@ -202,4 +210,12 @@ func applyPlaidMVPDefaults(a *App) {
 // PlaidConfigured is true when credentials are present for Link token creation.
 func (a *App) PlaidConfigured() bool {
 	return a != nil && strings.TrimSpace(a.PlaidClientID) != "" && strings.TrimSpace(a.PlaidSecret) != ""
+}
+
+// ResolveMSTransactionsBaseURL devuelve la base URL de ms-transactions sin barra final.
+func (a *App) ResolveMSTransactionsBaseURL() string {
+	if a == nil {
+		return ""
+	}
+	return strings.TrimRight(strings.TrimSpace(a.MSTransactionsBaseURL), "/")
 }
