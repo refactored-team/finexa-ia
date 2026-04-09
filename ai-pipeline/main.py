@@ -67,6 +67,25 @@ _TAGS: list[dict] = [
             "financiero y onboarding."
         ),
     },
+    {
+        "name": "Insights",
+        "description": (
+            "**Step E** — Plan de acción detallado para un insight específico. "
+            "El usuario selecciona un insight de `/analyze` y recibe una guía de "
+            "**2 a 4 pasos concretos** para ejecutar ahora mismo o en los próximos días: "
+            "cancelar una suscripción, sustituir un gasto hormiga, configurar ahorro automático, etc."
+        ),
+    },
+    {
+        "name": "Supervivencia",
+        "description": (
+            "**Modo Supervivencia** — Simula el escenario de recorte brusco: ¿qué pasa si el "
+            "usuario elimina todos los gastos hormiga, suscripciones, entretenimiento y variables "
+            "y se queda solo con renta, comida, salud y transporte? "
+            "Devuelve ahorro mensual proyectado, runway, balance y desglose por categoría. "
+            "Sin Bedrock — cálculo puro."
+        ),
+    },
 ]
 
 # ─────────────────────────────────────────────────────────────

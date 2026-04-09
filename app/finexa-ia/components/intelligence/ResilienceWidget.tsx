@@ -18,18 +18,16 @@ export default function ResilienceWidget({
       end={{ x: 1, y: 1 }}
       style={styles.container}
     >
-      <Text style={styles.statusMicro}>[SEC_BUFFER: NOMINAL]</Text>
-
       {/* Background Icon */}
       <View style={styles.bgIconWrap}>
         <Zap size={100} color="#FFFFFF" opacity={0.25} fill="#FFFFFF" />
       </View>
 
-      <Text style={styles.label}>Resilience Index</Text>
+      <Text style={styles.label}>Indice de Resiliencia</Text>
 
       <View style={styles.valueWrap}>
         <Text style={styles.valueText}>${liquidity.toLocaleString('en-US')}</Text>
-        <Text style={styles.subValueText}>observed_liquidity</Text>
+        <Text style={styles.subValueText}>liquidez observada</Text>
       </View>
 
       {/* Progress Bar */}

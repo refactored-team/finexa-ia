@@ -2,18 +2,19 @@ import { PrismColors } from '@/constants/theme';
 import { Radius, Shadow, Spacing, TextStyles } from '@/constants/uiStyles';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import type { RecurringExpense } from '@/src/types/transactions';
 
 export default function FixedCostsCard({
-  total = 20256,
-  ratio = 35.5,
+  total = 0,
+  ratio = 0,
+  items = [],
 }: {
   total?: number;
   ratio?: number;
+  items?: RecurringExpense[];
 }) {
   return (
     <View style={styles.container}>
-      <Text style={styles.statusMicro}>[FIXED_COSTS: STABLE]</Text>
-
       {/* Accent Top Left */}
       <View style={[styles.prismAccent, styles.prismAccentTl]} />
 
@@ -21,13 +22,20 @@ export default function FixedCostsCard({
         <View style={styles.leftCol}>
           <Text style={styles.title}>Carga Fija</Text>
           <Text style={styles.totalValue}>${total.toLocaleString('en-US')}</Text>
-          <Text style={styles.ratioBadge}>[FIXED_RATIO: {ratio}%]</Text>
+          <Text style={styles.ratioBadge}>PORCENTAJE FIJO: {ratio}%</Text>
         </View>
 
         <View style={styles.rightCol}>
-          <Text style={styles.itemText}>Renta ($9,200)</Text>
-          <Text style={styles.itemText}>Gym ($499)</Text>
-          <Text style={styles.itemText}>CFE ($450)</Text>
+          {items.slice(0, 3).map((item, index) => {
+            return (
+              <Text key={`fixed-${index}`} style={styles.itemText}>
+                {item.name} (${item.amount.toLocaleString('en-US')})
+              </Text>
+            );
+          })}
+          {items.length === 0 && (
+            <Text style={styles.itemText}>No hay datos</Text>
+          )}
         </View>
       </View>
 

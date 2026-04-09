@@ -71,9 +71,6 @@ export default function EmergencyShield({
         <Text style={styles.securedAmount}>
           ${securedAmount.toLocaleString('en-US')} Asegurados
         </Text>
-        <Text style={styles.statusTag}>
-          [RUNWAY_STATUS: {runwayStatus}]
-        </Text>
       </View>
 
       {/* Badge */}

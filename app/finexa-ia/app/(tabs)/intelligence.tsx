@@ -3,8 +3,9 @@ import { PrismColors } from '@/constants/theme';
 import { Radius, Shadow, Spacing, TextStyles } from '@/constants/uiStyles';
 import { LinearGradient } from 'expo-linear-gradient';
 import React from 'react';
-import { Image, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, View, ActivityIndicator, Text, Pressable } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useIntelligenceData } from '@/src/hooks/useIntelligenceData';
 
 // Importing sub-components
 import AsymmetricAnalytics from '@/components/intelligence/AsymmetricAnalytics';
@@ -15,6 +16,27 @@ import SmallExpensesCard from '@/components/intelligence/SmallExpensesCard';
 
 export default function IntelligenceScreen() {
   const insets = useSafeAreaInsets();
+  const { analysis, insights, resilienceFactors, cashFlow, pulse, loading, error, refetch } = useIntelligenceData();
+
+  const antExpensePercentage = analysis?.ant_expense_percentage ?? 0;
+  const riskLevel = analysis?.risk_level;
+  const summary = analysis?.summary;
+
+  const antExpenseTotal = analysis?.ant_expense_total || 0;
+
+  const resilienceLiquidity = cashFlow?.projected_liquidity || 0;
+  const resiliencePercentage = Math.max(
+    0,
+    Math.min(100, resilienceFactors.reduce((acc, factor) => acc + (factor.score_ponderado || 0), 0) * 100)
+  );
+
+  const fixedCostsTotal = pulse?.gasto_fijo_mensual || 0;
+  const fixedCostsRatio = pulse?.porcentaje_consumido_mes || 0;
+
+  const projectionLiquidityStr =
+    cashFlow?.projected_liquidity != null
+      ? `$${cashFlow.projected_liquidity.toLocaleString('en-US')}`
+      : '$0';
 
   return (
     <AuthBackground showBottomBar showHeader={false}>
@@ -30,34 +52,59 @@ export default function IntelligenceScreen() {
           contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + Spacing.lg + 110, paddingBottom: insets.bottom + 120 }]}
           showsVerticalScrollIndicator={false}
         >
-
-          {/* Header Hero / Insight */}
-
-
-          {/* DNA Metrics Grid */}
-          <View style={styles.gridSection}>
-            <View style={styles.colContainer}>
-              <ConfidenceScore />
+          {loading ? (
+            <ActivityIndicator size="large" color={PrismColors.primary} style={{ marginVertical: Spacing.xl }} />
+          ) : error ? (
+            <View style={styles.errorCard}>
+              <Text style={styles.errorTitle}>No se pudo cargar Inteligencia</Text>
+              <Text style={styles.errorText}>{error}</Text>
+              <Pressable onPress={refetch} style={styles.retryButton}>
+                <Text style={styles.retryText}>Reintentar</Text>
+              </Pressable>
             </View>
-            <View style={styles.colContainer}>
-              <ResilienceWidget />
-            </View>
-          </View>
+          ) : (
+            <>
+              {/* DNA Metrics Grid */}
+              <View style={styles.gridSection}>
+                <View style={styles.colContainer}>
+                  <ConfidenceScore
+                    antExpensePercentage={antExpensePercentage}
+                    riskLevel={riskLevel}
+                    summary={summary}
+                  />
+                </View>
+                <View style={styles.colContainer}>
+                  <ResilienceWidget
+                    liquidity={resilienceLiquidity}
+                    percentage={Math.round(resiliencePercentage)}
+                  />
+                </View>
+              </View>
 
-          {/* Detail Cards */}
-          <View style={styles.sectionMargin}>
-            <SmallExpensesCard />
-          </View>
+              {/* Detail Cards */}
+              <View style={styles.sectionMargin}>
+                <SmallExpensesCard
+                  total={antExpenseTotal}
+                  items={insights ?? []}
+                />
+              </View>
 
-          <View style={styles.sectionMargin}>
-            <FixedCostsCard />
-          </View>
+              <View style={styles.sectionMargin}>
+                <FixedCostsCard
+                  total={fixedCostsTotal}
+                  ratio={fixedCostsRatio}
+                  items={cashFlow?.recurring_expenses ?? []}
+                />
+              </View>
 
-          {/* Charts & Analytics */}
-          <View style={styles.sectionMargin}>
-            <AsymmetricAnalytics />
-          </View>
-
+              {/* Charts & Analytics */}
+              <View style={styles.sectionMargin}>
+                <AsymmetricAnalytics
+                  projection={projectionLiquidityStr}
+                />
+              </View>
+            </>
+          )}
         </ScrollView>
       </View>
     </AuthBackground>
@@ -81,7 +128,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: Spacing.lg,
-    marginTop: -90
+    marginTop: -50
   },
   heroSection: {
     marginBottom: Spacing.xl,
@@ -171,5 +218,38 @@ const styles = StyleSheet.create({
   },
   sectionMargin: {
     marginBottom: Spacing.lg,
+  },
+  errorCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: Spacing.lg,
+    gap: Spacing.sm,
+    borderWidth: 1,
+    borderColor: 'rgba(185, 28, 28, 0.2)',
+    marginBottom: Spacing.lg,
+  },
+  errorTitle: {
+    color: PrismColors.textPrimary,
+    fontWeight: '700',
+    fontSize: 16,
+  },
+  errorText: {
+    color: PrismColors.textSecondary,
+    fontSize: 13,
+    lineHeight: 20,
+  },
+  retryButton: {
+    alignSelf: 'flex-start',
+    backgroundColor: PrismColors.primary,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    borderRadius: 8,
+  },
+  retryText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+    fontSize: 12,
+    letterSpacing: 0.3,
+    textTransform: 'uppercase',
   },
 });

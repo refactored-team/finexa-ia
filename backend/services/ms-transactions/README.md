@@ -1,6 +1,6 @@
 # ms-transactions
 
-Microservicio de transacciones y snapshots financieros del usuario autenticado.
+Microservicio de transacciones y snapshots financieros por usuario (`userId` en path).
 
 ## Qué cubre este servicio
 
@@ -20,71 +20,72 @@ Microservicio de transacciones y snapshots financieros del usuario autenticado.
   - `GET /ready`
   - `GET /health` (incluye check de DB)
 - Endpoints funcionales:
-  - prefijo: `GET|POST /v1/transactions/...`
+  - prefijo: `GET|POST /v1/users/:userId/transactions/...`
 
 ## Autenticación y scoping
 
-Todos los endpoints bajo `/v1/transactions` usan middleware de autenticación y filtran por usuario autenticado.
+La validación de identidad debe hacerse en API Gateway (authorizer).  
+Este servicio aplica scoping por `userId` en la ruta.
 
-- El frontend **no** debe enviar `user_id`.
-- El backend toma el usuario desde el token y aplica aislamiento por usuario en queries.
+- El cliente debe enviar `userId` en path.
+- El backend aísla queries por ese `userId`.
 
 ## Catálogo de endpoints
 
 | Método | Ruta | Qué muestra | Query/Path params | Códigos comunes |
 |---|---|---|---|---|
-| `GET` | `/v1/transactions` | Lista paginada de transacciones del usuario | `limit`, `offset`, `from` (RFC3339), `to` (RFC3339), `category` | `200`, `400`, `401`, `500` |
-| `GET` | `/v1/transactions/:id` | Detalle por ID interno | `id` (path) | `200`, `400`, `401`, `404`, `500` |
-| `GET` | `/v1/transactions/by-transaction-id/:transaction_id` | Detalle por transaction_id externo | `transaction_id` (path) | `200`, `400`, `401`, `404`, `500` |
-| `GET` | `/v1/transactions/analysis/latest` | Último análisis agregado del usuario | - | `200`, `401`, `404`, `500` |
-| `GET` | `/v1/transactions/insights` | Lista paginada de insights | `limit`, `offset` | `200`, `400`, `401`, `500` |
-| `GET` | `/v1/transactions/resilience-factors` | Factores de resiliencia del usuario | - | `200`, `401`, `500` |
-| `GET` | `/v1/transactions/cash-flow/latest` | Último snapshot de cash flow | - | `200`, `401`, `404`, `500` |
-| `GET` | `/v1/transactions/pulse/latest` | Último snapshot de pulse diario | - | `200`, `401`, `404`, `500` |
-| `POST` | `/v1/transactions/test-bedrock` | Prueba de conectividad con `ai-pipeline` | - | `200`, `401`, `502`, `500` |
+| `GET` | `/v1/users/:userId/transactions` | Lista paginada de transacciones del usuario | `userId` (path), `limit`, `offset`, `from` (RFC3339), `to` (RFC3339), `category` | `200`, `400`, `500` |
+| `GET` | `/v1/users/:userId/transactions/:id` | Detalle por ID interno | `userId`, `id` (path) | `200`, `400`, `404`, `500` |
+| `GET` | `/v1/users/:userId/transactions/by-transaction-id/:transaction_id` | Detalle por transaction_id externo | `userId`, `transaction_id` (path) | `200`, `400`, `404`, `500` |
+| `GET` | `/v1/users/:userId/transactions/analysis/latest` | Último análisis agregado del usuario | `userId` (path) | `200`, `400`, `404`, `500` |
+| `GET` | `/v1/users/:userId/transactions/insights` | Lista paginada de insights | `userId` (path), `limit`, `offset` | `200`, `400`, `500` |
+| `GET` | `/v1/users/:userId/transactions/resilience-factors` | Factores de resiliencia del usuario | `userId` (path) | `200`, `400`, `500` |
+| `GET` | `/v1/users/:userId/transactions/cash-flow/latest` | Último snapshot de cash flow | `userId` (path) | `200`, `400`, `404`, `500` |
+| `GET` | `/v1/users/:userId/transactions/pulse/latest` | Último snapshot de pulse diario | `userId` (path) | `200`, `400`, `404`, `500` |
+| `POST` | `/v1/users/:userId/transactions/test-bedrock` | Prueba de conectividad con `ai-pipeline` | `userId` (path) | `200`, `400`, `502`, `500` |
+| `POST` | `/v1/users/:userId/transactions/sync-and-analyze` | Plaid sync + análisis IA + persistencia | `userId` (path) + body opcional | `200`, `400`, `404`, `500`, `502`, `503` |
 
 ## Endpoint -> pantallas sugeridas en app móvil
 
 - **Pantalla Movimientos**
-  - `GET /v1/transactions`
+  - `GET /v1/users/:userId/transactions`
   - Uso: feed de transacciones, filtros por fecha/categoría, paginación.
 
 - **Pantalla Detalle de movimiento**
-  - `GET /v1/transactions/:id`
-  - Alternativa por ID externo: `GET /v1/transactions/by-transaction-id/:transaction_id`
+  - `GET /v1/users/:userId/transactions/:id`
+  - Alternativa por ID externo: `GET /v1/users/:userId/transactions/by-transaction-id/:transaction_id`
 
 - **Home financiera / Resumen**
-  - `GET /v1/transactions/analysis/latest`
-  - `GET /v1/transactions/pulse/latest`
+  - `GET /v1/users/:userId/transactions/analysis/latest`
+  - `GET /v1/users/:userId/transactions/pulse/latest`
   - Uso: score/riesgo + estado diario en widgets iniciales.
 
 - **Pantalla Insights**
-  - `GET /v1/transactions/insights`
+  - `GET /v1/users/:userId/transactions/insights`
   - Uso: recomendaciones y oportunidades ordenadas por recencia.
 
 - **Pantalla Resiliencia**
-  - `GET /v1/transactions/resilience-factors`
+  - `GET /v1/users/:userId/transactions/resilience-factors`
   - Uso: explicación por factores (peso, score raw, score ponderado).
 
 - **Pantalla Cash Flow**
-  - `GET /v1/transactions/cash-flow/latest`
+  - `GET /v1/users/:userId/transactions/cash-flow/latest`
   - Uso: liquidez proyectada, gastos recurrentes y alertas impulsivas.
 
 - **QA / Soporte técnico**
-  - `POST /v1/transactions/test-bedrock`
+  - `POST /v1/users/:userId/transactions/test-bedrock`
   - Uso: check rápido de integración IA (no para UX principal de usuario final).
 
 ## Ejemplos rápidos (cURL)
 
 Asume:
 - `API_BASE=https://<api-id>.execute-api.<region>.amazonaws.com`
-- `TOKEN=<id_token_o_access_token_valido>`
+- `USER_ID=<id_interno_usuario>`
 
 ### 1) Lista de transacciones con filtros
 
 ```bash
-curl -G "$API_BASE/v1/transactions" \
-  -H "Authorization: Bearer $TOKEN" \
+curl -G "$API_BASE/v1/users/$USER_ID/transactions" \
   --data-urlencode "limit=20" \
   --data-urlencode "offset=0" \
   --data-urlencode "from=2026-04-01T00:00:00Z" \
@@ -95,22 +96,19 @@ curl -G "$API_BASE/v1/transactions" \
 ### 2) Último análisis agregado
 
 ```bash
-curl "$API_BASE/v1/transactions/analysis/latest" \
-  -H "Authorization: Bearer $TOKEN"
+curl "$API_BASE/v1/users/$USER_ID/transactions/analysis/latest"
 ```
 
 ### 3) Último pulse
 
 ```bash
-curl "$API_BASE/v1/transactions/pulse/latest" \
-  -H "Authorization: Bearer $TOKEN"
+curl "$API_BASE/v1/users/$USER_ID/transactions/pulse/latest"
 ```
 
 ### 4) Test de Bedrock (vía ai-pipeline)
 
 ```bash
-curl -X POST "$API_BASE/v1/transactions/test-bedrock" \
-  -H "Authorization: Bearer $TOKEN"
+curl -X POST "$API_BASE/v1/users/$USER_ID/transactions/test-bedrock"
 ```
 
 ## Notas de integración frontend
@@ -139,7 +137,7 @@ curl -X POST "$API_BASE/v1/transactions/test-bedrock" \
 3. `ms-transactions` tiene `PLAID_CLIENT_ID`, `PLAID_SECRET`/`SANDBOX_SECRET`, `PLAID_ENV`.
 4. `AI_PIPELINE_BASE_URL` apunta a `ai-pipeline` disponible.
 5. Ejecutar:
-   - `POST /v1/transactions/sync-and-analyze`
+   - `POST /v1/users/:userId/transactions/sync-and-analyze`
 6. Verificar persistencia:
    - `public.transactions` (upserts por `transaction_id`)
    - `finexa_tx.transaction_analysis`

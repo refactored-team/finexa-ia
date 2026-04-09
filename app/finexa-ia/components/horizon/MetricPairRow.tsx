@@ -17,7 +17,7 @@ export type MetricItem = {
 
 export type MetricPairRowProps = {
   left: MetricItem;
-  right: MetricItem;
+  right?: MetricItem;
 };
 
 function MetricCard({ item }: { item: MetricItem }) {
@@ -50,7 +50,7 @@ export default function MetricPairRow({ left, right }: MetricPairRowProps) {
   return (
     <View style={styles.row}>
       <MetricCard item={left} />
-      <MetricCard item={right} />
+      {right ? <MetricCard item={right} /> : <View style={{ flex: 1 }} />}
     </View>
   );
 }

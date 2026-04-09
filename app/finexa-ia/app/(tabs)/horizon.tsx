@@ -3,7 +3,7 @@ import { PrismColors } from '@/constants/theme';
 import { Spacing, TextStyles } from '@/constants/uiStyles';
 import { LinearGradient } from 'expo-linear-gradient';
 import React from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AuthBackground } from '@/components/auth';
@@ -14,6 +14,7 @@ import {
   MetricPairRow,
   OptimizeButton,
 } from '@/components/horizon';
+import { useResilienceFactors } from '@/src/hooks/useResilienceFactors';
 
 // ---------------------------------------------------------------------------
 //  Static demo data — replace with API/store data when available
@@ -71,6 +72,29 @@ function getProjectedDate(savingAmount: number): string {
 
 export default function HorizonScreen() {
   const insets = useSafeAreaInsets();
+  const { factors, loading } = useResilienceFactors();
+
+  // Mapeamos exactamente la información que devuelve useResilienceFactors
+  const metricsData = factors.map((factor, index) => ({
+    icon: index % 2 === 0 ? Home : GitBranch, // Alternar iconos
+    iconColor: index % 2 === 0 ? `${PrismColors.primary}B3` : PrismColors.tertiary,
+    label: factor.nombre,
+    value: factor.score_raw, // El score raw (0.52) o el valor original
+    progress: factor.score_ponderado, // El progreso (ej. 0.13)
+    progressColor: index % 2 === 0 ? PrismColors.primary : PrismColors.tertiary,
+  }));
+
+  // Chunk en pares para respetar el diseño Dual de MetricPairRow
+  const metricRows = [];
+  for (let i = 0; i < metricsData.length; i += 2) {
+    metricRows.push(
+      <MetricPairRow
+        key={i}
+        left={metricsData[i]}
+        right={metricsData[i + 1]}
+      />
+    );
+  }
 
   return (
     <AuthBackground showBottomBar showHeader={false}>
@@ -92,19 +116,26 @@ export default function HorizonScreen() {
           ]}
           showsVerticalScrollIndicator={false}
         >
-
           {/* 1. Goal Hero */}
           <GoalHeroCard
             title={GOAL_DATA.title}
             targetAmount={GOAL_DATA.targetAmount}
             liquidityAmount={GOAL_DATA.liquidityAmount}
-            aiNarrative={GOAL_DATA.aiNarrative}
+            aiNarrative={factors.length > 0 ? factors.map((f) => f.descripcion).join(' ') : GOAL_DATA.aiNarrative}
             currentProjection={GOAL_DATA.currentProjection}
             acceleratedProjection={GOAL_DATA.acceleratedProjection}
           />
 
-          {/* 2. Two-column metrics */}
-          <MetricPairRow left={METRICS.left} right={METRICS.right} />
+          {/* 2. Dynamic resilience metrics */}
+          {loading ? (
+            <ActivityIndicator size="large" color={PrismColors.primary} style={{ marginVertical: Spacing.xl }} />
+          ) : metricRows.length > 0 ? (
+            <View style={{ gap: Spacing.lg }}>
+              {metricRows}
+            </View>
+          ) : (
+            <MetricPairRow left={METRICS.left} right={METRICS.right} />
+          )}
 
           {/* 3. Emergency shield */}
           <EmergencyShield
@@ -134,16 +165,15 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
-    height: 0
-    // height: 240,
+    height: 240,
   },
-  // scrollView: {
-  //   flex: 1,
-  // },
+  scrollView: {
+    flex: 1,
+  },
   scrollContent: {
     paddingHorizontal: Spacing.lg,
     gap: Spacing.lg,
-    marginTop: -120,
+    marginTop: -50,
   },
   engineTagRow: {
     alignItems: 'flex-end',

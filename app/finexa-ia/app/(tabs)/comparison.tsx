@@ -26,7 +26,7 @@ export default function ComparisonScreen() {
 
           {/* OPTION 1: Soft Primary Focus */}
           <View style={styles.comparisonSection}>
-            <Text style={styles.optionLabel}>OPCIÓN 1: Soft Primary Focus (Recomendado)</Text>
+            <Text style={styles.optionLabel}>OPCIÓN 1: Enfoque Primario Suave (Recomendado)</Text>
             <Text style={styles.optionDescription}>Profesional, confiable, con acentos azules suaves</Text>
 
             <View style={[styles.glassCard, styles.alertCard, styles.option1Card]}>
@@ -95,7 +95,7 @@ export default function ComparisonScreen() {
 
           {/* OPTION 2: Tertiary Accent (Playful) */}
           <View style={styles.comparisonSection}>
-            <Text style={styles.optionLabel}>OPCIÓN 2: Tertiary Accent</Text>
+            <Text style={styles.optionLabel}>OPCIÓN 2: Acento Terciario</Text>
             <Text style={styles.optionDescription}>Más jugétón y fresco con acentos cian</Text>
 
             <View style={[styles.glassCard, styles.alertCard, styles.option2Card]}>
@@ -164,7 +164,7 @@ export default function ComparisonScreen() {
 
           {/* OPTION 3: Gradient Background */}
           <View style={styles.comparisonSection}>
-            <Text style={styles.optionLabel}>OPCIÓN 3: Gradient Background</Text>
+            <Text style={styles.optionLabel}>OPCIÓN 3: Fondo con Gradiente</Text>
             <Text style={styles.optionDescription}>Fondo con gradiente sutil, más profundidad visual</Text>
 
             <View style={[styles.glassCard, styles.alertCard, styles.option3Card]}>
@@ -392,7 +392,7 @@ export default function ComparisonScreen() {
           {/* OPTION 5B: Gradient Card Background */}
           <View style={styles.comparisonSection}>
             <Text style={styles.optionLabel}>OPCIÓN 5B: Gradiente Suave</Text>
-            <Text style={styles.optionDescription}>Card con gradiente cyan → azul → morado, más visual</Text>
+            <Text style={styles.optionDescription}>Tarjeta con gradiente cian → azul → morado, más visual</Text>
 
             <LinearGradient
               colors={['#E0F2FE', '#DBEAFE', '#EDE9FE']}
@@ -472,8 +472,8 @@ export default function ComparisonScreen() {
 
           {/* OPTION 5C: Deep Navy Premium (Anti-Canva) */}
           <View style={styles.comparisonSection}>
-            <Text style={styles.optionLabel}>OPCIÓN 5C: Navy Premium (Anti-Canva)</Text>
-            <Text style={styles.optionDescription}>Fondo navy profundo, colores ricos y sofisticados</Text>
+            <Text style={styles.optionLabel}>OPCIÓN 5C: Azul Marino Premium (Anti-Canva)</Text>
+            <Text style={styles.optionDescription}>Fondo azul marino profundo, colores ricos y sofisticados</Text>
 
             <View style={[styles.glassCard, styles.alertCard, styles.option5CCard]}>
               <View style={styles.option4TopSection}>
@@ -549,7 +549,7 @@ export default function ComparisonScreen() {
 
           {/* OPTION 5D: Rich Purple Premium */}
           <View style={styles.comparisonSection}>
-            <Text style={styles.optionLabel}>OPCIÓN 5D: Purple Premium</Text>
+            <Text style={styles.optionLabel}>OPCIÓN 5D: Morado Premium</Text>
             <Text style={styles.optionDescription}>Fondo morado rico, muy premium y fintech</Text>
 
             <View style={[styles.glassCard, styles.alertCard, styles.option5DCard]}>
