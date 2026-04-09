@@ -16,6 +16,7 @@ from pipeline.domain.models import (
     InsightActionPlan,
     ResilienceScore,
     SpendingInsight,
+    SurvivalModeResult,
     WhatIfResult,
 )
 
@@ -355,4 +356,30 @@ class ActionPlanData(BaseModel):
 class ActionPlanResponse(BaseModel):
     ok: Literal[True] = True
     data: ActionPlanData
+    meta: SimpleMeta
+
+
+# ─────────────────────────────────────────────────────────────
+# Survival mode
+# ─────────────────────────────────────────────────────────────
+
+class SurvivalModeRequest(BaseModel):
+    """Solicitud de calculo de Modo Supervivencia."""
+
+    transactions: list[dict] = Field(
+        ...,
+        description="Lista de transacciones Plaid crudas (mismo formato que `/classify`).",
+    )
+
+
+class SurvivalModeData(BaseModel):
+    survival: SurvivalModeResult = Field(
+        ...,
+        description="Resultado completo del Modo Supervivencia con ahorros, runway y desglose por categoria.",
+    )
+
+
+class SurvivalModeResponse(BaseModel):
+    ok: Literal[True] = True
+    data: SurvivalModeData
     meta: SimpleMeta

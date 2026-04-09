@@ -7,6 +7,7 @@ Importa todos los modelos desde este módulo:
 
 from pipeline.domain.models.action_plan import ActionStep, InsightActionPlan
 from pipeline.domain.models.analysis import BehavioralAnalysisResult, SpendingInsight
+from pipeline.domain.models.survival import SurvivalCategoryBreakdown, SurvivalModeResult
 from pipeline.domain.models.cashflow import (
     CashFlowResult,
     ImpulseSpendingAlert,
@@ -47,6 +48,9 @@ __all__ = [
     # action plan
     "ActionStep",
     "InsightActionPlan",
+    # survival mode
+    "SurvivalCategoryBreakdown",
+    "SurvivalModeResult",
     # analysis
     "BehavioralAnalysisResult",
     "SpendingInsight",

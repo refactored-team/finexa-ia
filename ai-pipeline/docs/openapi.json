@@ -331,6 +331,58 @@
           }
         }
       }
+    },
+    "/survival-mode": {
+      "post": {
+        "tags": [
+          "Supervivencia"
+        ],
+        "summary": "Modo Supervivencia — impacto de recortar todo lo no esencial",
+        "description": "Simula que pasaria si el usuario eliminara **bruscamente** todos los gastos discrecionales y se quedara solo con lo indispensable.\n\n### Que se elimina\n| Categoria | Ejemplos |\n|---|---|\n| `hormiga` | Cafe, OXXO, snacks, delivery |\n| `suscripcion` | Netflix, Spotify, iCloud, ChatGPT |\n| `entretenimiento` | Bares, cine, eventos, videojuegos |\n| `variable` | Ropa, electronica, regalos, gastos discrecionales |\n\n### Que se conserva\n| Categoria | Ejemplos |\n|---|---|\n| `fijo` | Renta, CFE, agua, internet, gym, seguro |\n| `alimentacion` | Walmart, Soriana, HEB |\n| `salud` | Farmacia, medico, hospital |\n| `transporte` | Uber, DiDi, gasolina, metro |\n\n### Metricas devueltas\n- **Ahorro total** del periodo y **proyeccion mensual** (normalizado a 30 dias)\n- **% de reduccion** del gasto total\n- **Runway actual vs supervivencia** (meses de gastos cubiertos)\n- **Balance** antes y despues del recorte\n- **Gasto hormiga promedio diario** (para que impacte ver el numero)\n- **Desglose por categoria** ordenado por ahorro generado\n- **Categoria de mayor impacto** y monto ahorrado\n\nNo requiere Bedrock — calculo puro sobre las transacciones clasificadas.",
+        "operationId": "survival_mode_survival_mode_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SurvivalModeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SurvivalModeResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1924,6 +1976,281 @@
         "title": "SpendingInsight",
         "description": "One actionable insight from the behavioral analysis (Step B)."
       },
+      "SurvivalCategoryBreakdown": {
+        "properties": {
+          "categoria": {
+            "type": "string",
+            "title": "Categoria",
+            "description": "Identificador de la categoria (ej. 'hormiga', 'fijo')."
+          },
+          "label": {
+            "type": "string",
+            "title": "Label",
+            "description": "Nombre legible para la UI (ej. 'Gastos hormiga')."
+          },
+          "estado": {
+            "type": "string",
+            "enum": [
+              "eliminado",
+              "conservado"
+            ],
+            "title": "Estado",
+            "description": "'eliminado': se recorta a cero en supervivencia. 'conservado': se mantiene como gasto necesario."
+          },
+          "gasto_periodo": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Gasto Periodo",
+            "description": "Gasto total en esta categoria durante el periodo analizado (MXN)."
+          },
+          "ahorro_generado": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Ahorro Generado",
+            "description": "Cuanto se ahorra al aplicar supervivencia. 0 si la categoria se conserva."
+          },
+          "transacciones": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Transacciones",
+            "description": "Numero de transacciones en esta categoria."
+          },
+          "gasto_promedio_por_tx": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Gasto Promedio Por Tx",
+            "description": "Ticket promedio por transaccion en esta categoria."
+          }
+        },
+        "type": "object",
+        "required": [
+          "categoria",
+          "label",
+          "estado",
+          "gasto_periodo",
+          "ahorro_generado",
+          "transacciones",
+          "gasto_promedio_por_tx"
+        ],
+        "title": "SurvivalCategoryBreakdown",
+        "description": "Desglose de una categoria en modo supervivencia."
+      },
+      "SurvivalModeData": {
+        "properties": {
+          "survival": {
+            "$ref": "#/components/schemas/SurvivalModeResult",
+            "description": "Resultado completo del Modo Supervivencia con ahorros, runway y desglose por categoria."
+          }
+        },
+        "type": "object",
+        "required": [
+          "survival"
+        ],
+        "title": "SurvivalModeData"
+      },
+      "SurvivalModeRequest": {
+        "properties": {
+          "transactions": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Transactions",
+            "description": "Lista de transacciones Plaid crudas (mismo formato que `/classify`)."
+          }
+        },
+        "type": "object",
+        "required": [
+          "transactions"
+        ],
+        "title": "SurvivalModeRequest",
+        "description": "Solicitud de calculo de Modo Supervivencia."
+      },
+      "SurvivalModeResponse": {
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "const": true,
+            "title": "Ok",
+            "default": true
+          },
+          "data": {
+            "$ref": "#/components/schemas/SurvivalModeData"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/SimpleMeta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data",
+          "meta"
+        ],
+        "title": "SurvivalModeResponse"
+      },
+      "SurvivalModeResult": {
+        "properties": {
+          "dias_del_periodo": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Dias Del Periodo",
+            "description": "Duracion del periodo analizado en dias (calculada desde la primera a la ultima tx)."
+          },
+          "gasto_total_actual": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Gasto Total Actual",
+            "description": "Gasto total del periodo (todas las categorias de egreso)."
+          },
+          "gasto_total_supervivencia": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Gasto Total Supervivencia",
+            "description": "Gasto total si solo se conservan las categorias necesarias."
+          },
+          "ahorro_total_periodo": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Ahorro Total Periodo",
+            "description": "Diferencia entre gasto actual y gasto en supervivencia durante el periodo."
+          },
+          "reduccion_gasto_pct": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Reduccion Gasto Pct",
+            "description": "Porcentaje de reduccion del gasto total al activar supervivencia."
+          },
+          "ahorro_mensual_proyectado": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Ahorro Mensual Proyectado",
+            "description": "Ahorro proyectado a 30 dias normalizado por la duracion del periodo."
+          },
+          "gasto_mensual_actual_proyectado": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Gasto Mensual Actual Proyectado",
+            "description": "Gasto mensual actual proyectado a 30 dias."
+          },
+          "gasto_mensual_supervivencia_proyectado": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Gasto Mensual Supervivencia Proyectado",
+            "description": "Gasto mensual en supervivencia proyectado a 30 dias."
+          },
+          "ingreso_total_periodo": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Ingreso Total Periodo",
+            "description": "Ingresos totales observados en el periodo."
+          },
+          "balance_actual_periodo": {
+            "type": "number",
+            "title": "Balance Actual Periodo",
+            "description": "Balance neto actual: ingreso - gasto_actual."
+          },
+          "balance_supervivencia_periodo": {
+            "type": "number",
+            "title": "Balance Supervivencia Periodo",
+            "description": "Balance neto en supervivencia: ingreso - gasto_supervivencia."
+          },
+          "runway_actual_meses": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Runway Actual Meses",
+            "description": "Meses que podrias sostenerte con el ahorro actual si perdieras todos tus ingresos. Calculado como balance_actual / gasto_mensual_actual. 0 si el balance es negativo."
+          },
+          "runway_supervivencia_meses": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Runway Supervivencia Meses",
+            "description": "Runway en supervivencia: cuanto tiempo aguantarias gastando solo lo necesario."
+          },
+          "ahorro_diario_promedio": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Ahorro Diario Promedio",
+            "description": "Cuanto ahorras por dia al activar supervivencia (ahorro_total / dias)."
+          },
+          "gasto_hormiga_diario_promedio": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Gasto Hormiga Diario Promedio",
+            "description": "Cuanto gastas en promedio por dia en gastos hormiga en el periodo actual."
+          },
+          "transacciones_eliminadas": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Transacciones Eliminadas",
+            "description": "Numero de transacciones que desaparecen en modo supervivencia."
+          },
+          "transacciones_conservadas": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Transacciones Conservadas",
+            "description": "Numero de transacciones que se mantienen en modo supervivencia."
+          },
+          "categorias": {
+            "items": {
+              "$ref": "#/components/schemas/SurvivalCategoryBreakdown"
+            },
+            "type": "array",
+            "title": "Categorias",
+            "description": "Desglose por categoria ordenado por ahorro_generado descendente."
+          },
+          "categoria_mayor_ahorro": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Categoria Mayor Ahorro",
+            "description": "Nombre de la categoria que genera el mayor ahorro al eliminarse."
+          },
+          "mayor_ahorro_monto": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Mayor Ahorro Monto",
+            "description": "Monto ahorrado por la categoria de mayor impacto.",
+            "default": 0.0
+          },
+          "porcentaje_ingreso_liberado": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Porcentaje Ingreso Liberado",
+            "description": "Que porcentaje del ingreso total se libera al activar supervivencia. 0 si no hay ingresos registrados."
+          }
+        },
+        "type": "object",
+        "required": [
+          "dias_del_periodo",
+          "gasto_total_actual",
+          "gasto_total_supervivencia",
+          "ahorro_total_periodo",
+          "reduccion_gasto_pct",
+          "ahorro_mensual_proyectado",
+          "gasto_mensual_actual_proyectado",
+          "gasto_mensual_supervivencia_proyectado",
+          "ingreso_total_periodo",
+          "balance_actual_periodo",
+          "balance_supervivencia_periodo",
+          "runway_actual_meses",
+          "runway_supervivencia_meses",
+          "ahorro_diario_promedio",
+          "gasto_hormiga_diario_promedio",
+          "transacciones_eliminadas",
+          "transacciones_conservadas",
+          "categorias",
+          "porcentaje_ingreso_liberado"
+        ],
+        "title": "SurvivalModeResult",
+        "description": "Resultado completo del calculo de Modo Supervivencia."
+      },
       "ValidationError": {
         "properties": {
           "loc": {
@@ -2322,6 +2649,10 @@
     {
       "name": "Insights",
       "description": "**Step E** — Plan de acción detallado para un insight específico. El usuario selecciona un insight de `/analyze` y recibe una guía de **2 a 4 pasos concretos** para ejecutar ahora mismo o en los próximos días: cancelar una suscripción, sustituir un gasto hormiga, configurar ahorro automático, etc."
+    },
+    {
+      "name": "Supervivencia",
+      "description": "**Modo Supervivencia** — Simula el escenario de recorte brusco: ¿qué pasa si el usuario elimina todos los gastos hormiga, suscripciones, entretenimiento y variables y se queda solo con renta, comida, salud y transporte? Devuelve ahorro mensual proyectado, runway, balance y desglose por categoría. Sin Bedrock — cálculo puro."
     }
   ]
 }
