@@ -31,7 +31,6 @@ export default function AsymmetricAnalytics({
     <View style={styles.container}>
       {/* Chart Section */}
       <View style={styles.chartCard}>
-        <Text style={styles.statusMicro}>[CHART_RENDER: H_FREQ]</Text>
         <Text style={styles.chartTitle}>Curva de Gasto Semanal</Text>
 
         <View style={styles.chartArea}>
@@ -75,8 +74,6 @@ export default function AsymmetricAnalytics({
 
       {/* Projection Card */}
       <View style={styles.projectionCard}>
-        <Text style={[styles.statusMicro, { color: 'rgba(6, 182, 212, 0.4)' }]}>[PRJ: AUTO]</Text>
-
         <View style={styles.projIconWrap}>
           <PiggyBank size={24} color={PrismColors.tertiary} />
         </View>

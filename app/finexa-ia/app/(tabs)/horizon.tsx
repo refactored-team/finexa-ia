@@ -2,7 +2,7 @@ import { GitBranch, Home } from '@/constants/lucideIcons';
 import { PrismColors } from '@/constants/theme';
 import { Spacing, TextStyles } from '@/constants/uiStyles';
 import React from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AuthBackground } from '@/components/auth';
@@ -13,6 +13,7 @@ import {
   MetricPairRow,
   OptimizeButton,
 } from '@/components/horizon';
+import { useResilienceFactors } from '@/src/hooks/useResilienceFactors';
 
 // ---------------------------------------------------------------------------
 //  Static demo data — replace with API/store data when available
@@ -70,6 +71,29 @@ function getProjectedDate(savingAmount: number): string {
 
 export default function HorizonScreen() {
   const insets = useSafeAreaInsets();
+  const { factors, loading } = useResilienceFactors();
+
+  // Mapeamos exactamente la información que devuelve useResilienceFactors
+  const metricsData = factors.map((factor, index) => ({
+    icon: index % 2 === 0 ? Home : GitBranch, // Alternar iconos
+    iconColor: index % 2 === 0 ? `${PrismColors.primary}B3` : PrismColors.tertiary,
+    label: factor.nombre,
+    value: factor.score_raw, // El score raw (0.52) o el valor original
+    progress: factor.score_ponderado, // El progreso (ej. 0.13)
+    progressColor: index % 2 === 0 ? PrismColors.primary : PrismColors.tertiary,
+  }));
+
+  // Chunk en pares para respetar el diseño Dual de MetricPairRow
+  const metricRows = [];
+  for (let i = 0; i < metricsData.length; i += 2) {
+    metricRows.push(
+      <MetricPairRow
+        key={i}
+        left={metricsData[i]}
+        right={metricsData[i + 1]}
+      />
+    );
+  }
 
   return (
     <AuthBackground showBottomBar>
@@ -84,23 +108,25 @@ export default function HorizonScreen() {
         ]}
         showsVerticalScrollIndicator={false}
       >
-        {/* Engine status tag */}
-        <View style={styles.engineTagRow}>
-          <Text style={styles.engineTag}>[PROJECTION_ENGINE: ACTIVE]</Text>
-        </View>
 
         {/* 1. Goal Hero */}
         <GoalHeroCard
           title={GOAL_DATA.title}
           targetAmount={GOAL_DATA.targetAmount}
           liquidityAmount={GOAL_DATA.liquidityAmount}
-          aiNarrative={GOAL_DATA.aiNarrative}
+          aiNarrative={factors.length > 0 ? factors.map(f => f.descripcion).join(' ') : GOAL_DATA.aiNarrative}
           currentProjection={GOAL_DATA.currentProjection}
           acceleratedProjection={GOAL_DATA.acceleratedProjection}
         />
 
-        {/* 2. Two-column metrics */}
-        <MetricPairRow left={METRICS.left} right={METRICS.right} />
+        {/* 2. Dynamic Resilience Metrics Rows */}
+        {loading ? (
+          <ActivityIndicator size="large" color={PrismColors.primary} style={{ marginVertical: Spacing.xl }} />
+        ) : (
+          <View style={{ gap: Spacing.lg }}>
+            {metricRows}
+          </View>
+        )}
 
         {/* 3. Emergency shield */}
         <EmergencyShield
@@ -113,7 +139,7 @@ export default function HorizonScreen() {
         <ActionSimulator getProjectedDate={getProjectedDate} />
 
         {/* 5. CTA */}
-        <OptimizeButton onPress={() => {/* TODO: connect to optimization flow */}} />
+        <OptimizeButton onPress={() => {/* TODO: connect to optimization flow */ }} />
       </ScrollView>
     </AuthBackground>
   );
