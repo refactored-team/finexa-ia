@@ -101,7 +101,6 @@ export default function ActionSimulator({
         </View>
       </View>
 
-      <Text style={styles.tagMicro}>[SIM_ENG: READY]</Text>
     </View>
   );
 }

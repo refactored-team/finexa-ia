@@ -32,13 +32,6 @@ export default function GoalHeroCard({
 
   return (
     <View style={styles.cardContainer}>
-      {/* AI Bot icon */}
-      <View style={styles.botBadge}>
-        <View style={styles.botPulse} />
-        <View style={styles.botIconWrap}>
-          <Bot size={18} color={PrismColors.primary} strokeWidth={2} />
-        </View>
-      </View>
 
       <View style={styles.cardInner}>
         {/* Header: title + target amount */}
@@ -87,7 +80,6 @@ export default function GoalHeroCard({
           </Text>
         </View>
 
-        <Text style={styles.tagMicro}>[AI_ANALYSIS_ACTIVE]</Text>
       </View>
     </View>
   );
