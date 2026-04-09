@@ -366,7 +366,7 @@ const styles = StyleSheet.create({
   leftColumn: {
     gap: Spacing.lg,
     paddingHorizontal: Spacing.lg,
-    marginTop: Spacing.xl,
+    marginTop: 10,
     paddingBottom: Spacing.xl,
   },
   glassCard: {
