@@ -1,6 +1,7 @@
 import { AuthBackground } from '@/components/auth';
 import { PrismColors } from '@/constants/theme';
 import { Radius, Shadow, Spacing, TextStyles } from '@/constants/uiStyles';
+import { LinearGradient } from 'expo-linear-gradient';
 import React from 'react';
 import { ScrollView, StyleSheet, View, ActivityIndicator, Text, Pressable } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -38,68 +39,74 @@ export default function IntelligenceScreen() {
       : '$0';
 
   return (
-    <AuthBackground showBottomBar>
-      <ScrollView
-        style={styles.container}
-        contentContainerStyle={[styles.scrollContent, { paddingTop: Spacing.xl }]}
-        showsVerticalScrollIndicator={false}
-      >
+    <AuthBackground showBottomBar showHeader={false}>
+      <View style={styles.container}>
+        <LinearGradient
+          colors={['#C3E9E9', '#F6FBFB']}
+          start={{ x: 0.5, y: 1 }}
+          end={{ x: 0.5, y: 2 }}
+          style={[styles.heroBackground, { height: insets.top + 220 }]}
+        />
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + Spacing.lg + 110, paddingBottom: insets.bottom + 120 }]}
+          showsVerticalScrollIndicator={false}
+        >
+          {loading ? (
+            <ActivityIndicator size="large" color={PrismColors.primary} style={{ marginVertical: Spacing.xl }} />
+          ) : error ? (
+            <View style={styles.errorCard}>
+              <Text style={styles.errorTitle}>No se pudo cargar Inteligencia</Text>
+              <Text style={styles.errorText}>{error}</Text>
+              <Pressable onPress={refetch} style={styles.retryButton}>
+                <Text style={styles.retryText}>Reintentar</Text>
+              </Pressable>
+            </View>
+          ) : (
+            <>
+              {/* DNA Metrics Grid */}
+              <View style={styles.gridSection}>
+                <View style={styles.colContainer}>
+                  <ConfidenceScore
+                    antExpensePercentage={antExpensePercentage}
+                    riskLevel={riskLevel}
+                    summary={summary}
+                  />
+                </View>
+                <View style={styles.colContainer}>
+                  <ResilienceWidget
+                    liquidity={resilienceLiquidity}
+                    percentage={Math.round(resiliencePercentage)}
+                  />
+                </View>
+              </View>
 
-        {loading ? (
-          <ActivityIndicator size="large" color={PrismColors.primary} style={{ marginVertical: Spacing.xl }} />
-        ) : error ? (
-          <View style={styles.errorCard}>
-            <Text style={styles.errorTitle}>No se pudo cargar Inteligencia</Text>
-            <Text style={styles.errorText}>{error}</Text>
-            <Pressable onPress={refetch} style={styles.retryButton}>
-              <Text style={styles.retryText}>Reintentar</Text>
-            </Pressable>
-          </View>
-        ) : (
-          <>
-            {/* DNA Metrics Grid */}
-            <View style={styles.gridSection}>
-              <View style={styles.colContainer}>
-                <ConfidenceScore
-                  antExpensePercentage={antExpensePercentage}
-                  riskLevel={riskLevel}
-                  summary={summary}
+              {/* Detail Cards */}
+              <View style={styles.sectionMargin}>
+                <SmallExpensesCard
+                  total={antExpenseTotal}
+                  items={insights ?? []}
                 />
               </View>
-              <View style={styles.colContainer}>
-                <ResilienceWidget
-                  liquidity={resilienceLiquidity}
-                  percentage={Math.round(resiliencePercentage)}
+
+              <View style={styles.sectionMargin}>
+                <FixedCostsCard
+                  total={fixedCostsTotal}
+                  ratio={fixedCostsRatio}
+                  items={cashFlow?.recurring_expenses ?? []}
                 />
               </View>
-            </View>
 
-            {/* Detail Cards */}
-            <View style={styles.sectionMargin}>
-              <SmallExpensesCard
-                total={antExpenseTotal}
-                items={insights ?? []}
-              />
-            </View>
-
-            <View style={styles.sectionMargin}>
-              <FixedCostsCard
-                total={fixedCostsTotal}
-                ratio={fixedCostsRatio}
-                items={cashFlow?.recurring_expenses ?? []}
-              />
-            </View>
-
-            {/* Charts & Analytics */}
-            <View style={styles.sectionMargin}>
-              <AsymmetricAnalytics
-                projection={projectionLiquidityStr}
-              />
-            </View>
-          </>
-        )}
-
-      </ScrollView>
+              {/* Charts & Analytics */}
+              <View style={styles.sectionMargin}>
+                <AsymmetricAnalytics
+                  projection={projectionLiquidityStr}
+                />
+              </View>
+            </>
+          )}
+        </ScrollView>
+      </View>
     </AuthBackground>
   );
 }
@@ -107,9 +114,21 @@ export default function IntelligenceScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#F1F4F9',
+  },
+  heroBackground: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 240,
+  },
+  scrollView: {
+    flex: 1,
   },
   scrollContent: {
     paddingHorizontal: Spacing.lg,
+    marginTop: -50
   },
   heroSection: {
     marginBottom: Spacing.xl,

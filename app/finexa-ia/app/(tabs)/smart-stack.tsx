@@ -13,13 +13,14 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import Svg, { Circle, Defs, LinearGradient as SvgLinearGradient, Stop } from 'react-native-svg';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
 import { PrismColors } from '@/constants/theme';
 import { Spacing } from '@/constants/uiStyles';
 import SmartStack, { Finding, Theme } from '@/components/SmartStack';
+import apiClient from '@/src/services/api/apiClient';
 
 // ---------------------------------------------------------------------------
 // Themes
@@ -93,6 +94,50 @@ const HERO_THEME: Theme = {
 const ACCOUNT_CARD_WIDTH = 160;
 const ACCOUNT_CARD_GAP = 10;
 const CARD_WIDTH = ACCOUNT_CARD_WIDTH + ACCOUNT_CARD_GAP;
+const GAUGE_SIZE = 72;
+const GAUGE_STROKE = 6;
+const GAUGE_RADIUS = (GAUGE_SIZE - GAUGE_STROKE) / 2;
+const HARDCODED_USER_ID = 123;
+
+type ApiEnvelope<T> = {
+  ok: boolean;
+  data: T;
+};
+
+type ApiAnalysis = {
+  ant_expense_total?: number | null;
+  risk_level?: string | null;
+};
+
+type ApiCashFlow = {
+  projected_liquidity?: number | null;
+  forecast_horizon_days?: number | null;
+};
+
+type ApiInsight = {
+  title?: string | null;
+  affected_category?: string | null;
+};
+
+type ApiResilienceFactor = {
+  score_ponderado?: number | null;
+};
+
+type ApiTransaction = {
+  id: number;
+  amount_cents: number;
+  description?: string;
+  posted_at: string;
+  category?: string | null;
+};
+
+type UiTransaction = {
+  id: string;
+  merchant_name: string;
+  category: string;
+  amount: number;
+  dateISO: string;
+};
 
 // ---------------------------------------------------------------------------
 // Data
@@ -147,12 +192,17 @@ export default function SmartStackScreen() {
   const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
   const screenHeight = Dimensions.get('window').height;
   const sheetY = useSharedValue(screenHeight);
-  const analysis = {
+  const fallbackAnalysis = {
     resilience: { score_total: 14 },
     cash_flow: { projected_liquidity: 1400 },
     ant_expense_total: 2100,
     insights: [{ title: 'Gastos hormiga altos en delivery y cafés' }],
   };
+  const [apiAnalysis, setApiAnalysis] = useState<ApiAnalysis | null>(null);
+  const [apiCashFlow, setApiCashFlow] = useState<ApiCashFlow | null>(null);
+  const [apiInsights, setApiInsights] = useState<ApiInsight[]>([]);
+  const [apiResilienceFactors, setApiResilienceFactors] = useState<ApiResilienceFactor[]>([]);
+  const [apiTransactions, setApiTransactions] = useState<UiTransaction[]>([]);
   const accounts = [
     {
       account_id: 'acc_1',
@@ -189,28 +239,90 @@ export default function SmartStackScreen() {
     //   ],
     // },
   ];
-  const dailySpend = analysis.ant_expense_total / 30;
-  const projectedDays = Math.max(0, Math.round(analysis.cash_flow.projected_liquidity / dailySpend));
+  useEffect(() => {
+    let cancelled = false;
+    const loadSmartStackData = async () => {
+      try {
+        const [analysisRes, cashFlowRes, insightsRes, resilienceRes, transactionsRes] = await Promise.all([
+          apiClient.get<ApiEnvelope<ApiAnalysis>>(`/ms-transactions/v1/users/${HARDCODED_USER_ID}/transactions/analysis/latest`),
+          apiClient.get<ApiEnvelope<ApiCashFlow>>(`/ms-transactions/v1/users/${HARDCODED_USER_ID}/transactions/cash-flow/latest`),
+          apiClient.get<ApiEnvelope<ApiInsight[]>>(`/ms-transactions/v1/users/${HARDCODED_USER_ID}/transactions/insights`, {
+            params: { limit: 3, offset: 0 },
+          }),
+          apiClient.get<ApiEnvelope<ApiResilienceFactor[]>>(`/ms-transactions/v1/users/${HARDCODED_USER_ID}/transactions/resilience-factors`),
+          apiClient.get<ApiEnvelope<ApiTransaction[]>>(`/ms-transactions/v1/users/${HARDCODED_USER_ID}/transactions`, {
+            params: { limit: 20, offset: 0 },
+          }),
+        ]);
+
+        if (cancelled) return;
+        setApiAnalysis(analysisRes.data?.data ?? null);
+        setApiCashFlow(cashFlowRes.data?.data ?? null);
+        setApiInsights(insightsRes.data?.data ?? []);
+        setApiResilienceFactors(resilienceRes.data?.data ?? []);
+        setApiTransactions(
+          (transactionsRes.data?.data ?? []).map((tx) => ({
+            id: String(tx.id),
+            merchant_name: (tx.description || 'Movimiento').slice(0, 20),
+            category: tx.category || 'variable',
+            amount: (tx.amount_cents || 0) / 100,
+            dateISO: tx.posted_at,
+          }))
+        );
+      } catch {
+        if (!cancelled) {
+          setApiAnalysis(null);
+          setApiCashFlow(null);
+          setApiInsights([]);
+          setApiResilienceFactors([]);
+          setApiTransactions([]);
+        }
+      }
+    };
+    loadSmartStackData();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const resilienceScoreTotal = Math.max(
+    0,
+    Math.round(apiResilienceFactors.reduce((acc, factor) => acc + (factor.score_ponderado ?? 0), 0))
+  );
+  const antExpenseTotal = apiAnalysis?.ant_expense_total ?? fallbackAnalysis.ant_expense_total;
+  const projectedLiquidity = apiCashFlow?.projected_liquidity ?? fallbackAnalysis.cash_flow.projected_liquidity;
+  const dailySpend = Math.max(1, antExpenseTotal / 30);
+  const projectedDays = Math.max(0, apiCashFlow?.forecast_horizon_days ?? Math.round(projectedLiquidity / dailySpend));
   const projectedDate = new Date(Date.now() + projectedDays * 86400000).toLocaleDateString('es-MX', {
     day: 'numeric',
     month: 'short',
   });
-  const gaugeProgress = analysis.resilience.score_total / 100;
-  const circumference = 2 * Math.PI * 32;
+  const gaugeProgress = resilienceScoreTotal > 0 ? Math.min(1, resilienceScoreTotal / 100) : Math.min(1, projectedDays / 30);
+  const circumference = 2 * Math.PI * GAUGE_RADIUS;
   const strokeDashoffset = circumference - gaugeProgress * circumference;
-  const topInsight = `${analysis.insights[0]?.title ?? ''}`;
+  const topInsight = apiInsights[0]?.title ?? fallbackAnalysis.insights[0]?.title ?? '';
   const cardColors = ['#312E81', '#3730A3', '#4338CA'];
   const selectedAccount = accounts.find((a) => a.account_id === selectedAccountId) ?? null;
-  const visibleAccountId = accounts[activeCardIndex]?.account_id;
-  const filteredRecent = useMemo(
-    () =>
+  const filteredRecent = useMemo(() => {
+    if (apiTransactions.length > 0) {
+      return apiTransactions
+        .slice()
+        .sort((a, b) => new Date(b.dateISO).getTime() - new Date(a.dateISO).getTime())
+        .slice(0, 8);
+    }
+    const visibleAccountId = accounts[activeCardIndex]?.account_id;
+    return (
       accounts
         .find((a) => a.account_id === visibleAccountId)
         ?.transactions?.slice()
         .sort((a, b) => new Date(b.dateISO).getTime() - new Date(a.dateISO).getTime())
-        .slice(0, 8) ?? [],
-    [accounts, visibleAccountId]
-  );
+        .slice(0, 8) ?? []
+    );
+  }, [accounts, activeCardIndex, apiTransactions]);
+  const levelLabel = apiAnalysis?.risk_level ? `Nivel ${apiAnalysis.risk_level.toLowerCase()}` : 'Nivel estable';
+  const categoryLabel = apiInsights[0]?.affected_category
+    ? `${apiInsights[0].affected_category.replace(/_/g, ' ')} altos`
+    : 'Gastos hormiga altos';
   const onAccountsScroll = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {
     const rawIndex = Math.round(e.nativeEvent.contentOffset.x / CARD_WIDTH);
     const clampedIndex = Math.max(0, Math.min(rawIndex, accounts.length - 1));
@@ -291,10 +403,10 @@ export default function SmartStackScreen() {
             </Text>
             <View style={styles.chipsRow}>
               <View style={styles.chip}>
-                <Text style={styles.chipText}>Nivel estable</Text>
+                <Text style={styles.chipText}>{levelLabel}</Text>
               </View>
               <View style={styles.chip}>
-                <Text style={styles.chipText}>Gastos hormiga altos</Text>
+                <Text style={styles.chipText}>{categoryLabel}</Text>
               </View>
             </View>
           </LinearGradient>
@@ -310,24 +422,31 @@ export default function SmartStackScreen() {
           <View style={styles.lowerSection}>
             <View style={styles.gaugeCard}>
               <View style={styles.gaugeLeft}>
-                <Svg width={64} height={64}>
-                  <Circle cx="32" cy="32" r="32" stroke="#E5E7EB" strokeWidth="6" fill="transparent" />
+                <Svg width={GAUGE_SIZE} height={GAUGE_SIZE}>
                   <Circle
-                    cx="32"
-                    cy="32"
-                    r="32"
+                    cx={GAUGE_SIZE / 2}
+                    cy={GAUGE_SIZE / 2}
+                    r={GAUGE_RADIUS}
+                    stroke="#E5E7EB"
+                    strokeWidth={GAUGE_STROKE}
+                    fill="transparent"
+                  />
+                  <Circle
+                    cx={GAUGE_SIZE / 2}
+                    cy={GAUGE_SIZE / 2}
+                    r={GAUGE_RADIUS}
                     stroke="#2DD4BF"
-                    strokeWidth="6"
+                    strokeWidth={GAUGE_STROKE}
                     fill="transparent"
                     strokeDasharray={circumference}
                     strokeDashoffset={strokeDashoffset}
                     strokeLinecap="round"
                     rotation="-90"
-                    origin="32, 32"
+                    origin={`${GAUGE_SIZE / 2}, ${GAUGE_SIZE / 2}`}
                   />
                 </Svg>
                 <View style={styles.gaugeInner}>
-                  <Text style={styles.gaugeInnerValue}>{analysis.resilience.score_total}</Text>
+                  <Text style={styles.gaugeInnerValue}>{projectedDays}</Text>
                   <Text style={styles.gaugeInnerLabel}>DIAS</Text>
                 </View>
               </View>
@@ -522,16 +641,19 @@ const styles = StyleSheet.create({
   gaugeCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
-    padding: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 18,
-    height: 120,
+    minHeight: 126,
+    gap: 12,
   },
   gaugeLeft: {
-    width: 75,
-    height: 75,
-    marginRight: 12,
+    flexBasis: '42%',
+    maxWidth: 120,
+    minWidth: 96,
+    height: 92,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -553,9 +675,8 @@ const styles = StyleSheet.create({
   },
   gaugeRight: {
     flex: 1,
+    minWidth: 0,
     gap: 4,
-    // height: 75,
-
   },
   gaugeRightTitle: {
     fontSize: 16,

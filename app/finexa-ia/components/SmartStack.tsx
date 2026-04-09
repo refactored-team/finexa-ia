@@ -5,6 +5,7 @@ import {
   View,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { GestureDetector, Gesture } from 'react-native-gesture-handler';
 import Animated, {
@@ -69,6 +70,7 @@ interface SmartStackProps {
 // ---------------------------------------------------------------------------
 function StackCard({ finding, offset, isActive, translateY, theme }: StackCardProps) {
   const [stepsCollapsed, setStepsCollapsed] = useState(true);
+  const router = useRouter();
 
   const animatedStyle = useAnimatedStyle(() => {
     if (isActive) {
@@ -149,7 +151,9 @@ function StackCard({ finding, offset, isActive, translateY, theme }: StackCardPr
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={styles.ctaButton}>
-        <Pressable style={styles.ctaPressable}>
+        <Pressable
+          style={styles.ctaPressable}
+          onPress={() => router.push('/cancelling-process')}>
           <Text style={styles.ctaText}>Ver estrategia</Text>
         </Pressable>
       </LinearGradient>

@@ -12,9 +12,10 @@ import CustomBottomBar from '../navigation/CustomBottomBar';
 type AuthBackgroundProps = {
   children: ReactNode;
   showBottomBar?: boolean;
+  showHeader?: boolean;
 };
 
-export function AuthBackground({ children, showBottomBar = false }: AuthBackgroundProps) {
+export function AuthBackground({ children, showBottomBar = false, showHeader = true }: AuthBackgroundProps) {
   const [signingOut, setSigningOut] = useState(false);
 
   const insets = useSafeAreaInsets();
@@ -43,14 +44,15 @@ export function AuthBackground({ children, showBottomBar = false }: AuthBackgrou
     <View style={Layout.flex1}>
 
 
-      {/* HEADER */}
-      <View style={[styles.header, { paddingTop }]}>
-        <View style={styles.headerLeft}>
-          <Pressable onPress={handleSignOut} style={styles.signOutBtn} hitSlop={10}>
-            {signingOut ? <ActivityIndicator size="small" color={PrismColors.primary} /> : <Text style={styles.signOutText}>Cerrar sesión</Text>}
-          </Pressable>
+      {showHeader && (
+        <View style={[styles.header, { paddingTop }]}>
+          <View style={styles.headerLeft}>
+            <Pressable onPress={handleSignOut} style={styles.signOutBtn} hitSlop={10}>
+              {signingOut ? <ActivityIndicator size="small" color={PrismColors.primary} /> : <Text style={styles.signOutText}>Cerrar sesión</Text>}
+            </Pressable>
+          </View>
         </View>
-      </View>
+      )}
 
       <View style={[Layout.flex1, { backgroundColor: PrismColors.neutral }]}>
         {children}

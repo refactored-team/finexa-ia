@@ -1,6 +1,7 @@
 import { GitBranch, Home } from '@/constants/lucideIcons';
 import { PrismColors } from '@/constants/theme';
 import { Spacing, TextStyles } from '@/constants/uiStyles';
+import { LinearGradient } from 'expo-linear-gradient';
 import React from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -96,51 +97,60 @@ export default function HorizonScreen() {
   }
 
   return (
-    <AuthBackground showBottomBar>
-      <ScrollView
-        style={styles.container}
-        contentContainerStyle={[
-          styles.scrollContent,
-          {
-            paddingTop: insets.top + Spacing.lg,
-            paddingBottom: insets.bottom + 100,
-          },
-        ]}
-        showsVerticalScrollIndicator={false}
-      >
-
-        {/* 1. Goal Hero */}
-        <GoalHeroCard
-          title={GOAL_DATA.title}
-          targetAmount={GOAL_DATA.targetAmount}
-          liquidityAmount={GOAL_DATA.liquidityAmount}
-          aiNarrative={factors.length > 0 ? factors.map(f => f.descripcion).join(' ') : GOAL_DATA.aiNarrative}
-          currentProjection={GOAL_DATA.currentProjection}
-          acceleratedProjection={GOAL_DATA.acceleratedProjection}
+    <AuthBackground showBottomBar showHeader={false}>
+      <View style={styles.container}>
+        <LinearGradient
+          colors={['#C3E9E9', '#F6FBFB']}
+          start={{ x: 0.5, y: 1 }}
+          end={{ x: 0.5, y: 2 }}
+          style={[styles.heroBackground, { height: insets.top + 220 }]}
         />
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={[
+            styles.scrollContent,
+            {
+              paddingTop: insets.top + Spacing.lg + 110,
+              paddingBottom: insets.bottom + 100,
+            },
+          ]}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* 1. Goal Hero */}
+          <GoalHeroCard
+            title={GOAL_DATA.title}
+            targetAmount={GOAL_DATA.targetAmount}
+            liquidityAmount={GOAL_DATA.liquidityAmount}
+            aiNarrative={factors.length > 0 ? factors.map((f) => f.descripcion).join(' ') : GOAL_DATA.aiNarrative}
+            currentProjection={GOAL_DATA.currentProjection}
+            acceleratedProjection={GOAL_DATA.acceleratedProjection}
+          />
 
-        {/* 2. Dynamic Resilience Metrics Rows */}
-        {loading ? (
-          <ActivityIndicator size="large" color={PrismColors.primary} style={{ marginVertical: Spacing.xl }} />
-        ) : (
-          <View style={{ gap: Spacing.lg }}>
-            {metricRows}
-          </View>
-        )}
+          {/* 2. Dynamic resilience metrics */}
+          {loading ? (
+            <ActivityIndicator size="large" color={PrismColors.primary} style={{ marginVertical: Spacing.xl }} />
+          ) : metricRows.length > 0 ? (
+            <View style={{ gap: Spacing.lg }}>
+              {metricRows}
+            </View>
+          ) : (
+            <MetricPairRow left={METRICS.left} right={METRICS.right} />
+          )}
 
-        {/* 3. Emergency shield */}
-        <EmergencyShield
-          runwayDays={EMERGENCY.runwayDays}
-          securedAmount={EMERGENCY.securedAmount}
-          runwayStatus={EMERGENCY.runwayStatus}
-        />
+          {/* 3. Emergency shield */}
+          <EmergencyShield
+            runwayDays={EMERGENCY.runwayDays}
+            securedAmount={EMERGENCY.securedAmount}
+            runwayStatus={EMERGENCY.runwayStatus}
+          />
 
-        {/* 4. Action simulator */}
-        <ActionSimulator getProjectedDate={getProjectedDate} />
+          {/* 4. Action simulator */}
+          <ActionSimulator getProjectedDate={getProjectedDate} />
 
-        {/* 5. CTA */}
-        <OptimizeButton onPress={() => {/* TODO: connect to optimization flow */ }} />
-      </ScrollView>
+          {/* 5. CTA */}
+          <OptimizeButton onPress={() => {/* TODO: connect to optimization flow */ }} />
+        </ScrollView>
+      </View>
     </AuthBackground>
   );
 }
@@ -148,11 +158,22 @@ export default function HorizonScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: PrismColors.neutral,
+    backgroundColor: '#F1F4F9',
+  },
+  heroBackground: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 240,
+  },
+  scrollView: {
+    flex: 1,
   },
   scrollContent: {
     paddingHorizontal: Spacing.lg,
     gap: Spacing.lg,
+    marginTop: -50,
   },
   engineTagRow: {
     alignItems: 'flex-end',
